@@ -1,0 +1,74 @@
+{
+  "events": [
+    {
+      "date": "2026-06-12",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day (Tues)",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-06-19",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day (Tues)",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-06-26",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day (Tues)",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-07-10",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day (Tues)",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-07-18",
+      "type": "life_event",
+      "description": "Apartment viewing in Hamburg — exploring housing options",
+      "location": "Hamburg",
+      "signals": ["possible_relocation", "possible_d_ticket_relevance_change"]
+    },
+    {
+      "date": "2026-08-02",
+      "type": "trip",
+      "description": "Business trip to Amsterdam — international, neither D-Ticket nor BahnCard applies",
+      "location": "Amsterdam",
+      "signals": ["long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-08-15",
+      "type": "life_event",
+      "description": "Job offer decision deadline — possible relocation to Hamburg in September",
+      "location": null,
+      "signals": ["possible_relocation", "work_pattern_change"]
+    },
+    {
+      "date": "2026-09-01",
+      "type": "life_event",
+      "description": "Potential start date for new Hamburg-based role — remote with biweekly on-site",
+      "location": "Hamburg",
+      "signals": ["possible_relocation", "work_pattern_change", "possible_d_ticket_relevance_change"]
+    },
+    {
+      "date": "2026-06-20",
+      "type": "meeting",
+      "description": "Recurring project sync — Frankfurt office",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-07-25",
+      "type": "meeting",
+      "description": "Client meeting — Frankfurt",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    }
+  ]
+}

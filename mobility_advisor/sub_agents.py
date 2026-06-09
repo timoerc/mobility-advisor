@@ -18,7 +18,7 @@ from .tools import (
     load_user_preferences,
 )
 
-_MODEL = LiteLlm(model="openai/Mistral Small 3.2 24B Instruct 2506")
+_MODEL = LiteLlm(model="openai/Openai GPT OSS 120B") # options: "openai/Openai GPT OSS 120B", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3.2 24B Instruct 2506"
 _TODAY = date.today().isoformat()
 
 analyst_agent = LlmAgent(
@@ -31,7 +31,7 @@ Today's date: {_TODAY}.
 
 You MUST call load_travel_history and load_current_subscriptions first. Use ONLY the exact figures returned by the tools — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
 
-Your job: report usage facts for each of Maja's active subscriptions. Do not draw conclusions or make recommendations — that is the Optimizer's job.
+Your job: report usage facts for each of Maja's active subscriptions. Do not draw conclusions or make recommendations — that is another agent's job.
 
 Step 1 — call load_travel_history() and load_current_subscriptions(). Do this before writing anything.
 
@@ -39,6 +39,7 @@ Step 2 — for each subscription, report:
 - **Subscription name** and monthly cost (verbatim from tool)
 - **Trip count**: how many trips in the past 12 months used this subscription (from travel history)
 - **Spend figures**: total amount paid under this subscription in the past 12 months (verbatim from tool data)
+- **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
 
 Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
 
@@ -74,11 +75,6 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
     output_key="forecast",
 )
 
-# Optimizer calls load_current_subscriptions() independently of the Analyst.
-# This is intentional: Tier-1 agents operate with context isolation — each LlmAgent
-# receives only its own tool results and the injected state keys, not the Analyst's
-# raw tool responses. The redundant fetch is a known, bounded cost accepted in
-# exchange for clean context boundaries (Tier-1 design principle, CLAUDE.md §2).
 optimizer_agent = LlmAgent(
     name="optimizer",
     model=_MODEL,
@@ -93,7 +89,7 @@ Context from upstream agents:
 
 Your job: propose exactly ONE concrete contract change that maximizes value for Maja.
 
-Step 1 — call load_user_preferences(), load_current_subscriptions(), and load_mobility_catalog(). Do this before writing anything.
+Step 1 — call load_user_preferences() and load_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with Maja's preferences and the market catalog, identify the single highest-impact change.
 
@@ -124,6 +120,8 @@ Step 3 — output your recommendation in this exact structure:
   co2_saved_kg = co2_car_kg − co2_rail_kg
 Compute only over trips whose mode is "rail". Write: "By choosing rail over car, Maja avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
 
+**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {analysis}.
+
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
 
@@ -132,7 +130,7 @@ Compute only over trips whose mode is "rail". Write: "By choosing rail over car,
 
 Show real numbers from the data. Do not propose more than one change.
 """,
-    tools=[load_user_preferences, load_current_subscriptions, load_mobility_catalog],
+    tools=[load_user_preferences, load_mobility_catalog],
     output_key="recommendation",
 )
 
@@ -158,6 +156,7 @@ Structure your output exactly as follows:
 
 **What's changing:**
 - [the proposed change, with the monthly saving in €]
+- Action by: **[next_renewal_date from the recommendation, formatted as DD Month YYYY]** to avoid auto-renewal
 
 **CO₂ impact:** [one line]
 
