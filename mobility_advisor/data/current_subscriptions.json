@@ -1,0 +1,25 @@
+{
+  "subscriptions": [
+    {
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse)",
+      "monthly_cost_eur": 20.33,
+      "started": "2023-01-15",
+      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares."
+    },
+    {
+      "provider": "Deutschlandticket",
+      "product": "Deutschland-Ticket",
+      "monthly_cost_eur": 58.00,
+      "started": "2023-05-01",
+      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
+    },
+    {
+      "provider": "MILES Mobility",
+      "product": "MILES+ Abo",
+      "monthly_cost_eur": 4.90,
+      "started": "2022-03-10",
+      "notes": "Car-sharing membership tier. Provides 5% cashback on MILES trip costs and slightly reduced per-minute rate."
+    }
+  ]
+}

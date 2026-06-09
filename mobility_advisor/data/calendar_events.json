@@ -1,0 +1,74 @@
+{
+  "events": [
+    {
+      "date": "2026-06-18",
+      "type": "trip",
+      "description": "Client workshop in Berlin — 2 days on-site",
+      "location": "Berlin",
+      "signals": ["long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-07-02",
+      "type": "trip",
+      "description": "Team offsite in Munich — 3 days",
+      "location": "Munich",
+      "signals": ["long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-07-21",
+      "type": "trip",
+      "description": "Conference: ProductCon Hamburg",
+      "location": "Hamburg",
+      "signals": ["long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-08-04",
+      "type": "trip",
+      "description": "Summer visit to family in Cologne",
+      "location": "Cologne",
+      "signals": ["long_distance_rail_likely", "leisure"]
+    },
+    {
+      "date": "2026-06-09",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day (hybrid: Tues + Thurs in office)",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-06-20",
+      "type": "life_event",
+      "description": "Final interview for a remote-first role at a Berlin startup",
+      "location": "Berlin",
+      "signals": ["possible_relocation", "work_pattern_change", "long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-07-15",
+      "type": "life_event",
+      "description": "Apartment viewing in Berlin — exploring housing options",
+      "location": "Berlin",
+      "signals": ["possible_relocation", "possible_d_ticket_relevance_change"]
+    },
+    {
+      "date": "2026-09-01",
+      "type": "life_event",
+      "description": "Potential start date for new role — remote with occasional Berlin travel",
+      "location": null,
+      "signals": ["work_pattern_change", "possible_relocation", "long_distance_rail_likely"]
+    },
+    {
+      "date": "2026-06-25",
+      "type": "meeting",
+      "description": "Doctor appointment — local errand, no car needed",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
+    },
+    {
+      "date": "2026-10-01",
+      "type": "trip",
+      "description": "Planned autumn trip to Vienna — leisure",
+      "location": "Vienna",
+      "signals": ["long_distance_rail_likely", "leisure"]
+    }
+  ]
+}

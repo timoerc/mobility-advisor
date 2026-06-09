@@ -1,60 +1,82 @@
 # Mobility Advisor
 
-> *Continuously optimizing the traveler's mobility portfolio.*
+An agentic AI system that answers one question: **"Is my mobility setup optimal right now?"**
 
-Agentic AI system that continuously optimizes a user's mobility contract portfolio by integrating multi-modal travel data, contracts, and calendar signals via multi-agent orchestration.
-
-Developed as part of a joint university course by **University of Cologne (UoC)** and **BCG Platinion**.
+Built for a joint course at **University of Cologne × BCG Platinion**. The system analyzes a traveler's current subscription portfolio, forecasts forward demand, and recommends concrete contract changes — with full cost and CO₂ transparency and a human-in-the-loop gate before any change is made.
 
 ---
 
-## Use Case
+## What it does (Tier 1)
 
-Modern commuters hold a mix of mobility subscriptions — public transit passes, rail cards, shared mobility memberships — but rarely have the time or data to evaluate whether their setup is actually optimal.
+A linear pipeline of four AI agents runs in sequence:
 
-**Mobility Advisor** addresses this by acting as a continuous, AI-driven portfolio manager for personal mobility. It analyzes travel behavior, active contracts, and upcoming demand to surface inefficiencies and recommend right-sized alternatives — with transparent cost and CO₂ trade-offs. It answers the core question:
+1. **Analyst** — reviews 12 months of travel history against active subscriptions; flags under-used contracts
+2. **Forecaster** — reads upcoming calendar events; summarizes forward demand and life-event signals
+3. **Optimizer** — combines findings with the market catalog; proposes one concrete change with €/mo savings and CO₂ delta
+4. **Communicator** — formats a scannable recommendation for the user; explicitly notes that no change has been made and approval is required
 
-> *"Is my mobility setup optimal right now?"*
-
----
-
-## Key Features
-
-- **Behavioral Analysis**: Continuously analyzes real travel behavior across transportation modes and active contracts to surface inefficiencies.
-- **Portfolio Recommendations**: Recommends right-sized contract combinations with transparent cost and CO₂ trade-offs.
-- **Life Event Triggering**: Detects life events (relocation, job change, family changes) via opt-in signals to prompt portfolio reviews.
-- **Demand Forecasting**: Models upcoming travel demand using calendar feeds and historical patterns rather than relying purely on past data.
-- **Human-in-the-Loop Execution**: Executes approved changes via DB and partner APIs, with mandatory user validation at every critical step.
-- **Reporting & Ad-hoc Queries**: Annual mobility review (savings, CO₂ avoided) plus a conversational interface for on-demand optimization queries.
+Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid worker with BahnCard 50, Deutschland-Ticket, and MILES car-sharing.
 
 ---
 
-## Data Sources
+## Prerequisites
 
-| Source | Description |
-|---|---|
-| Mobility Setup | Baseline subscriptions and contracts captured at onboarding |
-| Travel History | Multi-modal trip data across corporate and private providers |
-| Calendar Feeds | Upcoming meetings and events for forward demand modeling |
-| Contracts Catalog | Public transit tiers, BahnCard pricing, shared mobility memberships |
-| CO₂ Emission Factors | Emissions coefficients per transport mode |
-| Opt-in Signals | Automated life event detection (e.g., email parsing) |
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- Python 3.12+
+- A [Google AI Studio](https://aistudio.google.com/) API key (`gemini-2.5-flash` access)
 
 ---
 
-## Multi-Agent Architecture
+## Setup
 
-The system is designed around four specialized agents with strict context isolation:
+1. Clone the repo and enter the directory.
 
-| Agent | Responsibility |
-|---|---|
-| **Analyst** | Uncovers inefficiencies in historical multi-modal portfolio data |
-| **Forecaster** | Builds forward-looking demand assumptions from calendar and life event signals |
-| **Optimizer** | Simulates scenarios balancing cost savings vs. CO₂ targets |
-| **Communicator** | Drafts recommendations and executes approved changes via partner APIs |
+2. Install dependencies:
+   ```bash
+   uv sync
+   ```
+
+3. Create a `.env` file in the repo root:
+   ```
+   GOOGLE_API_KEY=<your_key_from_ai_studio>
+   GOOGLE_GENAI_USE_VERTEXAI=FALSE
+   ```
+
+4. Run the ADK web UI:
+   ```bash
+   uv run adk web
+   ```
+
+5. Open the URL shown in the terminal, select **mobility_advisor_pipeline**, and send:
+   > Is my mobility setup optimal right now?
+
+The four agents run in sequence. The final output is a recommendation with savings, CO₂ impact, and a clear "awaiting your approval" note.
 
 ---
 
-## Project Status
+## Project structure
 
-🚧 Under active development.
+```
+mobility_advisor/
+├── __init__.py          # ADK package entry point
+├── agent.py             # root_agent (SequentialAgent)
+├── sub_agents.py        # analyst, forecaster, optimizer, communicator
+├── tools.py             # 5 loader functions (mock data)
+├── models.py            # Pydantic models for all fixtures
+└── data/
+    ├── user_preferences.json
+    ├── current_subscriptions.json
+    ├── mobility_catalog.json
+    ├── travel_history.json
+    └── calendar_events.json
+```
+
+---
+
+## Tier roadmap
+
+| Tier | Status | Features |
+|------|--------|----------|
+| **Tier 1 — Basic** | ✅ Current | Mocked data, linear pipeline, single run, no persistence |
+| Tier 2 — Intermediate | Planned | Persistent user state, RAG over contracts DB, calendar-driven forecasting, constraint capture |
+| Tier 3 — Advanced | Planned | Multi-agent with context isolation, execution agent, life-event triggers, Docker, ADRs |

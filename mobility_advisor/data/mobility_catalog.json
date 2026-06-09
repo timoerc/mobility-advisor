@@ -1,0 +1,68 @@
+{
+  "options": [
+    {
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 (2. Klasse)",
+      "mode": "rail",
+      "monthly_cost_eur": 9.25,
+      "discount_rule": "25% discount on all DB long-distance fares",
+      "co2_g_per_km": 32
+    },
+    {
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse)",
+      "mode": "rail",
+      "monthly_cost_eur": 20.33,
+      "discount_rule": "50% discount on all DB long-distance fares",
+      "co2_g_per_km": 32
+    },
+    {
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 100 (2. Klasse)",
+      "mode": "rail",
+      "monthly_cost_eur": 412.00,
+      "discount_rule": "Unlimited DB long-distance travel 2nd class",
+      "co2_g_per_km": 32
+    },
+    {
+      "provider": "Deutschlandticket",
+      "product": "Deutschland-Ticket",
+      "mode": "regional",
+      "monthly_cost_eur": 58.00,
+      "discount_rule": "Unlimited local and regional public transport nationwide",
+      "co2_g_per_km": 55
+    },
+    {
+      "provider": "MILES Mobility",
+      "product": "MILES Basis (pay-per-use)",
+      "mode": "car_share",
+      "monthly_cost_eur": 0.00,
+      "discount_rule": "No membership fee; €0.23/min driving, free parking in zone",
+      "co2_g_per_km": 118
+    },
+    {
+      "provider": "MILES Mobility",
+      "product": "MILES+ Abo",
+      "mode": "car_share",
+      "monthly_cost_eur": 4.90,
+      "discount_rule": "€4.90/mo; €0.22/min driving + 5% cashback on all trips",
+      "co2_g_per_km": 118
+    },
+    {
+      "provider": "Stadtmobil",
+      "product": "Stadtmobil Basic (pay-per-use)",
+      "mode": "car_share",
+      "monthly_cost_eur": 0.00,
+      "discount_rule": "No membership fee; €3.50/hr + €0.22/km",
+      "co2_g_per_km": 118
+    },
+    {
+      "provider": "Flinkster (DB)",
+      "product": "Flinkster Standard",
+      "mode": "car_share",
+      "monthly_cost_eur": 0.00,
+      "discount_rule": "No membership fee; €4.00/hr + €0.20/km; BahnCard discount eligible",
+      "co2_g_per_km": 118
+    }
+  ]
+}
