@@ -1,0 +1,300 @@
+.app-shell {
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(236, 0, 22, 0.08), transparent 34%),
+    #f5f5f3;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.onboarding-panel {
+  background: #ffffff;
+  border: 1px solid #e2e0dc;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(31, 31, 31, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 460px;
+  min-height: 620px;
+  padding: 22px;
+  width: 100%;
+}
+
+.app-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hidden-header,
+.hidden-footer {
+  display: none;
+}
+
+.eyebrow {
+  color: #ec0016;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.progress-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  background: #d8d5cf;
+  border-radius: 999px;
+  display: block;
+  height: 8px;
+  width: 8px;
+}
+
+.dot.active {
+  background: #ec0016;
+  width: 22px;
+}
+
+.page-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.logo-intro-page {
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.skip-button {
+  background: transparent;
+  color: #68635d;
+  font-size: 0.9rem;
+  min-height: 36px;
+  padding: 0 10px;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.logo-animation {
+  align-items: center;
+  animation: logoReveal 2.4s ease both;
+  background: #ec0016;
+  border-radius: 8px;
+  color: #ffffff;
+  display: flex;
+  font-size: 3rem;
+  font-weight: 800;
+  height: 120px;
+  justify-content: center;
+  overflow: hidden;
+  width: 160px;
+}
+
+.logo-image {
+  height: 100%;
+  width: 100%;
+}
+
+.logo-image span {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.agent-intro-page {
+  justify-content: center;
+}
+
+.agent-avatar {
+  align-items: center;
+  background: #1f1f1f;
+  border-radius: 999px;
+  color: #ffffff;
+  display: flex;
+  font-weight: 800;
+  height: 68px;
+  justify-content: center;
+  width: 68px;
+}
+
+.speech-bubble {
+  background: #f5f5f3;
+  border: 1px solid #dedbd6;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+h1 {
+  font-size: 1.85rem;
+  line-height: 1.12;
+  margin: 0 0 10px;
+}
+
+.intro-text {
+  color: #55514b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.slider-field,
+.notes-field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field-title {
+  font-weight: 700;
+}
+
+input[type="range"] {
+  accent-color: #ec0016;
+  width: 100%;
+}
+
+.range-labels {
+  align-items: center;
+  color: #68635d;
+  display: flex;
+  font-size: 0.9rem;
+  justify-content: space-between;
+}
+
+.range-labels strong {
+  color: #1f1f1f;
+}
+
+.checkbox-card {
+  align-items: flex-start;
+  border: 1px solid #dedbd6;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+}
+
+.checkbox-card input {
+  accent-color: #ec0016;
+  margin-top: 3px;
+}
+
+.checkbox-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checkbox-card small {
+  color: #68635d;
+  line-height: 1.4;
+}
+
+textarea {
+  border: 1px solid #c9c5bf;
+  border-radius: 8px;
+  min-height: 180px;
+  padding: 14px;
+  resize: vertical;
+  width: 100%;
+}
+
+textarea:focus {
+  border-color: #ec0016;
+  outline: 3px solid rgba(236, 0, 22, 0.14);
+}
+
+.final-page {
+  justify-content: center;
+  text-align: center;
+}
+
+.success-mark {
+  align-items: center;
+  background: #ec0016;
+  border-radius: 999px;
+  color: #ffffff;
+  display: flex;
+  font-size: 2rem;
+  font-weight: 800;
+  height: 72px;
+  justify-content: center;
+  margin: 0 auto;
+  width: 72px;
+}
+
+@keyframes logoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 48px;
+  padding: 0 18px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primary-button {
+  background: #ec0016;
+  color: #ffffff;
+  flex: 1;
+}
+
+.secondary-button {
+  background: #efede9;
+  color: #1f1f1f;
+}
+
+@media (min-width: 680px) {
+  .app-shell {
+    padding: 32px;
+  }
+
+  .onboarding-panel {
+    padding: 30px;
+  }
+}
