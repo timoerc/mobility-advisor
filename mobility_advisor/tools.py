@@ -43,15 +43,36 @@ def load_mobility_catalog() -> dict:
     return MobilityCatalog.model_validate(raw).model_dump()
 
 
+_KNOWN_MODES = {"rail", "regional", "car_share", "e_scooter", "bus", "local_transit"}
+
+
 def load_travel_history() -> dict:
     """Load Maja's 12-month travel history from the mock data store.
 
     Returns a dict with key 'trips', a list of past trips each containing:
     date (str), mode (str), origin (str), destination (str), distance_km (float),
-    cost_eur (float), provider (str), booked_under (str or null — which subscription was used).
+    cost_eur (float or null), provider (str), booked_under (str or null).
+    If any trips have data quality issues, a 'data_quality_warnings' key is included
+    listing each problem so downstream agents can surface them to the user.
     """
     raw = json.loads((_DATA / "travel_history.json").read_text())
-    return TravelHistory.model_validate(raw).model_dump()
+    history = TravelHistory.model_validate(raw)
+    result = history.model_dump()
+
+    warnings = []
+    for trip in history.trips:
+        label = f"{trip.date} {trip.origin}→{trip.destination}"
+        if trip.cost_eur is None:
+            warnings.append(f"{label}: cost_eur is null — excluded from spend totals")
+        if not trip.mode:
+            warnings.append(f"{label}: mode is empty — excluded from CO₂ and mode aggregations")
+        elif trip.mode not in _KNOWN_MODES:
+            warnings.append(f"{label}: unknown mode '{trip.mode}' — excluded from CO₂ and mode aggregations")
+
+    if warnings:
+        result["data_quality_warnings"] = warnings
+
+    return result
 
 
 def load_calendar_events() -> dict:

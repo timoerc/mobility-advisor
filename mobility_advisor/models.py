@@ -44,7 +44,7 @@ class Trip(BaseModel):
     origin: str
     destination: str
     distance_km: float
-    cost_eur: float
+    cost_eur: float | None = None
     provider: str
     booked_under: str | None = None
 
