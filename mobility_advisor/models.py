@@ -15,6 +15,8 @@ class Subscription(BaseModel):
     provider: str
     product: str
     monthly_cost_eur: float
+    billing_cycle: str
+    next_renewal_date: str
     started: str
     notes: str
 
