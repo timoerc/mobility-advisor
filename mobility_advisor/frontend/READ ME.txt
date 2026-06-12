@@ -1,0 +1,70 @@
+Mobility Advisor Frontend
+
+This is the frontend prototype for the Mobility Advisor onboarding flow.
+It collects the data needed as a starting point for the preference agent, such as budget, priorities, mobility options, flexibility, and notes.
+
+Right now, the data is only saved locally in the running React app state. It is not sent to the backend yet and it is not exported to a file. Later, this can be changed so the collected data is transferred to the backend.
+
+Technology
+
+The frontend uses:
+
+- React
+- Vite
+- TypeScript
+- plain CSS for styling
+
+TypeScript helps catch coding mistakes earlier and improves the developer experience with better autocomplete and clearer data structures.
+
+
+
+How to run the frontend locally
+
+Open a terminal in this frontend folder. In Windows Explorer, you can usually right-click inside the folder and choose "Open in Terminal".
+
+First install the dependencies:
+
+npm install
+
+Then start the development server:
+
+npm run dev
+
+The terminal will show a local URL, usually something like:
+
+http://localhost:5173
+
+Open that URL in your browser.
+
+To stop the server, click into the terminal and press:
+
+Ctrl + C
+
+
+
+Project structure:
+
+The project uses a simple pages and components structure.
+
+- src/App.tsx controls the onboarding flow, page switching, and shared frontend state.
+- src/App.css contains the main styling.
+- src/pages contains the onboarding screens.
+- src/components contains reusable UI parts.
+- public/assets contains SVG logos and icons.
+
+The page files are numbered in the order they appear in the onboarding flow, for example:
+
+0_LogoIntroPage.tsx
+1_AgentIntroPage.tsx
+2_BudgetPage.tsx
+
+This numbering is only a preference to make the flow easier to understand. It would also be possible to keep everything in one file, but the pages/components structure is easier to read and maintain.
+
+Some files, such as package-lock.json, vite.config.ts, tsconfig.json, and index.html, are part of the normal Vite/React setup. They handle project configuration, dependencies, TypeScript settings, and how the app starts in the browser.
+
+
+Assets disclaimer!
+
+Some SVG icons were sourced from the web for visual prototyping. Their licenses have not been fully checked. They should not be used for a commercial or public release unless the usage rights are confirmed or the icons are replaced with approved assets.
+
+For the current non-commercial local prototype, they are included only to make the demo easier to understand visually.
