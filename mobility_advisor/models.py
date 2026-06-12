@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class UserPreferences(BaseModel):
+    name: str
     monthly_budget_eur: float
     flexibility_need: str
     sustainability_weight: float
