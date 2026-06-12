@@ -1,3 +1,5 @@
+import { TypewriterHeading } from "../components/TypewriterHeading";
+
 export function FinalPage() {
   return (
     <div className="page-content final-page">
@@ -6,7 +8,7 @@ export function FinalPage() {
       </div>
 
       <div>
-        <h1>Thank you!</h1>
+        <TypewriterHeading text="Thank you!" />
         <p className="intro-text">
           I will now analyze your mobility portfolio and prepare personalized
           recommendations for your next trips.

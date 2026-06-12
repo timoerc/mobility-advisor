@@ -1,4 +1,5 @@
 export type OnboardingPreferences = {
+  monthly_budget_eur: number;
   priorities: {
     money: number;
     time: number;

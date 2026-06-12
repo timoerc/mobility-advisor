@@ -25,29 +25,47 @@ export function MobilityOptionsPage({
         </p>
       </div>
 
-      <label className="checkbox-card">
+      <div className="mobility-option-grid">
+      <label
+        className={
+          mobilityOptions.owns_bike
+            ? "mobility-option-card selected"
+            : "mobility-option-card"
+        }
+      >
         <input
           type="checkbox"
           checked={mobilityOptions.owns_bike}
           onChange={(event) => updateOption("owns_bike", event.target.checked)}
         />
+        <img className="mobility-icon" src="/assets/bike.svg" alt="" />
         <span>
-          <strong>I own or regularly use a bike</strong>
-          <small>Useful for station access and short city trips.</small>
+          <strong>Bike</strong>
+          <small>I own or regularly use a bike.</small>
         </span>
+        <span className="checkbox-indicator" aria-hidden="true" />
       </label>
 
-      <label className="checkbox-card">
+      <label
+        className={
+          mobilityOptions.owns_car
+            ? "mobility-option-card selected"
+            : "mobility-option-card"
+        }
+      >
         <input
           type="checkbox"
           checked={mobilityOptions.owns_car}
           onChange={(event) => updateOption("owns_car", event.target.checked)}
         />
+        <img className="mobility-icon" src="/assets/car.svg" alt="" />
         <span>
-          <strong>I own or regularly use a car</strong>
-          <small>Useful for comparing train, car, and mixed journeys.</small>
+          <strong>Car</strong>
+          <small>I own or regularly use a car.</small>
         </span>
+        <span className="checkbox-indicator" aria-hidden="true" />
       </label>
+      </div>
     </div>
   );
 }
