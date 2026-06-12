@@ -120,7 +120,7 @@ Step 3 — output your recommendation in this exact structure:
   co2_saved_kg = co2_car_kg − co2_rail_kg
 Compute only over trips whose mode is "rail". Write: "By choosing rail over car, Maja avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
 
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {analysis}.
+**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
