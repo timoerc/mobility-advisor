@@ -11,6 +11,7 @@ from .models import (
 
 _DATA = Path(__file__).parent / "data"
 
+USE_MOCK_DATA = False
 
 def load_user_preferences() -> dict:
     """Load Maja's personal mobility preferences and constraints from the mock data store.
@@ -76,11 +77,15 @@ def load_travel_history() -> dict:
 
 
 def load_calendar_events() -> dict:
-    """Load Maja's upcoming calendar events and life-event signals from the mock data store.
+    """Load upcoming calendar events — from mock data or live Outlook API.
 
     Returns a dict with key 'events', a list of upcoming events each containing:
     date (str), type (str: trip/meeting/life_event), description (str),
     location (str or null), signals (list[str] — demand or life-change indicators).
     """
-    raw = json.loads((_DATA / "calendar_events.json").read_text())
+    if USE_MOCK_DATA:
+        raw = json.loads((_DATA / "calendar_events.json").read_text())
+    else:
+        from .outlook_calendar import fetch_calendar_events
+        raw = fetch_calendar_events()
     return CalendarEvents.model_validate(raw).model_dump()
