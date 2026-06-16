@@ -23,7 +23,8 @@ Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid work
 
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Python 3.12+
-- A [Google AI Studio](https://aistudio.google.com/) API key (`gemini-2.5-flash` access)
+- A [Google AI Studio](https://aistudio.google.com/) API key (required by the ADK runtime)
+- A KIConnect API key (used for the LLM agents via the KIConnect proxy)
 
 ---
 
@@ -36,10 +37,11 @@ Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid work
    uv sync
    ```
 
-3. Create a `.env` file in the repo root:
+3. Copy `sample.env` to `.env` and fill in your keys:
    ```
-   GOOGLE_API_KEY=<your_key_from_ai_studio>
    GOOGLE_GENAI_USE_VERTEXAI=FALSE
+   GOOGLE_API_KEY=<your_google_ai_studio_key>
+   KICONNECT_API_KEY=<your_kiconnect_key>
    ```
 
 4. Run the ADK web UI:
@@ -63,12 +65,41 @@ mobility_advisor/
 ├── sub_agents.py        # analyst, forecaster, optimizer, communicator
 ├── tools.py             # 5 loader functions (mock data)
 ├── models.py            # Pydantic models for all fixtures
-└── data/
-    ├── user_preferences.json
-    ├── current_subscriptions.json
-    ├── mobility_catalog.json
-    ├── travel_history.json
-    └── calendar_events.json
+├── data/                # active data files (replaced by scenario activation)
+│   ├── user_preferences.json
+│   ├── current_subscriptions.json
+│   ├── mobility_catalog.json
+│   ├── travel_history.json
+│   └── calendar_events.json
+└── scenarios/           # self-contained fixture sets for testing
+    ├── activate_scenario.sh
+    ├── 01_happy_path/
+    ├── 02_edge_case/
+    └── 03_failure_recovery/
+```
+
+---
+
+## Scenario testing
+
+Three pre-built scenarios let you exercise different pipeline behaviours without modifying `data/` by hand. Run the activation script from the `mobility_advisor/` directory:
+
+```bash
+./scenarios/activate_scenario.sh 01_happy_path
+```
+
+The script backs up the current `data/` with a timestamp before overwriting, so switching is non-destructive.
+
+| Scenario | Signal | Expected outcome |
+|---|---|---|
+| `01_happy_path` | BC50 savings far below card cost; no upcoming long-distance travel | Unambiguous recommendation to cancel BC50 |
+| `02_edge_case` | Erratic usage; BC50 borderline break-even; possible relocation | Hedged conditional recommendation |
+| `03_failure_recovery` | 6 of 20 travel history entries malformed (null costs, empty/unknown mode) | Pipeline completes with partial result and data quality warnings |
+
+To restore the original `data/` after testing:
+
+```bash
+cp data_backup_<timestamp>/*.json data/
 ```
 
 ---

@@ -1,5 +1,7 @@
+import json
 import os
 from datetime import date
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -20,18 +22,22 @@ from .tools import (
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
 _TODAY = date.today().isoformat()
+_DATA_DIR = Path(__file__).parent / "data"
+_prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
+_USER_NAME = _prefs.get("name", "the user")
+_USER_FIRST_NAME = _USER_NAME.split()[0]
 
 analyst_agent = LlmAgent(
     name="analyst",
     model=_MODEL,
-    description="Analyzes Maja's travel history and current subscriptions to identify portfolio inefficiencies.",
+    description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
     instruction=f"""\
-You are the Analyst agent for Maja Hoffmann's Mobility Advisor.
+You are the Analyst agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
 You MUST call load_travel_history and load_current_subscriptions first. Use ONLY the exact figures returned by the tools — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
 
-Your job: report usage facts for each of Maja's active subscriptions. Do not draw conclusions or make recommendations — that is another agent's job.
+Your job: report usage facts for each of {_USER_FIRST_NAME}'s active subscriptions. Do not draw conclusions or make recommendations — that is another agent's job.
 
 Step 1 — call load_travel_history() and load_current_subscriptions(). Do this before writing anything.
 
@@ -52,9 +58,9 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 forecaster_agent = LlmAgent(
     name="forecaster",
     model=_MODEL,
-    description="Forecasts Maja's forward mobility demand for the next 3–6 months based on her calendar.",
+    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
     instruction=f"""\
-You are the Forecaster agent for Maja Hoffmann's Mobility Advisor.
+You are the Forecaster agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
 Your job: summarize forward mobility demand for the next 3–6 months from today.
@@ -80,18 +86,18 @@ optimizer_agent = LlmAgent(
     model=_MODEL,
     description="Proposes one concrete contract change based on analysis, forecast, preferences, and catalog.",
     instruction=f"""\
-You are the Optimizer agent for Maja Hoffmann's Mobility Advisor.
+You are the Optimizer agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
 Context from upstream agents:
 - Analyst finding: {{analysis}}
 - Forecaster outlook: {{forecast}}
 
-Your job: propose exactly ONE concrete contract change that maximizes value for Maja.
+Your job: propose exactly ONE concrete contract change that maximizes value for {_USER_FIRST_NAME}.
 
 Step 1 — call load_user_preferences() and load_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
-Step 2 — combining the upstream findings with Maja's preferences and the market catalog, identify the single highest-impact change.
+Step 2 — combining the upstream findings with {_USER_FIRST_NAME}'s preferences and the market catalog, identify the single highest-impact change.
 
 CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
 All rail trips in history are priced at the BahnCard 50 discount (50% off).
@@ -118,7 +124,7 @@ Step 3 — output your recommendation in this exact structure:
   co2_rail_kg = Σ(trip.distance_km × 32) / 1000    (rail: 32 g/km from catalog)
   co2_car_kg  = Σ(trip.distance_km × 118) / 1000   (car-share baseline: 118 g/km from catalog)
   co2_saved_kg = co2_car_kg − co2_rail_kg
-Compute only over trips whose mode is "rail". Write: "By choosing rail over car, Maja avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
+Compute only over trips whose mode is "rail". Write: "By choosing rail over car, {_USER_FIRST_NAME} avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
 
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 
@@ -137,15 +143,15 @@ Show real numbers from the data. Do not propose more than one change.
 communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
-    description="Formats the optimizer's recommendation into a clear, scannable message for Maja.",
+    description=f"Formats the optimizer's recommendation into a clear, scannable message for {_USER_FIRST_NAME}.",
     instruction=f"""\
-You are the Communicator agent for Maja Hoffmann's Mobility Advisor.
+You are the Communicator agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
 The Optimizer has produced this recommendation:
 {{recommendation}}
 
-Your job: reformat it into a friendly, scannable message addressed directly to Maja.
+Your job: reformat it into a friendly, scannable message addressed directly to {_USER_FIRST_NAME}.
 
 Structure your output exactly as follows:
 
@@ -164,7 +170,7 @@ Structure your output exactly as follows:
 - [subscription] — [reason, with the key number that justifies it]
 - [subscription] — [reason]
 
-**Why now:** [1–2 sentences referencing her upcoming calendar or life events]
+**Why now:** [1–2 sentences referencing {_USER_FIRST_NAME}'s upcoming calendar or life events]
 
 **Trade-offs to consider:** [1–2 sentences on any downside or uncertainty]
 

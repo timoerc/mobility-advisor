@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class UserPreferences(BaseModel):
+    name: str
     monthly_budget_eur: float
     flexibility_need: str
     sustainability_weight: float
@@ -15,6 +16,8 @@ class Subscription(BaseModel):
     provider: str
     product: str
     monthly_cost_eur: float
+    billing_cycle: str
+    next_renewal_date: str
     started: str
     notes: str
 
@@ -42,7 +45,7 @@ class Trip(BaseModel):
     origin: str
     destination: str
     distance_km: float
-    cost_eur: float
+    cost_eur: float | None = None
     provider: str
     booked_under: str | None = None
 
