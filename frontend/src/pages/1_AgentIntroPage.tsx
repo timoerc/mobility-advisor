@@ -15,7 +15,6 @@ export function AgentIntroPage() {
           window.clearInterval(typingTimer);
           return currentText;
         }
-
         return introText.slice(0, currentText.length + 1);
       });
     }, 28);
@@ -35,12 +34,16 @@ export function AgentIntroPage() {
         .length;
 
   return (
-    <div className="page-content agent-intro-page">
-      <div className="agent-heading-row">
-        <div className="agent-avatar" aria-hidden="true">
-          <img src="/assets/advisor.svg" alt="" />
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-5">
+        <div className="w-20 h-20 flex-shrink-0" aria-hidden="true">
+          <img
+            className="w-full h-full object-contain"
+            src="/assets/advisor.svg"
+            alt=""
+          />
         </div>
-        <h1>
+        <h1 className="text-3xl font-bold leading-tight m-0">
           {headline}
           {headlineIsTyping && (
             <span className="typing-cursor" aria-hidden="true" />
@@ -48,14 +51,14 @@ export function AgentIntroPage() {
         </h1>
       </div>
 
-      <div className="agent-copy">
-        <p className="intro-text">
+      <div className="flex flex-col gap-4">
+        <p className="text-gray-500 leading-relaxed m-0">
           {firstParagraph}
           {firstParagraphIsTyping && (
             <span className="typing-cursor" aria-hidden="true" />
           )}
         </p>
-        <p className="intro-text">
+        <p className="text-gray-500 leading-relaxed m-0">
           {secondParagraph}
           {isTyping && !headlineIsTyping && !firstParagraphIsTyping && (
             <span className="typing-cursor" aria-hidden="true" />

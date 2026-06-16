@@ -1,7 +1,33 @@
+# Environment & secrets
 .env
+.env.local
+.env.*.local
+
+# Python
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ADK / Google
+.adk/
+
+# Logs
+*.log
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.idea/
+.vscode/settings.json
+
+# Claude Code (local session data)
 .claude/
 .adk/
 CLAUDE.md

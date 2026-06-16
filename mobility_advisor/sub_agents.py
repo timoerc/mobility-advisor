@@ -20,7 +20,7 @@ from .tools import (
     load_user_preferences,
 )
 
-_MODEL = LiteLlm(model="openai/Openai GPT OSS 120B") # options: "openai/Openai GPT OSS 120B", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3.2 24B Instruct 2506"
+_MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
 _TODAY = date.today().isoformat()
 _DATA_DIR = Path(__file__).parent / "data"
 _prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
