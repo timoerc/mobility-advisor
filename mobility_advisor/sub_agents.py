@@ -58,7 +58,7 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 forecaster_agent = LlmAgent(
     name="forecaster",
     model=_MODEL,
-    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on her calendar.",
+    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
     instruction=f"""\
 You are the Forecaster agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
@@ -170,7 +170,7 @@ Structure your output exactly as follows:
 - [subscription] — [reason, with the key number that justifies it]
 - [subscription] — [reason]
 
-**Why now:** [1–2 sentences referencing her upcoming calendar or life events]
+**Why now:** [1–2 sentences referencing {_USER_FIRST_NAME}'s upcoming calendar or life events]
 
 **Trade-offs to consider:** [1–2 sentences on any downside or uncertainty]
 
