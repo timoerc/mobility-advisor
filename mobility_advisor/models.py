@@ -31,6 +31,7 @@ class CatalogOption(BaseModel):
     product: str
     mode: str
     monthly_cost_eur: float
+    billing_cycle: str = "monthly"
     discount_rule: str | None = None
     co2_g_per_km: int
 
