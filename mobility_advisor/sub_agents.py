@@ -18,7 +18,7 @@ from .tools import (
     load_user_preferences,
 )
 
-_MODEL = LiteLlm(model="openai/Openai GPT OSS 120B") # options: "openai/Openai GPT OSS 120B", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3.2 24B Instruct 2506"
+_MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
 _TODAY = date.today().isoformat()
 
 analyst_agent = LlmAgent(
@@ -120,7 +120,7 @@ Step 3 — output your recommendation in this exact structure:
   co2_saved_kg = co2_car_kg − co2_rail_kg
 Compute only over trips whose mode is "rail". Write: "By choosing rail over car, Maja avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
 
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {analysis}.
+**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]

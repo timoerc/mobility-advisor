@@ -1,0 +1,67 @@
+/* Animations used by LogoIntroPage and typewriter components */
+
+.logo-animation {
+  animation: logoReveal 2.4s ease both;
+}
+
+.typing-cursor {
+  animation: cursorBlink 0.9s steps(2, start) infinite;
+  border-right: 2px solid #ec0016;
+  margin-left: 2px;
+}
+
+/* SVG mask-based nav arrows */
+
+.nav-arrow {
+  display: block;
+  height: 22px;
+  margin: 0 auto;
+  mask: url("/assets/arrow.svg") center / contain no-repeat;
+  width: 22px;
+}
+
+.nav-arrow-dark {
+  background: #1f1f1f;
+}
+
+.nav-arrow-white {
+  background: #ffffff;
+}
+
+.nav-arrow-back {
+  transform: rotate(180deg);
+}
+
+@keyframes logoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes cursorBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+  }
+}

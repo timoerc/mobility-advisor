@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 
 type TypewriterHeadingProps = {
   text: string;
+  className?: string;
 };
 
-export function TypewriterHeading({ text }: TypewriterHeadingProps) {
+export function TypewriterHeading({
+  text,
+  className = "text-3xl font-bold leading-tight",
+}: TypewriterHeadingProps) {
   const [visibleText, setVisibleText] = useState("");
 
   useEffect(() => {
@@ -16,7 +20,6 @@ export function TypewriterHeading({ text }: TypewriterHeadingProps) {
           window.clearInterval(typingTimer);
           return currentText;
         }
-
         return text.slice(0, currentText.length + 1);
       });
     }, 30);
@@ -25,7 +28,7 @@ export function TypewriterHeading({ text }: TypewriterHeadingProps) {
   }, [text]);
 
   return (
-    <h1>
+    <h1 className={className}>
       {visibleText}
       {visibleText.length < text.length && (
         <span className="typing-cursor" aria-hidden="true" />

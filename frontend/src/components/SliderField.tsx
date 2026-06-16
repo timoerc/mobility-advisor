@@ -14,8 +14,8 @@ export function SliderField({
   onChange,
 }: SliderFieldProps) {
   return (
-    <label className="slider-field">
-      <span className="field-title">{label}</span>
+    <label className="flex flex-col gap-3">
+      <span className="font-semibold text-sm">{label}</span>
       <input
         type="range"
         min="0"
@@ -24,11 +24,11 @@ export function SliderField({
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       />
-      <span className="range-labels">
+      <div className="flex justify-between text-sm text-gray-500">
         <span>{minLabel}</span>
-        <strong>{value.toFixed(1)}</strong>
+        <strong className="text-gray-900">{value.toFixed(1)}</strong>
         <span>{maxLabel}</span>
-      </span>
+      </div>
     </label>
   );
 }
