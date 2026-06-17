@@ -11,7 +11,7 @@ from .models import (
 
 _DATA = Path(__file__).parent / "data"
 
-USE_MOCK_DATA = False
+USE_MOCK_DATA = True
 
 def load_user_preferences() -> dict:
     """Load Maja's personal mobility preferences and constraints from the mock data store.
