@@ -12,3 +12,8 @@ dependencies = [
     "pydantic>=2.13.4",
     "requests>=2.34.2",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

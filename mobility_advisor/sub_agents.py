@@ -21,6 +21,11 @@ from .tools import (
 )
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
+
+
+def build_model() -> LiteLlm:
+    """Return the shared LiteLlm singleton used by all pipeline agents."""
+    return _MODEL
 _TODAY = date.today().isoformat()
 _DATA_DIR = Path(__file__).parent / "data"
 _prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
