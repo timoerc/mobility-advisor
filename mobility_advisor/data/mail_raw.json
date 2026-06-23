@@ -1,0 +1,200 @@
+{
+  "emails": [
+    {
+      "id": "mail_001",
+      "received_datetime": "2026-05-14T09:23:00Z",
+      "sender_email": "noreply@deutschebahn.com",
+      "sender_name": "Deutsche Bahn",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 793069274902)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Maja Hoffmann,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 14.05.2026 um 09:21 Uhr wurde der Auftrag mit der Auftragsnummer 793069274902 wie folgt gebucht:\n\nLeistungen\nSuper Sparpreis, 2. Klasse\nvon Frankfurt(Main)Hbf, 25.08.2026 07:04 Uhr\nnach Berlin Hbf, 25.08.2026 10:56 Uhr\nZug: ICE 1091\nSitzplatz: Wagen 5, Platz 42\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 29,90 EUR wird per Kreditkarte durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_002",
+      "received_datetime": "2026-05-22T14:05:00Z",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "sender_name": "Deutsche Bahn Buchungsservice",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 339012045840)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Maja Hoffmann,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 22.05.2026 um 14:03 Uhr wurde der Auftrag mit der Auftragsnummer 339012045840 wie folgt gebucht:\n\nLeistungen\nFlexpreis, 2. Klasse\nvon Frankfurt(Main)Hbf, 24.08.2026 11:04 Uhr\nnach Hamburg Hbf, 24.08.2026 14:02 Uhr\nZug: ICE 583\nSitzplatz: Wagen 3, Platz 17\n\nRückreise\nFlexpreis, 2. Klasse\nvon Hamburg Hbf, 24.08.2026 16:04 Uhr\nnach Frankfurt(Main)Hbf, 24.08.2026 19:01 Uhr\nZug: ICE 872\nSitzplatz: Wagen 7, Platz 33\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 118,00 EUR wird per Kreditkarte durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_003",
+      "received_datetime": "2026-06-01T10:14:00Z",
+      "sender_email": "maja.hoffmann@outlook.com",
+      "sender_name": "Maja Hoffmann",
+      "subject": "Fwd: Buchungsbestätigung Deutsche Bahn (Auftrag: 897331166098)",
+      "body_text": "---------- Weitergeleitete Nachricht ----------\nVon: noreply@deutschebahn.com\nAn: maja.hoffmann@outlook.com\nBetreff: Buchungsbestätigung Deutsche Bahn (Auftrag: 897331166098)\n\nHier Ihre Buchungsbestätigung.\n\nHallo Frau Maja Hoffmann,\n\nAm 01.06.2026 um 09:58 Uhr wurde der Auftrag mit der Auftragsnummer 897331166098 wie folgt gebucht:\n\nLeistungen\nSuper Sparpreis Young, 2. Klasse\nvon Frankfurt(Main)Hbf, 07.07.2026 06:02 Uhr\nnach Nürnberg Hbf, 07.07.2026 07:49 Uhr\nZug: ICE 1623\nSitzplatz: Wagen 2, Platz 55\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 19,90 EUR wird per Kreditkarte durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_004",
+      "received_datetime": "2026-06-01T10:15:00Z",
+      "sender_email": "maja.hoffmann@outlook.com",
+      "sender_name": "Maja Hoffmann",
+      "subject": "Fwd: Buchungsbestätigung Deutsche Bahn (Auftrag: 636984565104)",
+      "body_text": "---------- Weitergeleitete Nachricht ----------\nVon: noreply@deutschebahn.com\nAn: maja.hoffmann@outlook.com\nBetreff: Buchungsbestätigung Deutsche Bahn (Auftrag: 636984565104)\n\nHier Ihre Buchungsbestätigung.\n\nHallo Frau Maja Hoffmann,\n\nAm 01.06.2026 um 10:00 Uhr wurde der Auftrag mit der Auftragsnummer 636984565104 wie folgt gebucht:\n\nLeistungen\nSuper Sparpreis Young, 2. Klasse\nvon Nürnberg Hbf, 08.07.2026 05:58 Uhr\nnach Friedrichshafen Stadt, 08.07.2026 07:41 Uhr\nZug: RE 57 / IRE 3\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 24,90 EUR wird per Kreditkarte durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_005",
+      "received_datetime": "2026-06-01T10:16:00Z",
+      "sender_email": "maja.hoffmann@outlook.com",
+      "sender_name": "Maja Hoffmann",
+      "subject": "Fwd: Buchungsbestätigung Deutsche Bahn (Auftrag: 598453290506)",
+      "body_text": "---------- Weitergeleitete Nachricht ----------\nVon: buchungsbestaetigung@bahn.de\nAn: maja.hoffmann@outlook.com\nBetreff: Buchungsbestätigung Deutsche Bahn (Auftrag: 598453290506)\n\nHier Ihre Buchungsbestätigung.\n\nHallo Frau Maja Hoffmann,\n\nAm 30.05.2026 um 14:43 Uhr wurde der Auftrag mit der Auftragsnummer 598453290506 wie folgt gebucht:\n\nLeistungen\nFlexpreis, 2. Klasse\nvon Frankfurt(Main)Hbf, 03.08.2026 06:55 Uhr\nnach München Hbf, 03.08.2026 09:37 Uhr\nZug: ICE 727\nSitzplatz: Wagen 4, Platz 28\n\nRückreise\nFlexpreis, 2. Klasse\nvon München Hbf, 03.08.2026 20:03 Uhr\nnach Frankfurt(Main)Hbf, 03.08.2026 22:46 Uhr\nZug: ICE 1208\nSitzplatz: Wagen 6, Platz 11\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 97,00 EUR wird per Kreditkarte durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_006",
+      "received_datetime": "2026-06-03T08:40:00Z",
+      "sender_email": "noreply@booking.flixbus.com",
+      "sender_name": "FlixBus",
+      "subject": "Buchungsbestätigung #3142532076",
+      "body_text": "Deine Buchung ist bestätigt.\n\nHallo Maja Hoffmann,\n\ndanke, dass Du Dich für eine Reise mit uns entschieden hast.\n\nBuchungsnummer: 3142532076\n\nDeine Reise:\nFrankfurt am Main (ZOB) → Berlin (ZOB Funkturm)\nDatum: 11.08.2026\nAbfahrt: 08:00 Uhr | Ankunft: 13:30 Uhr\n\nReisende: Maja Hoffmann\n\nDen genauen Preis findest Du in der beigefügten Rechnung.",
+      "has_attachment": true,
+      "attachments": [
+        {"filename": "Rechnung_3142532076.pdf", "type": "pdf"}
+      ]
+    },
+    {
+      "id": "mail_007",
+      "received_datetime": "2026-06-03T08:41:00Z",
+      "sender_email": "noreply@flixbus.com",
+      "sender_name": "FlixBus Rechnungsservice",
+      "subject": "Deine FlixBus Rechnung #3142532076",
+      "body_text": "Hallo Maja Hoffmann,\n\nim Anhang findest Du die Rechnung für Deine Buchung #3142532076.\n\nRechnungsbetrag: 18,99 EUR\nStrecke: Frankfurt am Main → Berlin\nReisedatum: 11.08.2026\n\nVielen Dank für Deine Buchung.",
+      "has_attachment": true,
+      "attachments": [
+        {"filename": "FlixBus_Rechnung_3142532076.pdf", "type": "pdf"}
+      ]
+    },
+    {
+      "id": "mail_008",
+      "received_datetime": "2026-05-10T16:22:00Z",
+      "sender_email": "expedia@de.expediamail.com",
+      "sender_name": "Expedia",
+      "subject": "Expedia: Bestätigung der Flugbuchung – Zurich, Switzerland (ZRH) – Sa., 11. Sep. (Reiseplannr. 72153772575223)",
+      "body_text": "Ihre Flugbuchung ist bestätigt.\n\nHallo Maja Hoffmann,\n\nIhre Buchung ist abgeschlossen.\n\nReiseplan-Nr.: 72153772575223\n\nHinflug:\nFrankfurt (FRA) → Zürich (ZRH)\nDatum: Samstag, 11. September 2026\nAbflug: 07:15 Uhr | Ankunft: 08:20 Uhr\nFlug: LH 1188 | Lufthansa\nKlasse: Economy\n\nRückflug:\nZürich (ZRH) → Frankfurt (FRA)\nDatum: Sonntag, 12. September 2026\nAbflug: 19:45 Uhr | Ankunft: 20:55 Uhr\nFlug: LH 1191 | Lufthansa\nKlasse: Economy\n\nPassagier: Maja Hoffmann\nGesamtpreis: 214,80 EUR (inkl. Steuern und Gebühren)",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_009",
+      "received_datetime": "2026-04-28T11:05:00Z",
+      "sender_email": "buchungsbestaetigung@lastminute.de",
+      "sender_name": "lastminute.de",
+      "subject": "lastminute.de Flugbuchung Basel - Athen mit EasyJet",
+      "body_text": "Athen wartet auf Sie!\n\nGuten Tag Maja Hoffmann,\n\nIhre Buchung ist bestätigt.\n\nBuchungsreferenz: LMDE-8821047\n\nHinflug:\nBasel/Mulhouse (BSL) → Athen (ATH)\nDatum: Montag, 31. August 2026\nAbflug: 06:30 Uhr | Ankunft: 10:15 Uhr\nFlug: U2 2631 | EasyJet\nKlasse: Economy\n\nRückflug:\nAthen (ATH) → Basel/Mulhouse (BSL)\nDatum: Sonntag, 6. September 2026\nAbflug: 11:40 Uhr | Ankunft: 13:30 Uhr\nFlug: U2 2632 | EasyJet\nKlasse: Economy\n\nPassagier: Maja Hoffmann\nGesamtpreis: 189,98 EUR",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_010",
+      "received_datetime": "2026-07-15T13:30:00Z",
+      "sender_email": "reservations@enterprise.de",
+      "sender_name": "Enterprise Rent-A-Car",
+      "subject": "Ihre Mietwagen-Reservierungsbestätigung – Enterprise Rent-A-Car",
+      "body_text": "Vielen Dank für Ihre Reservierung bei Enterprise Rent-A-Car.\n\nGuten Tag Maja Hoffmann,\n\nReservierungsnummer: ENT-DE-20260803-4471\n\nAbholung:\nStandort: Enterprise Frankfurt Flughafen Terminal 1\nDatum: Montag, 03. August 2026\nUhrzeit: 08:30 Uhr\n\nRückgabe:\nStandort: Enterprise München Hauptbahnhof\nDatum: Montag, 03. August 2026\nUhrzeit: 19:00 Uhr\n\nFahrzeugkategorie: Kompaktklasse (z.B. VW Golf oder ähnlich)\nStrecke: Frankfurt → München (One-Way)\n\nMietpreis: 74,50 EUR (inkl. MwSt., exkl. Kraftstoff)\nVersicherungspaket: Basis-Schutz inklusive",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_011",
+      "received_datetime": "2026-08-17T20:14:00Z",
+      "sender_email": "noreply@miles-mobility.com",
+      "sender_name": "MILES Mobility",
+      "subject": "Deine MILES Fahrtbestätigung – 17. August 2026",
+      "body_text": "Deine Fahrt ist abgeschlossen.\n\nHallo Maja,\n\nFahrtdetails:\nStart: 17.08.2026, 16:45 Uhr | Ostbahnhof Frankfurt\nEnde: 17.08.2026, 17:12 Uhr | Sachsenhausen, Frankfurt\nFahrzeug: VW Golf (F-MI 4421)\nStrecke: ca. 6,3 km\nDauer: 27 Minuten\n\nKosten:\nFahrzeit: 27 min x 0,39 EUR = 10,53 EUR\nGesamtbetrag: 10,53 EUR",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_012",
+      "received_datetime": "2026-07-20T09:55:00Z",
+      "sender_email": "buchung@lufthansa.com",
+      "sender_name": "Lufthansa",
+      "subject": "Ihre Buchungsbestätigung – Lufthansa Flug LH 100 Frankfurt nach New York",
+      "body_text": "Ihre Buchung ist bestätigt.\n\nSehr geehrte Frau Hoffmann,\n\nBuchungscode (PNR): LHFNK7\n\nHinflug:\nFrankfurt (FRA) → New York John F. Kennedy (JFK)\nDatum: Samstag, 05. September 2026\nAbflug: 10:20 Uhr | Ankunft: 13:05 Uhr (Ortszeit)\nFlug: LH 100 | Lufthansa\nKlasse: Economy\nSitzplatz: 34A\n\nRückflug:\nNew York John F. Kennedy (JFK) → Frankfurt (FRA)\nDatum: Freitag, 12. September 2026\nAbflug: 22:15 Uhr | Ankunft: 12:10 Uhr +1\nFlug: LH 401 | Lufthansa\nKlasse: Economy\nSitzplatz: 31C\n\nPassagier: Maja Hoffmann\nGesamtpreis: 687,40 EUR",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_013",
+      "received_datetime": "2026-06-10T07:14:00Z",
+      "sender_email": "reisebegleitung@deutschebahn.com",
+      "sender_name": "Deutsche Bahn Reisebegleitung",
+      "subject": "Änderung Ihrer Abfahrt",
+      "body_text": "Änderung Ihrer Abfahrt\n\nGuten Morgen Maja Hoffmann,\n\ndie Abfahrt Ihrer heutigen Reise mit ICE 78 von Freiburg(Breisgau) Hbf nach Karlsruhe Hbf um 07:48 Uhr verspätet sich um 5 Minuten. Voraussichtliche Abfahrtzeit ist 07:53 Uhr.\n\nMit freundlichen Grüßen\nIhre Deutsche Bahn\n\nHinterlegte Verbindung\nStand: 10. Jun. 2026 07:14 Uhr\n\n07:48 Freiburg(Breisgau) Hbf Gl. 1\n07:53 ICE 78 Richtung Hamburg-Altona\n\n08:49 Karlsruhe Hbf Gl. 3",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_014",
+      "received_datetime": "2026-06-08T11:30:00Z",
+      "sender_email": "info@vermieter-berlin.de",
+      "sender_name": "Immobilienverwaltung Mitte GmbH",
+      "subject": "Ihr neuer Mietvertrag",
+      "body_text": "Sehr geehrte Frau Hoffmann,\n\nanbei finden Sie Ihren neuen Mietvertrag für Ihre neue Wohnung in Berlin-Mitte.\n\nObjekt: Linienstraße 42, 10115 Berlin-Mitte\nMietbeginn: 01. September 2026\nMonatliche Miete: 1.650,00 EUR (kalt)\nNebenkosten: ca. 280,00 EUR\n\nBitte unterzeichnen Sie den beigefügten Mietvertrag bis zum 20. Juni 2026.\n\nMit freundlichen Grüßen\nImmobilienverwaltung Mitte GmbH",
+      "has_attachment": true,
+      "attachments": [
+        {"filename": "Mietvertrag_Hoffmann_Berlin_Mitte.pdf", "type": "pdf"}
+      ]
+    },
+    {
+      "id": "mail_015",
+      "received_datetime": "2026-06-09T14:20:00Z",
+      "sender_email": "noreply@teams.microsoft.com",
+      "sender_name": "Microsoft Teams",
+      "subject": "Einladung: Eventuell Abendessen mit CEO talentdirect",
+      "body_text": "Sie wurden zu einem Meeting eingeladen.\n\nBetreff: Eventuell Abendessen mit CEO talentdirect\nDatum: Donnerstag, 09. Juli 2026\nUhrzeit: 17:00 - 19:00 Uhr\nOrt: Köln Atawitsch Burger Restaurant\n\nBitte bestätigen Sie Ihre Teilnahme.",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_016",
+      "received_datetime": "2026-06-10T08:00:00Z",
+      "sender_email": "noreply@amazon.de",
+      "sender_name": "Amazon.de",
+      "subject": "Zugestellt: 1 Artikel | Bestellung # 302-7516524-0211568",
+      "body_text": "Hallo Maja Hoffmann,\n\nIhr Paket wurde zugestellt.\n\nBestellung #302-7516524-0211568\n1x Artikel wurde heute geliefert.",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_017",
+      "received_datetime": "2026-06-10T09:00:00Z",
+      "sender_email": "infomail@wiso.uni-koeln.de",
+      "sender_name": "WiSo-Fakultät",
+      "subject": "Infomail der WiSo-Fakultät vom 10.06.2026",
+      "body_text": "Liebe Masterstudierende,\n\nanbei die wöchentlichen Informationen der WiSo-Fakultät.\n\n- Prüfungsanmeldung: Frist endet am 20.06.2026\n- Neue Lehrveranstaltungen im Wintersemester\n- Karrieremesse am 15.07.2026",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_018",
+      "received_datetime": "2026-06-11T10:45:00Z",
+      "sender_email": "noreply@ilias.uni-koeln.de",
+      "sender_name": "ILIAS UzK",
+      "subject": "[ILIAS UzK] Update: Next Week's Session Time and Group Registration",
+      "body_text": "Dear students,\n\nplease note that next week's session has been moved to Thursday at 14:00.\n\nGroup registration for the project work is now open via ILIAS.",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_019",
+      "received_datetime": "2026-06-12T16:00:00Z",
+      "sender_email": "noreply@verify.service.com",
+      "sender_name": "Verify Service",
+      "subject": "Verify email",
+      "body_text": "Hello,\n\nyou receive this email because someone registered with this email address.\n\nPlease verify your email address by clicking the link below.",
+      "has_attachment": false,
+      "attachments": []
+    }
+  ]
+}
