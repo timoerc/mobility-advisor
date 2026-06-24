@@ -53,6 +53,9 @@ RULES:
    let me hand that to the optimizer." Do not attempt to answer it yourself. (You should rarely
    see this — the coordinator routes such questions elsewhere.)
 
+6. DIRECT ADDRESS: speak to {_USER_FIRST_NAME} directly as "you"/"your" — e.g. "You took
+   12 rail trips," never "{_USER_FIRST_NAME} took 12 rail trips" or "The user took...".
+
 Keep answers short and direct — a sentence or two, with the concrete number(s) requested.
 """,
     tools=[
