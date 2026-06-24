@@ -1,25 +1,11 @@
 from google.adk.agents import SequentialAgent
 
-from .sub_agents import (
-    analyst_agent,
-    annual_analyst_agent,
-    annual_communicator_agent,
-    annual_forecaster_agent,
-    annual_optimizer_agent,
-    communicator_agent,
-    forecaster_agent,
-    optimizer_agent,
-)
+from .annual_pipeline import annual_report_pipeline  # noqa: F401 — wired into coordinator AgentTool on merge
+from .sub_agents import analyst_agent, communicator_agent, forecaster_agent, optimizer_agent
 
 # TODO (Tier 2): add persistent user state, RAG over contracts catalog, calendar-driven forecasting, constraint capture
 root_agent = SequentialAgent(
     name="mobility_advisor_pipeline",
     description="Tier 1 Mobility Advisor: analyze → forecast → optimize → communicate.",
     sub_agents=[analyst_agent, forecaster_agent, optimizer_agent, communicator_agent],
-)
-
-annual_report_agent = SequentialAgent(
-    name="annual_report_pipeline",
-    description="Annual mobility review: analyze → forecast → optimize → annual report.",
-    sub_agents=[annual_analyst_agent, annual_forecaster_agent, annual_optimizer_agent, annual_communicator_agent],
 )
