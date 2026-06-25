@@ -78,7 +78,10 @@ def _get_token() -> str:
 
 
 def fetch_new_mails(token: str) -> list[dict]:
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Prefer": 'outlook.body-content-type="text"',
+    }
 
     if _DELTA_LINK_FILE.exists():
         url = _DELTA_LINK_FILE.read_text(encoding="utf-8").strip()
