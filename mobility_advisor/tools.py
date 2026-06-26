@@ -24,7 +24,7 @@ USE_MOCK_DATA = True
 def load_user_preferences() -> dict:
     """Load Maja's personal mobility preferences and constraints from the mock data store.
 
-    Returns a dict with keys: monthly_budget_eur (float), flexibility_need (str: low/medium/high),
+    Returns a dict with keys: flexibility_need (str: low/medium/high),
     sustainability_weight (float 0-1), values_time_over_money (bool), and notes (str).
     """
     raw = json.loads((_DATA / "user_preferences.json").read_text())

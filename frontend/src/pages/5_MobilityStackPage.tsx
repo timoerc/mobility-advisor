@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SubscriptionCard } from "../components/SubscriptionCard";
 import type {
   CostStructure,
@@ -64,11 +64,13 @@ function SubscriptionForm({
   onFormChange,
   onSave,
   onCancel,
+  saveLabel = "Add",
 }: {
   form: FormState;
   onFormChange: (f: FormState) => void;
   onSave: () => void;
   onCancel: () => void;
+  saveLabel?: string;
 }) {
   const set = (patch: Partial<FormState>) =>
     onFormChange({ ...form, ...patch });
@@ -360,7 +362,7 @@ function SubscriptionForm({
           disabled={!form.provider || !form.product}
           className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-lg border-0 cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Add
+          {saveLabel}
         </button>
       </div>
     </div>
@@ -373,22 +375,36 @@ function SectionAccordion({
   subscriptions,
   onAdd,
   onRemove,
+  onEdit,
+  editingEntry,
+  onEditDone,
 }: {
   category: SubscriptionCategory;
   label: string;
   subscriptions: SubscriptionEntry[];
   onAdd: (entry: SubscriptionEntry) => void;
   onRemove: (id: string) => void;
+  onEdit: (entry: SubscriptionEntry) => void;
+  editingEntry: SubscriptionEntry | null;
+  onEditDone: (entryToRestore: SubscriptionEntry | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [addingForm, setAddingForm] = useState<FormState | null>(null);
+  const editingId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!editingEntry) return;
+    editingId.current = editingEntry.id;
+    setOpen(true);
+    setAddingForm({ ...editingEntry });
+  }, [editingEntry]);
 
   const sectionEntries = subscriptions.filter((s) => s.category === category);
 
   const handleSave = () => {
     if (!addingForm) return;
     const entry: SubscriptionEntry = {
-      id: crypto.randomUUID(),
+      id: editingId.current ?? crypto.randomUUID(),
       category,
       cost_structure: addingForm.cost_structure,
       provider: addingForm.provider ?? "",
@@ -416,6 +432,20 @@ function SectionAccordion({
     };
     onAdd(entry);
     setAddingForm(null);
+    if (editingId.current) {
+      editingId.current = null;
+      onEditDone(null);
+    }
+  };
+
+  const handleCancel = () => {
+    const wasEditing = !!editingId.current;
+    const toRestore = wasEditing ? editingEntry : null;
+    setAddingForm(null);
+    if (wasEditing) {
+      editingId.current = null;
+      onEditDone(toRestore);
+    }
   };
 
   return (
@@ -441,7 +471,12 @@ function SectionAccordion({
       {open && (
         <div className="border-t border-gray-100 p-4 flex flex-col gap-3 bg-white">
           {sectionEntries.map((entry) => (
-            <SubscriptionCard key={entry.id} entry={entry} onRemove={onRemove} />
+            <SubscriptionCard
+              key={entry.id}
+              entry={entry}
+              onRemove={onRemove}
+              onEdit={onEdit}
+            />
           ))}
 
           {addingForm ? (
@@ -449,7 +484,8 @@ function SectionAccordion({
               form={addingForm}
               onFormChange={setAddingForm}
               onSave={handleSave}
-              onCancel={() => setAddingForm(null)}
+              onCancel={handleCancel}
+              saveLabel={editingId.current ? "Save" : "Add"}
             />
           ) : (
             <button
@@ -470,11 +506,34 @@ export function MobilityStackPage({
   subscriptions,
   onChange,
 }: MobilityStackPageProps) {
+  const [loading, setLoading] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<SubscriptionEntry | null>(null);
+  const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (subscriptions.length > 0 || fetchedRef.current) return;
+    fetchedRef.current = true;
+    setLoading(true);
+    fetch("/api/detected-subscriptions.json")
+      .then((r) => r.json())
+      .then((data: SubscriptionEntry[]) => {
+        onChange(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const add = (entry: SubscriptionEntry) =>
     onChange([...subscriptions, entry]);
 
   const remove = (id: string) =>
     onChange(subscriptions.filter((s) => s.id !== id));
+
+  const handleEdit = (entry: SubscriptionEntry) => {
+    remove(entry.id);
+    setEditingEntry(entry);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -483,8 +542,9 @@ export function MobilityStackPage({
           Current mobility stack
         </h1>
         <p className="text-gray-500 leading-relaxed m-0">
-          Add the subscriptions and memberships you currently hold. Open a
-          section and click "+ Add service" to start.
+          {loading
+            ? "Scanning your connected accounts for active subscriptions…"
+            : "We've detected your active subscriptions from your connected accounts. Review, edit, or add more."}
         </p>
       </div>
 
@@ -497,13 +557,19 @@ export function MobilityStackPage({
             subscriptions={subscriptions}
             onAdd={add}
             onRemove={remove}
+            onEdit={handleEdit}
+            editingEntry={editingEntry?.category === category ? editingEntry : null}
+            onEditDone={(entryToRestore) => {
+              if (entryToRestore) onChange([...subscriptions, entryToRestore]);
+              setEditingEntry(null);
+            }}
           />
         ))}
       </div>
 
-      {subscriptions.length === 0 && (
+      {!loading && subscriptions.length === 0 && (
         <p className="text-xs text-gray-400 text-center">
-          No services added yet — skip to continue with an empty stack.
+          No services detected — skip to continue with an empty stack.
         </p>
       )}
     </div>

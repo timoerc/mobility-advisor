@@ -8,7 +8,6 @@ import { PersonalProfilePage } from "./pages/2_PersonalProfilePage";
 import { LocationCommutePage } from "./pages/3_LocationCommutePage";
 import { CarProfilePage } from "./pages/4_CarProfilePage";
 import { MobilityStackPage } from "./pages/5_MobilityStackPage";
-import { BudgetPage } from "./pages/6_BudgetPage";
 import { PrioritiesPage } from "./pages/7_PrioritiesPage";
 import { IntegrationsPage } from "./pages/8_IntegrationsPage";
 import { NotesPage } from "./pages/9_NotesPage";
@@ -35,7 +34,6 @@ const initialPreferences: OnboardingPreferences = {
     monthly_km_estimate: null,
   },
   subscriptions: [],
-  monthly_budget_eur: 100,
   priorities: {
     cost: 1 / 3,
     time: 1 / 3,
@@ -45,6 +43,9 @@ const initialPreferences: OnboardingPreferences = {
     outlook_connected: false,
     gmail_connected: false,
     calendar_connected: false,
+    db_connected: false,
+    miles_connected: false,
+    deutschlandticket_connected: false,
   },
   notes: "",
 };
@@ -71,8 +72,17 @@ const stepSkipDefaults: Partial<Record<number, Partial<OnboardingPreferences>>> 
       monthly_km_estimate: null,
     },
   },
-  5: { subscriptions: [] },
-  6: { monthly_budget_eur: 80 },
+  5: {
+    integrations: {
+      outlook_connected: false,
+      gmail_connected: false,
+      calendar_connected: false,
+      db_connected: false,
+      miles_connected: false,
+      deutschlandticket_connected: false,
+    },
+  },
+  6: { subscriptions: [] },
   7: {
     priorities: {
       cost: 1 / 3,
@@ -80,17 +90,10 @@ const stepSkipDefaults: Partial<Record<number, Partial<OnboardingPreferences>>> 
       sustainability: 1 / 3,
     },
   },
-  8: {
-    integrations: {
-      outlook_connected: false,
-      gmail_connected: false,
-      calendar_connected: false,
-    },
-  },
-  9: { notes: "" },
+  8: { notes: "" },
 };
 
-const totalSteps = 11;
+const totalSteps = 10;
 
 function buildExportJson(p: OnboardingPreferences) {
   return {
@@ -100,7 +103,6 @@ function buildExportJson(p: OnboardingPreferences) {
     car: p.car,
     subscriptions: p.subscriptions,
     preferences: {
-      monthly_budget_eur: p.monthly_budget_eur,
       priorities: p.priorities,
       notes: p.notes,
     },
@@ -145,7 +147,7 @@ function App() {
     return <LogoIntroPage />;
   }
 
-  const showSkipButton = step >= 2 && step <= 9;
+  const showSkipButton = step >= 2 && step <= 8;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
@@ -203,19 +205,19 @@ function App() {
         )}
 
         {step === 5 && (
-          <MobilityStackPage
-            subscriptions={preferences.subscriptions}
-            onChange={(subscriptions) =>
-              setPreferences((c) => ({ ...c, subscriptions }))
+          <IntegrationsPage
+            integrations={preferences.integrations}
+            onChange={(integrations) =>
+              setPreferences((c) => ({ ...c, integrations }))
             }
           />
         )}
 
         {step === 6 && (
-          <BudgetPage
-            monthlyBudgetEur={preferences.monthly_budget_eur}
-            onChange={(monthly_budget_eur) =>
-              setPreferences((c) => ({ ...c, monthly_budget_eur }))
+          <MobilityStackPage
+            subscriptions={preferences.subscriptions}
+            onChange={(subscriptions) =>
+              setPreferences((c) => ({ ...c, subscriptions }))
             }
           />
         )}
@@ -230,22 +232,13 @@ function App() {
         )}
 
         {step === 8 && (
-          <IntegrationsPage
-            integrations={preferences.integrations}
-            onChange={(integrations) =>
-              setPreferences((c) => ({ ...c, integrations }))
-            }
-          />
-        )}
-
-        {step === 9 && (
           <NotesPage
             notes={preferences.notes}
             onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
           />
         )}
 
-        {step === 10 && (
+        {step === 9 && (
           <FinalPage
             onDownload={() =>
               downloadJson("user_profile.json", buildExportJson(preferences))

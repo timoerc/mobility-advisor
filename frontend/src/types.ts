@@ -39,6 +39,7 @@ export type SubscriptionCategory =
 
 export type SubscriptionEntry = {
   id: string;
+  detected?: boolean;
   category: SubscriptionCategory;
   cost_structure: CostStructure;
   provider: string;
@@ -63,9 +64,14 @@ export type SubscriptionEntry = {
 };
 
 export type Integrations = {
+  // email & calendar
   outlook_connected: boolean;
   gmail_connected: boolean;
   calendar_connected: boolean;
+  // mobility providers
+  db_connected: boolean;
+  miles_connected: boolean;
+  deutschlandticket_connected: boolean;
 };
 
 export type OnboardingPreferences = {
@@ -74,7 +80,6 @@ export type OnboardingPreferences = {
   commute: CommutePattern;
   car: CarProfile;
   subscriptions: SubscriptionEntry[];
-  monthly_budget_eur: number;
   priorities: PriorityWeights;
   integrations: Integrations;
   notes: string;
