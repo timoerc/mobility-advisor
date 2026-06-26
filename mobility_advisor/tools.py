@@ -1,6 +1,7 @@
 import calendar
 import json
 import os
+import re
 import shutil
 import tempfile
 from datetime import date, datetime
@@ -192,13 +193,31 @@ def _resolve_unique_match(
 ) -> tuple[dict | None, str | None]:
     """Find exactly one candidate whose given fields contain needle as a case-insensitive substring.
 
+    Falls back to token-overlap matching (≥ 2 alphanumeric words in common) when substring
+    matching yields no results, to handle language/notation variants such as "2nd class" vs
+    "2. Klasse" introduced by LLM paraphrasing.
+
     Returns (match, None) on exactly one match. Returns (None, error_message) if zero or
     more than one candidate matches — callers must treat both as failure, never guess.
     """
     needle_lower = needle.lower()
+
+    # Primary: case-insensitive substring
     matches = [
         c for c in candidates if any(needle_lower in str(c.get(f, "")).lower() for f in fields)
     ]
+
+    # Fallback: token overlap — handles variants like "2nd class" vs "2. Klasse"
+    if not matches:
+        needle_tokens = set(re.findall(r'\w+', needle_lower))
+        matches = [
+            c for c in candidates
+            if any(
+                len(needle_tokens & set(re.findall(r'\w+', str(c.get(f, "")).lower()))) >= 2
+                for f in fields
+            )
+        ]
+
     if not matches:
         return None, f"no match for '{needle}'"
     if len(matches) > 1:

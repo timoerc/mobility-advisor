@@ -145,3 +145,22 @@ def test_no_stray_temp_file_after_success_or_error(isolated_data_dir):
     tools.apply_subscription_change(action="remove", target_subscription="MILES+ Abo")
     tools.apply_subscription_change(action="remove", target_subscription="Nonexistent")
     assert not list(isolated_data_dir.glob("*.tmp"))
+
+
+def test_token_fallback_matches_english_class_notation(isolated_data_dir):
+    # Reproduces the session failure: coordinator translated "2. Klasse" → "2nd class"
+    result = tools.apply_subscription_change(
+        action="replace",
+        target_subscription="BahnCard 50",
+        new_product="BahnCard 100 (2nd class)",
+        as_of=date(2026, 6, 26),
+    )
+    assert result["status"] == "applied", result["error"]
+    assert result["added"][0]["product"] == "BahnCard 100 (2. Klasse)"
+
+
+def test_token_fallback_no_false_positive_between_bahncard_tiers(isolated_data_dir):
+    # "BahnCard 25" must not fall back to "BahnCard 50" (only 1 token in common: "bahncard")
+    result = tools.apply_subscription_change(action="add", new_product="BahnCard 25 (2nd class)")
+    assert result["status"] == "applied", result["error"]
+    assert result["added"][0]["product"] == "BahnCard 25 (2. Klasse)"
