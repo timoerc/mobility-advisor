@@ -57,6 +57,8 @@ class TravelHistory(BaseModel):
 
 class CalendarEvent(BaseModel):
     date: str
+    time_start: str | None = None
+    time_end: str | None = None
     type: str
     description: str
     location: str | None = None

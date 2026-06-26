@@ -35,6 +35,8 @@ Return a JSON object with exactly these fields:
       "origin": "full station or city name",
       "destination": "full station or city name",
       "departure_time": "HH:MM or null",
+      "arrival_time": "HH:MM or null",
+      "duration_min": integer or null,
       "cost_eur": float or null,
       "provider": "provider name",
       "ticket_type": "ticket type or null (rail examples: Sparpreis, Flexpreis, Super Sparpreis, Super Sparpreis Young, Deutschlandticket, BahnCard 50 — use exact wording from the email if it matches one of these, otherwise use the exact wording from the email as-is; flight: Economy / Business; bus: Standard; car: daily rate / one-way)",
@@ -54,6 +56,8 @@ Rules:
 - For MILES/car-share: mode = "car_share"
 - For Enterprise/Sixt/Hertz: mode = "car_rental"
 - For life events (Mietvertrag etc.): return {{"trips": []}}
+- Set arrival_time if mentioned in the email (HH:MM), otherwise null
+- Calculate duration_min from departure_time and arrival_time if both are available, otherwise null
 - Always return valid JSON, nothing else
 
 Email category: {category}
@@ -124,7 +128,7 @@ def extract_trip(mail: dict) -> list[dict]:
     prompt = EXTRACTION_PROMPT.format(
         category=mail.get("category", "unknown"),
         subject=mail["subject"],
-        body=mail["body_text"][:3000],
+        body=mail["body_text"][:10000],
     )
 
     response = requests.post(
