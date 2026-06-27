@@ -43,7 +43,7 @@ Return a JSON object with exactly these fields:
       "type": "mode-specific — see rules below; use null (JSON null, not the string Null) when not determinable",
       "size": "mode-specific — see rules below; use null when not applicable or not determinable",
       "distance_km": null,
-      "co2_g_per_km": null,
+      "co2_emission_kg": null,
       "booked_under": null
     }}
   ]
