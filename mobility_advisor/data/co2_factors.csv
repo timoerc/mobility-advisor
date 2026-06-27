@@ -1,0 +1,84 @@
+mode,type,size,kg_co2e_per_km
+Bus,Coach,Null,0.02776
+Bus,Local Bus,Null,0.10385
+Bus,Null,Null,0.02776
+Car_private,Diesel,Small Car,0.1434
+Car_private,Diesel,Medium Car,0.17174
+Car_private,Diesel,Large Car,0.21007
+Car_private,Diesel,Null,0.17304
+Car_private,Petrol,Small Car,0.14308
+Car_private,Petrol,Medium Car,0.17474
+Car_private,Petrol,Large Car,0.26828
+Car_private,Petrol,Null,0.16272
+Car_private,Hybrid,Small Car,0.11413
+Car_private,Hybrid,Medium Car,0.11724
+Car_private,Hybrid,Large Car,0.1565
+Car_private,Hybrid,Null,0.12825
+Car_private,Plug-in Hybrid,Small Car,0.05669
+Car_private,Plug-in Hybrid,Medium Car,0.0882
+Car_private,Plug-in Hybrid,Large Car,0.1143
+Car_private,Plug-in Hybrid,Null,0.10461
+Car_private,Electric,Small Car,0.03688
+Car_private,Electric,Medium Car,0.03882
+Car_private,Electric,Large Car,0.04205
+Car_private,Electric,Null,0.04047
+Car_private,Null,Small Car,0.14322
+Car_private,Null,Medium Car,0.17322
+Car_private,Null,Large Car,0.22678
+Car_private,Null,Null,0.16725
+Car_Sharing,Diesel,Small Car,0.1434
+Car_Sharing,Diesel,Medium Car,0.17174
+Car_Sharing,Diesel,Large Car,0.21007
+Car_Sharing,Diesel,Null,0.17304
+Car_Sharing,Petrol,Small Car,0.14308
+Car_Sharing,Petrol,Medium Car,0.17474
+Car_Sharing,Petrol,Large Car,0.26828
+Car_Sharing,Petrol,Null,0.16272
+Car_Sharing,Fuel,Small Car,0.14324
+Car_Sharing,Fuel,Medium Car,0.17324
+Car_Sharing,Fuel,Large Car,0.23917500000000003
+Car_Sharing,Fuel,Null,0.16788
+Car_Sharing,Hybrid,Small Car,0.08541
+Car_Sharing,Hybrid,Medium Car,0.10272
+Car_Sharing,Hybrid,Large Car,0.1354
+Car_Sharing,Hybrid,Null,0.11643
+Car_Sharing,Electric,Small Car,0.03688
+Car_Sharing,Electric,Medium Car,0.03882
+Car_Sharing,Electric,Large Car,0.04205
+Car_Sharing,Electric,Null,0.04047
+Car_Sharing,Null,Small Car,0.14322
+Car_Sharing,Null,Medium Car,0.17322
+Car_Sharing,Null,Large Car,0.22678
+Car_Sharing,Null,Null,0.16725
+Car_Rental,Diesel,Small Car,0.1434
+Car_Rental,Diesel,Medium Car,0.17174
+Car_Rental,Diesel,Large Car,0.21007
+Car_Rental,Diesel,Null,0.17304
+Car_Rental,Petrol,Small Car,0.14308
+Car_Rental,Petrol,Medium Car,0.17474
+Car_Rental,Petrol,Large Car,0.26828
+Car_Rental,Petrol,Null,0.16272
+Car_Rental,Fuel,Small Car,0.14324
+Car_Rental,Fuel,Medium Car,0.17324
+Car_Rental,Fuel,Large Car,0.23917500000000003
+Car_Rental,Fuel,Null,0.16788
+Car_Rental,Hybrid,Small Car,0.08541
+Car_Rental,Hybrid,Medium Car,0.10272
+Car_Rental,Hybrid,Large Car,0.1354
+Car_Rental,Hybrid,Null,0.11643
+Car_Rental,Electric,Small Car,0.03688
+Car_Rental,Electric,Medium Car,0.03882
+Car_Rental,Electric,Large Car,0.04205
+Car_Rental,Electric,Null,0.04047
+Car_Rental,Null,Small Car,0.14322
+Car_Rental,Null,Medium Car,0.17322
+Car_Rental,Null,Large Car,0.22678
+Car_Rental,Null,Null,0.16725
+Rail,Regional,Null,0.0286
+Rail,Intercity,Null,0.03546
+Rail,Null,Null,0.03203
+Taxi,Null,Null,0.14861
+flight,domestic,Null,0.22928
+flight,short-haul,Null,0.12786
+flight,long-haul,Null,0.15282
+flight,Null,Null,0.16998666666666665
