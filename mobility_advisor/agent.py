@@ -1,5 +1,7 @@
 from datetime import date
 
+from .annual_pipeline import annual_report_pipeline  # noqa: F401 — wired into coordinator AgentTool on merge
+from .sub_agents import analyst_agent, communicator_agent, forecaster_agent, optimizer_agent
 from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
 from google.genai import types
