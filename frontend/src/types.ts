@@ -20,7 +20,8 @@ export type CommutePattern = {
 
 export type CarProfile = {
   owns_car: boolean;
-  fuel_type: "petrol" | "diesel" | "electric" | "hybrid" | null;
+  fuel_type: "Petrol" | "Diesel" | "Hybrid" | "Plug-in Hybrid" | "Electric" | null;
+  car_size: "Small car" | "Medium car" | "Large car" | null;
   efficiency: number | null;
   efficiency_unit: "L/100km" | "kWh/100km" | null;
   monthly_km_estimate: number | null;

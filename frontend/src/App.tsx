@@ -29,6 +29,7 @@ const initialPreferences: OnboardingPreferences = {
   car: {
     owns_car: false,
     fuel_type: null,
+    car_size: null,
     efficiency: null,
     efficiency_unit: null,
     monthly_km_estimate: null,
@@ -67,6 +68,7 @@ const stepSkipDefaults: Partial<Record<number, Partial<OnboardingPreferences>>> 
     car: {
       owns_car: false,
       fuel_type: null,
+      car_size: null,
       efficiency: null,
       efficiency_unit: null,
       monthly_km_estimate: null,
