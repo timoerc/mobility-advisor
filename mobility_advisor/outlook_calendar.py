@@ -5,6 +5,7 @@ import msal
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -31,10 +32,40 @@ def _get_token() -> str:
 
 def _convert_event(event: dict) -> dict:
     start_raw = event.get("start", {}).get("dateTime", "")
+    end_raw = event.get("end", {}).get("dateTime", "")
+    is_all_day = event.get("isAllDay", False)
+    is_online = event.get("isOnlineMeeting", False)
     location = event.get("location", {}).get("displayName", "") or None
+
+    if is_all_day:
+        date = start_raw[:10] if start_raw else ""
+        time_start = None
+        time_end = None
+        meeting_type = "all_day"
+    else:
+        date = datetime.strptime(start_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%d") if start_raw else ""
+        time_start = start_raw[11:16] if start_raw else None
+        time_end = end_raw[11:16] if end_raw else None
+
+        has_physical_location = bool(
+            location and
+            "Teams" not in location and
+            "Zoom" not in location and
+            "teams.microsoft" not in location
+        )
+
+        if is_online and has_physical_location:
+            meeting_type = "unclear"
+        elif is_online:
+            meeting_type = "online"
+        else:
+            meeting_type = "in_person"
+
     return {
-        "date": start_raw[:10] if start_raw else "",
-        "type": "meeting",
+        "date": date,
+        "time_start": time_start,
+        "time_end": time_end,
+        "type": meeting_type,
         "description": event.get("subject", ""),
         "location": location,
         "signals": [],
