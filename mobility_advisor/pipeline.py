@@ -1,6 +1,15 @@
 from google.adk.agents import SequentialAgent
 
-from .sub_agents import analyst_agent, communicator_agent, forecaster_agent, optimizer_agent
+from .sub_agents import (
+    analyst_agent,
+    annual_analyst_agent,
+    annual_communicator_agent,
+    annual_forecaster_agent,
+    annual_optimizer_agent,
+    communicator_agent,
+    forecaster_agent,
+    optimizer_agent,
+)
 
 optimization_pipeline = SequentialAgent(
     name="mobility_advisor_pipeline",
@@ -11,4 +20,19 @@ optimization_pipeline = SequentialAgent(
         "to change/cancel/add/downgrade/upgrade a subscription."
     ),
     sub_agents=[analyst_agent, forecaster_agent, optimizer_agent, communicator_agent],
+)
+
+annual_report_pipeline = SequentialAgent(
+    name="annual_report_pipeline",
+    description=(
+        "Run a full annual mobility review (analyst, forecaster, optimizer, annual "
+        "communicator) and return a complete year-in-review report. Use this when the "
+        "user asks for an annual summary, yearly breakdown, or full annual mobility review."
+    ),
+    sub_agents=[
+        annual_analyst_agent,
+        annual_forecaster_agent,
+        annual_optimizer_agent,
+        annual_communicator_agent,
+    ],
 )
