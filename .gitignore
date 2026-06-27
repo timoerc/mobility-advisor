@@ -20,6 +20,10 @@ __pycache__/
 # Logs
 *.log
 
+# Subscription-write backups (apply_subscription_change)
+mobility_advisor/data/*.bak_*
+mobility_advisor/scenarios/*/*.bak_*
+
 # Editor & OS
 .DS_Store
 Thumbs.db

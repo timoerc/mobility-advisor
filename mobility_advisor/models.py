@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 class UserPreferences(BaseModel):
     name: str
-    monthly_budget_eur: float
     flexibility_need: str
     sustainability_weight: float
     values_time_over_money: bool
@@ -45,10 +44,18 @@ class Trip(BaseModel):
     mode: str
     origin: str
     destination: str
-    distance_km: float
+    departure_time: str | None = None
+    arrival_time: str | None = None
+    duration_min: int | None = None
     cost_eur: float | None = None
     provider: str
+    ticket_type: str | None = None
+    type: str | None = None
+    size: str | None = None
+    distance_km: float | None = None
+    co2_emission_kg: float | None = None
     booked_under: str | None = None
+    source_mail_id: str | None = None
 
 
 class TravelHistory(BaseModel):
@@ -57,6 +64,8 @@ class TravelHistory(BaseModel):
 
 class CalendarEvent(BaseModel):
     date: str
+    time_start: str | None = None
+    time_end: str | None = None
     type: str
     description: str
     location: str | None = None

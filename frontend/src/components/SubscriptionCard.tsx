@@ -3,6 +3,7 @@ import type { SubscriptionEntry } from "../types";
 type SubscriptionCardProps = {
   entry: SubscriptionEntry;
   onRemove: (id: string) => void;
+  onEdit?: (entry: SubscriptionEntry) => void;
 };
 
 const CATEGORY_LABELS: Record<SubscriptionEntry["category"], string> = {
@@ -11,26 +12,45 @@ const CATEGORY_LABELS: Record<SubscriptionEntry["category"], string> = {
   micromobility_ridehailing: "Micromobility",
 };
 
-export function SubscriptionCard({ entry, onRemove }: SubscriptionCardProps) {
+export function SubscriptionCard({ entry, onRemove, onEdit }: SubscriptionCardProps) {
   return (
     <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm m-0 truncate">
-          {entry.provider} — {entry.product}
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-sm m-0 truncate">
+            {entry.provider} — {entry.product}
+          </p>
+          {entry.detected && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 font-medium leading-none flex-shrink-0">
+              Detected
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-400 m-0">
           {CATEGORY_LABELS[entry.category]} ·{" "}
           {entry.monthly_cost_eur.toFixed(2)} €/mo
         </p>
       </div>
-      <button
-        type="button"
-        onClick={() => onRemove(entry.id)}
-        aria-label="Remove"
-        className="text-gray-400 hover:text-red-500 bg-transparent border-0 cursor-pointer text-lg leading-none flex-shrink-0 p-1"
-      >
-        ×
-      </button>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(entry)}
+            aria-label="Edit"
+            className="text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer text-sm leading-none p-1"
+          >
+            ✎
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onRemove(entry.id)}
+          aria-label="Remove"
+          className="text-gray-400 hover:text-red-500 bg-transparent border-0 cursor-pointer text-lg leading-none p-1"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }
