@@ -19,6 +19,7 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
       onChange({
         owns_car: false,
         fuel_type: null,
+        car_size: null,
         efficiency: null,
         efficiency_unit: null,
         monthly_km_estimate: null,
@@ -75,10 +76,30 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
               className={inputClass}
             >
               <option value="">— select —</option>
-              <option value="petrol">Petrol</option>
-              <option value="diesel">Diesel</option>
-              <option value="electric">Electric</option>
-              <option value="hybrid">Hybrid</option>
+              <option value="Petrol">Petrol</option>
+              <option value="Diesel">Diesel</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="Plug-in Hybrid">Plug-in Hybrid</option>
+              <option value="Electric">Electric</option>
+            </select>
+          </label>
+
+          <label className={labelClass}>
+            <span className={labelTextClass}>Car size</span>
+            <select
+              value={car.car_size ?? ""}
+              onChange={(e) =>
+                set(
+                  "car_size",
+                  (e.target.value || null) as CarProfile["car_size"]
+                )
+              }
+              className={inputClass}
+            >
+              <option value="">— select —</option>
+              <option value="Small car">Small car</option>
+              <option value="Medium car">Medium car</option>
+              <option value="Large car">Large car</option>
             </select>
           </label>
 

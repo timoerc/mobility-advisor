@@ -21,6 +21,11 @@ from .tools import (
 )
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
+
+
+def build_model() -> LiteLlm:
+    """Return the shared LiteLlm singleton used by all pipeline agents."""
+    return _MODEL
 _TODAY = date.today().isoformat()
 _DATA_DIR = Path(__file__).parent / "data"
 _prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
@@ -94,6 +99,8 @@ Context from upstream agents:
 - Forecaster outlook: {{forecast}}
 
 Your job: propose exactly ONE concrete contract change that maximizes value for {_USER_FIRST_NAME}.
+Address {_USER_FIRST_NAME} directly as "you"/"your" throughout your output — never by name
+or as "the user".
 
 Step 1 — call load_user_preferences() and load_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
@@ -124,7 +131,7 @@ Step 3 — output your recommendation in this exact structure:
   co2_rail_kg = Σ(trip.distance_km × 32) / 1000    (rail: 32 g/km from catalog)
   co2_car_kg  = Σ(trip.distance_km × 118) / 1000   (car-share baseline: 118 g/km from catalog)
   co2_saved_kg = co2_car_kg − co2_rail_kg
-Compute only over trips whose mode is "rail". Write: "By choosing rail over car, {_USER_FIRST_NAME} avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
+Compute only over trips whose mode is "rail". Write: "By choosing rail over car, you avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
 
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 
@@ -151,7 +158,8 @@ Today's date: {_TODAY}.
 The Optimizer has produced this recommendation:
 {{recommendation}}
 
-Your job: reformat it into a friendly, scannable message addressed directly to {_USER_FIRST_NAME}.
+Your job: reformat it into a friendly, scannable message that speaks directly to
+{_USER_FIRST_NAME} as "you"/"your" throughout — never by name or as "the user".
 
 Structure your output exactly as follows:
 
@@ -170,7 +178,7 @@ Structure your output exactly as follows:
 - [subscription] — [reason, with the key number that justifies it]
 - [subscription] — [reason]
 
-**Why now:** [1–2 sentences referencing {_USER_FIRST_NAME}'s upcoming calendar or life events]
+**Why now:** [1–2 sentences referencing your upcoming calendar or life events]
 
 **Trade-offs to consider:** [1–2 sentences on any downside or uncertainty]
 

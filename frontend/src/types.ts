@@ -20,7 +20,8 @@ export type CommutePattern = {
 
 export type CarProfile = {
   owns_car: boolean;
-  fuel_type: "petrol" | "diesel" | "electric" | "hybrid" | null;
+  fuel_type: "Petrol" | "Diesel" | "Hybrid" | "Plug-in Hybrid" | "Electric" | null;
+  car_size: "Small car" | "Medium car" | "Large car" | null;
   efficiency: number | null;
   efficiency_unit: "L/100km" | "kWh/100km" | null;
   monthly_km_estimate: number | null;
@@ -39,6 +40,7 @@ export type SubscriptionCategory =
 
 export type SubscriptionEntry = {
   id: string;
+  detected?: boolean;
   category: SubscriptionCategory;
   cost_structure: CostStructure;
   provider: string;
@@ -63,9 +65,14 @@ export type SubscriptionEntry = {
 };
 
 export type Integrations = {
+  // email & calendar
   outlook_connected: boolean;
   gmail_connected: boolean;
   calendar_connected: boolean;
+  // mobility providers
+  db_connected: boolean;
+  miles_connected: boolean;
+  deutschlandticket_connected: boolean;
 };
 
 export type OnboardingPreferences = {
@@ -74,7 +81,6 @@ export type OnboardingPreferences = {
   commute: CommutePattern;
   car: CarProfile;
   subscriptions: SubscriptionEntry[];
-  monthly_budget_eur: number;
   priorities: PriorityWeights;
   integrations: Integrations;
   notes: string;
