@@ -32,12 +32,11 @@ _prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
 _USER_NAME = _prefs.get("name", "the user")
 _USER_FIRST_NAME = _USER_NAME.split()[0]
 
-def _make_analyst_agent(name: str = "analyst") -> LlmAgent:
-    return LlmAgent(
-        name=name,
-        model=_MODEL,
-        description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
-        instruction=f"""\
+analyst_agent = LlmAgent(
+    name="analyst",
+    model=_MODEL,
+    description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
+    instruction=f"""\
 You are the Analyst agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -57,17 +56,15 @@ Keep the output concise — bullet points, no prose paragraphs. Report only what
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-        tools=[load_travel_history, load_current_subscriptions],
-        output_key="analysis",
-    )
+    tools=[load_travel_history, load_current_subscriptions],
+    output_key="analysis",
+)
 
-
-def _make_forecaster_agent(name: str = "forecaster") -> LlmAgent:
-    return LlmAgent(
-        name=name,
-        model=_MODEL,
-        description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
-        instruction=f"""\
+forecaster_agent = LlmAgent(
+    name="forecaster",
+    model=_MODEL,
+    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
+    instruction=f"""\
 You are the Forecaster agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -85,17 +82,15 @@ Be factual and brief. Do not recommend actions — that is the Optimizer's job.
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-        tools=[load_calendar_events],
-        output_key="forecast",
-    )
+    tools=[load_calendar_events],
+    output_key="forecast",
+)
 
-
-def _make_optimizer_agent(name: str = "optimizer") -> LlmAgent:
-    return LlmAgent(
-        name=name,
-        model=_MODEL,
-        description="Proposes one concrete contract change based on analysis, forecast, preferences, and catalog.",
-        instruction=f"""\
+optimizer_agent = LlmAgent(
+    name="optimizer",
+    model=_MODEL,
+    description="Proposes one concrete contract change based on analysis, forecast, preferences, and catalog.",
+    instruction=f"""\
 You are the Optimizer agent for {_USER_NAME}'s Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -148,20 +143,9 @@ Compute only over trips whose mode is "rail". Write: "By choosing rail over car,
 
 Show real numbers from the data. Do not propose more than one change.
 """,
-        tools=[load_user_preferences, load_mobility_catalog],
-        output_key="recommendation",
-    )
-
-
-# Standard pipeline instances
-analyst_agent = _make_analyst_agent()
-forecaster_agent = _make_forecaster_agent()
-optimizer_agent = _make_optimizer_agent()
-
-# Annual report pipeline instances (ADK forbids sharing agent instances across SequentialAgents)
-annual_analyst_agent = _make_analyst_agent("annual_analyst")
-annual_forecaster_agent = _make_forecaster_agent("annual_forecaster")
-annual_optimizer_agent = _make_optimizer_agent("annual_optimizer")
+    tools=[load_user_preferences, load_mobility_catalog],
+    output_key="recommendation",
+)
 
 communicator_agent = LlmAgent(
     name="communicator",
@@ -207,6 +191,35 @@ Keep the tone direct and professional. Do not invent numbers not present in the 
     tools=[],
 )
 
+# Annual report pipeline instances — ADK forbids sharing agent instances across SequentialAgents,
+# so these are separate objects with distinct names but identical instructions and output_keys.
+annual_analyst_agent = LlmAgent(
+    name="annual_analyst",
+    model=_MODEL,
+    description=analyst_agent.description,
+    instruction=analyst_agent.instruction,
+    tools=[load_travel_history, load_current_subscriptions],
+    output_key="analysis",
+)
+
+annual_forecaster_agent = LlmAgent(
+    name="annual_forecaster",
+    model=_MODEL,
+    description=forecaster_agent.description,
+    instruction=forecaster_agent.instruction,
+    tools=[load_calendar_events],
+    output_key="forecast",
+)
+
+annual_optimizer_agent = LlmAgent(
+    name="annual_optimizer",
+    model=_MODEL,
+    description=optimizer_agent.description,
+    instruction=optimizer_agent.instruction,
+    tools=[load_user_preferences, load_mobility_catalog],
+    output_key="recommendation",
+)
+
 annual_communicator_agent = LlmAgent(
     name="annual_communicator",
     model=_MODEL,
@@ -224,12 +237,13 @@ The Analyst produced this usage report:
 The Forecaster produced this outlook:
 {{forecast}}
 
-Your job: produce a full annual mobility review addressed directly to {_USER_FIRST_NAME}.
+Your job: produce a full annual mobility review that speaks directly to {_USER_FIRST_NAME} as
+"you"/"your" throughout — never by name or as "the user".
 
 Structure your output EXACTLY as follows. Use all figures verbatim from the upstream context — do not invent numbers.
 
 ---
-# {_USER_FIRST_NAME}'s Annual Mobility Review
+# Your Annual Mobility Review
 
 **Period covered:** 1 January – 31 December [derive year from the oldest trip date in {{analysis}}]
 
@@ -269,7 +283,7 @@ Compute from {{analysis}} using these exact formulas:
 - CO₂ avoided = car-share baseline − rail actual
 
 Write:
-> {_USER_FIRST_NAME} traveled X km by rail, emitting X kg CO₂. Choosing rail over car avoided X kg CO₂ (rail: 32 g/km vs. car-share: 118 g/km).
+> You traveled X km by rail, emitting X kg CO₂. Choosing rail over car avoided X kg CO₂ (rail: 32 g/km vs. car-share: 118 g/km).
 
 Then list mode split: X% rail, X% regional, X% car-share, etc. by trip count.
 
