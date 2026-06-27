@@ -40,6 +40,8 @@ Return a JSON object with exactly these fields:
       "cost_eur": float or null,
       "provider": "provider name",
       "ticket_type": "ticket type or null (rail examples: Sparpreis, Flexpreis, Super Sparpreis, Super Sparpreis Young, Deutschlandticket, BahnCard 50 — use exact wording from the email if it matches one of these, otherwise use the exact wording from the email as-is; flight: Economy / Business; bus: Standard; car: daily rate / one-way)",
+      "type": "mode-specific — see rules below; use null (JSON null, not the string Null) when not determinable",
+      "size": "mode-specific — see rules below; use null when not applicable or not determinable",
       "distance_km": null,
       "co2_g_per_km": null,
       "booked_under": null
@@ -58,6 +60,45 @@ Rules:
 - For life events (Mietvertrag etc.): return {{"trips": []}}
 - Set arrival_time if mentioned in the email (HH:MM), otherwise null
 - Calculate duration_min from departure_time and arrival_time if both are available, otherwise null
+
+--- TYPE AND SIZE RULES (fill these fields for every trip) ---
+
+RAIL:
+  type = null   [post-processing fills this, leave null]
+  size = null
+
+CAR_SHARE and CAR_RENTAL:
+  type: Determine the engine/drivetrain from any clue in the email (vehicle name, model, description).
+    - "Electric" — explicitly electric (e.g. Tesla, e-Golf, i3, Zoe, ID.4)
+    - "Hybrid"   — explicitly hybrid (e.g. Prius, Yaris Hybrid, plug-in hybrid)
+    - "Diesel"   — explicitly diesel
+    - "Petrol"   — explicitly petrol/gasoline
+    - "Fuel"     — a specific car model is named AND no electric/hybrid indication is present
+                   (e.g. "VW Golf", "BMW 1er", "Kompaktklasse z.B. Volkswagen Golf", "Ford Focus")
+    - null       — no car model or engine hint at all
+  size: Determine from vehicle class name or model.
+    - "Small Car"  — city cars, minis, subcompacts (e.g. Smart, VW Polo, Fiat 500, BMW 1er, Corsa)
+    - "Medium Car" — compact/mid-size (e.g. VW Golf, BMW 3er, Kompaktklasse, Mittelklasse, Passat)
+    - "Large Car"  — large/SUV/premium (e.g. BMW 5er, Mercedes E-Klasse, SUV, Oberklasse)
+    - null         — no vehicle class or model hint at all
+  Examples:
+    "Fahrzeugklasse: Kompaktklasse (z.B. Volkswagen Golf oder ähnlich)" → type="Fuel", size="Medium Car"
+    "BMW 1er"                                                            → type="Fuel", size="Small Car"
+    "Tesla Model 3"                                                      → type="Electric", size="Medium Car"
+    "Toyota Prius Hybrid"                                                → type="Hybrid", size="Medium Car"
+
+BUS:
+  type: "Coach" (long-distance/intercity, FlixBus is always Coach) | "Local Bus" (urban/local) | null (unclear)
+  size = null
+
+FLIGHT:
+  type: Classify by geography of origin and destination.
+    - "domestic"   — both cities/airports in the same country
+    - "short-haul" — both on the same continent (e.g. both in Europe)
+    - "long-haul"  — different continents (e.g. Europe and Asia, Europe and America)
+    - null         — cannot determine
+  size = null
+
 - Always return valid JSON, nothing else
 
 Email category: {category}
@@ -162,6 +203,19 @@ def extract_trip(mail: dict) -> list[dict]:
     return trips
 
 
+def _enrich_rail_trips(trips: list[dict]) -> list[dict]:
+    """Set type/size for rail trips based on distance_km (>100 → Intercity, ≤100 → Regional)."""
+    for trip in trips:
+        if trip.get("mode") == "rail":
+            trip["size"] = None
+            dist = trip.get("distance_km")
+            if dist is not None:
+                trip["type"] = "Intercity" if dist > 100 else "Regional"
+            else:
+                trip["type"] = None
+    return trips
+
+
 def save_raw(trips: list[dict]) -> None:
     if _RAW_OUTPUT.exists():
         existing = json.loads(_RAW_OUTPUT.read_text(encoding="utf-8"))
@@ -202,6 +256,7 @@ def run(use_mock: bool = False) -> None:
             print(f"  -> Error: {e}")
 
     if all_trips:
+        all_trips = _enrich_rail_trips(all_trips)
         save_raw(all_trips)
     else:
         print("No trips extracted.")
