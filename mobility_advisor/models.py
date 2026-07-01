@@ -47,6 +47,7 @@ class Trip(BaseModel):
     departure_time: str | None = None
     arrival_time: str | None = None
     duration_min: int | None = None
+    real_travel_duration_min: float | None = None
     cost_eur: float | None = None
     provider: str
     ticket_type: str | None = None
