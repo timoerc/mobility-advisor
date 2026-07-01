@@ -44,6 +44,7 @@ Return a JSON object with exactly these fields:
       "size": "mode-specific — see rules below; use null when not applicable or not determinable",
       "distance_km": null,
       "co2_emission_kg": null,
+      "real_travel_duration_min": null,
       "booked_under": null
     }}
   ]
@@ -60,6 +61,7 @@ Rules:
 - For life events (Mietvertrag etc.): return {{"trips": []}}
 - Set arrival_time if mentioned in the email (HH:MM), otherwise null
 - Calculate duration_min from departure_time and arrival_time if both are available, otherwise null
+- Always set real_travel_duration_min to null (post-processing fills this)
 
 --- TYPE AND SIZE RULES (fill these fields for every trip) ---
 

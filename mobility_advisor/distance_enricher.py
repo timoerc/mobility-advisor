@@ -20,6 +20,7 @@ _RAW_OUTPUT = _DATA / "travel_history_raw.json"
 _CO2_CSV = _DATA / "co2_factors.csv"
 
 ROUTABLE_MODES = {"rail", "bus", "car_share", "car_rental"}
+CAR_MODES = {"car_share", "car_rental"}
 
 # Map JSON mode values → mode column in co2_factors.csv
 _MODE_MAP = {
@@ -151,8 +152,8 @@ def _flight_distance_km(origin: str, destination: str) -> float | None:
     return _haversine_distance_km(orig, dest)
 
 
-def _driving_distance_km(origin: str, destination: str) -> float | None:
-    """Geocode origin and destination, then return driving distance in km."""
+def _driving_distance_km(origin: str, destination: str) -> tuple[float, float] | None:
+    """Geocode origin and destination, then return (distance_km, duration_min) for the driving route."""
     clean_origin = _clean_location(origin)
     clean_dest = _clean_location(destination)
     print(f"    Geocoding: '{clean_origin}' → '{clean_dest}'")
@@ -181,8 +182,10 @@ def _driving_distance_km(origin: str, destination: str) -> float | None:
     features = resp.json().get("features", [])
     if not features:
         return None
-    distance_m = features[0]["properties"]["summary"]["distance"]
-    return round(distance_m / 1000, 1)
+    summary = features[0]["properties"]["summary"]
+    distance_km = round(summary["distance"] / 1000, 1)
+    duration_min = round(summary["duration"] / 60, 1)
+    return distance_km, duration_min
 
 
 def enrich() -> None:
@@ -192,13 +195,18 @@ def enrich() -> None:
     trips = raw["trips"]
     dist_updated = 0
     co2_updated = 0
+    duration_updated = 0
 
-    # Pass 1 — fill distance_km for all modes that support it
+    # Pass 1 — fill distance_km (all routable/flight modes) and real_travel_duration_min
+    # (car_share/car_rental only, since ORS driving directions return duration alongside distance)
     for trip in trips:
         mode = trip.get("mode")
-        if trip.get("distance_km") is not None:
-            continue
         if mode not in ROUTABLE_MODES and mode != "flight":
+            continue
+
+        needs_distance = trip.get("distance_km") is None
+        needs_duration = mode in CAR_MODES and trip.get("real_travel_duration_min") is None
+        if not needs_distance and not needs_duration:
             continue
 
         origin = trip.get("origin", "")
@@ -207,15 +215,26 @@ def enrich() -> None:
         try:
             if mode == "flight":
                 dist = _flight_distance_km(origin, destination)
+                if dist is not None and needs_distance:
+                    trip["distance_km"] = dist
+                    print(f"    → {dist} km")
+                    dist_updated += 1
+                elif dist is None:
+                    print(f"    → Could not compute distance")
             else:
-                dist = _driving_distance_km(origin, destination)
-
-            if dist is not None:
-                trip["distance_km"] = dist
-                print(f"    → {dist} km")
-                dist_updated += 1
-            else:
-                print(f"    → Could not compute distance")
+                result = _driving_distance_km(origin, destination)
+                if result is not None:
+                    dist, duration = result
+                    if needs_distance:
+                        trip["distance_km"] = dist
+                        print(f"    → {dist} km")
+                        dist_updated += 1
+                    if needs_duration:
+                        trip["real_travel_duration_min"] = duration
+                        print(f"    → {duration} min real travel time")
+                        duration_updated += 1
+                else:
+                    print(f"    → Could not compute distance/duration")
         except requests.HTTPError as e:
             print(f"    → HTTP error: {e}")
         except Exception as e:
@@ -239,9 +258,18 @@ def enrich() -> None:
             trip["co2_emission_kg"] = co2
             co2_updated += 1
 
+    # Pass 4 — for non-car modes, real_travel_duration_min is just duration_min (no rental period involved)
+    for trip in trips:
+        if trip.get("mode") not in CAR_MODES and trip.get("real_travel_duration_min") is None:
+            trip["real_travel_duration_min"] = trip.get("duration_min")
+            duration_updated += 1
+
     raw["trips"] = trips
     _RAW_OUTPUT.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\nDone — {dist_updated} distance(s) and {co2_updated} CO₂ emission(s) filled.")
+    print(
+        f"\nDone — {dist_updated} distance(s), {duration_updated} real travel duration(s) "
+        f"and {co2_updated} CO₂ emission(s) filled."
+    )
 
 
 if __name__ == "__main__":
