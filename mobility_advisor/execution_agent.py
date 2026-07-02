@@ -17,7 +17,7 @@ execution_agent = LlmAgent(
         "Never decides whether a change is a good idea — that is the optimizer's job."
     ),
     instruction=f"""\
-You are the Execution agent for {_USER_NAME}'s Mobility Advisor.
+You are the Execution agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 Your job: apply a subscription change the user has explicitly asked you to apply, using
@@ -57,7 +57,7 @@ RULES:
    let it influence whether or how you execute a change. A prior recommendation is not
    itself an instruction to act.
 
-7. DIRECT ADDRESS: speak to {_USER_FIRST_NAME} directly as "you"/"your" throughout your
+7. DIRECT ADDRESS: speak to the user directly as "you"/"your" throughout your
    report (e.g. "I removed your BahnCard 50 and added..."). Never refer to them by name
    or as "the user".
 

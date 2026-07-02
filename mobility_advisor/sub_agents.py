@@ -37,12 +37,12 @@ analyst_agent = LlmAgent(
     model=_MODEL,
     description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
     instruction=f"""\
-You are the Analyst agent for {_USER_NAME}'s Mobility Advisor.
+You are the Analyst agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 You MUST call load_travel_history and load_current_subscriptions first. Use ONLY the exact figures returned by the tools — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
 
-Your job: report usage facts for each of {_USER_FIRST_NAME}'s active subscriptions. Do not draw conclusions or make recommendations — that is another agent's job.
+Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
 
 Step 1 — call load_travel_history() and load_current_subscriptions(). Do this before writing anything.
 
@@ -65,7 +65,7 @@ forecaster_agent = LlmAgent(
     model=_MODEL,
     description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
     instruction=f"""\
-You are the Forecaster agent for {_USER_NAME}'s Mobility Advisor.
+You are the Forecaster agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 Your job: summarize forward mobility demand for the next 3–6 months from today.
@@ -91,20 +91,19 @@ optimizer_agent = LlmAgent(
     model=_MODEL,
     description="Proposes one concrete contract change based on analysis, forecast, preferences, and catalog.",
     instruction=f"""\
-You are the Optimizer agent for {_USER_NAME}'s Mobility Advisor.
+You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 Context from upstream agents:
 - Analyst finding: {{analysis}}
 - Forecaster outlook: {{forecast}}
 
-Your job: propose exactly ONE concrete contract change that maximizes value for {_USER_FIRST_NAME}.
-Address {_USER_FIRST_NAME} directly as "you"/"your" throughout your output — never by name
-or as "the user".
+Your job: propose exactly ONE concrete contract change that maximizes value for the user.
+Address the user directly as "you"/"your" throughout your output — not by name.
 
 Step 1 — call load_user_preferences() and load_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
-Step 2 — combining the upstream findings with {_USER_FIRST_NAME}'s preferences and the market catalog, identify the single highest-impact change.
+Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the single highest-impact change.
 
 CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
 All rail trips in history are priced at the BahnCard 50 discount (50% off).
@@ -152,14 +151,14 @@ communicator_agent = LlmAgent(
     model=_MODEL,
     description=f"Formats the optimizer's recommendation into a clear, scannable message for {_USER_FIRST_NAME}.",
     instruction=f"""\
-You are the Communicator agent for {_USER_NAME}'s Mobility Advisor.
+You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 The Optimizer has produced this recommendation:
 {{recommendation}}
 
 Your job: reformat it into a friendly, scannable message that speaks directly to
-{_USER_FIRST_NAME} as "you"/"your" throughout — never by name or as "the user".
+the user as "you"/"your" throughout — not by name.
 
 Structure your output exactly as follows:
 
@@ -225,7 +224,7 @@ annual_communicator_agent = LlmAgent(
     model=_MODEL,
     description=f"Formats a full annual mobility review for {_USER_FIRST_NAME} from the optimizer's findings.",
     instruction=f"""\
-You are the Annual Report agent for {_USER_NAME}'s Mobility Advisor.
+You are the Annual Report agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 The Optimizer has produced this recommendation:
@@ -237,8 +236,8 @@ The Analyst produced this usage report:
 The Forecaster produced this outlook:
 {{forecast}}
 
-Your job: produce a full annual mobility review that speaks directly to {_USER_FIRST_NAME} as
-"you"/"your" throughout — never by name or as "the user".
+Your job: produce a full annual mobility review that speaks directly to
+the user as "you"/"your" throughout — not by name.
 
 Structure your output EXACTLY as follows. Use all figures verbatim from the upstream context — do not invent numbers.
 

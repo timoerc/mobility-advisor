@@ -1,38 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
+import { sendMessage } from "../../api";
 import type { Recommendation } from "../../types/recommendation";
 
 type Message = { role: "agent" | "user"; text: string; id: string };
 
-const CANNED_RESPONSES: [RegExp, string][] = [
-  [/co.?2|carbon|emission/i, "Based on your travel history, your mobility CO₂ footprint is approximately 28 kg/month — well below the German average of 95 kg/month for transport."],
-  [/budget|spend|cost|much/i, "Your current subscriptions cost roughly €20/month (BahnCard 50 annualised). Your declared budget is €350/month, so you have significant headroom."],
-  [/deutschlandticket|d.ticket/i, "The Deutschlandticket (€49/month) makes sense if you use local public transit daily. For your current profile, it's not recommended since you mainly travel long-distance."],
-  [/bahncard|bahn card|bc50|bc 50/i, "Your BahnCard 50 costs €244/year and saved you an estimated €72 in the last year. That's a net loss of €172 — the full analysis is on the dashboard."],
-  [/hamburg|frankfurt|cologne|köln/i, "Your most frequent route is Cologne–Frankfurt. At full price that's ~€89 per trip. With BahnCard 25 you'd pay ~€67; with BC50 ~€45."],
-  [/renew|renewal|cancel/i, "Your BahnCard 50 auto-renews on 31 December 2025. You need to cancel by 6 weeks before that date to avoid the charge."],
-  [/full.?analysis|run analysis|analyse|analyze/i, "I can run a full portfolio analysis for you. Head back to the dashboard and tap 'Run analysis' to get an updated recommendation."],
-];
-
-function generateResponse(input: string, rec: Recommendation): string {
-  for (const [pattern, response] of CANNED_RESPONSES) {
-    if (pattern.test(input)) return response;
-  }
-  if (/what|should|recommend|advice|suggest/i.test(input)) {
-    return `My top recommendation right now: ${rec.proposedAction.title}. ${rec.summaryText}`;
-  }
-  return "That's a good question. I don't have enough data to answer that precisely yet — try asking about your BahnCard, budget, CO₂ footprint, or upcoming travel.";
-}
-
 type ChatPageProps = {
+  sessionId: string;
   recommendation: Recommendation;
   onRunAnalysis: () => void;
 };
 
-const INITIAL_MESSAGE = "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.";
+const INITIAL_MESSAGE =
+  "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.";
 
-export function ChatPage({ recommendation, onRunAnalysis }: ChatPageProps) {
+export function ChatPage({ sessionId, onRunAnalysis }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "agent", text: INITIAL_MESSAGE, id: "init" },
   ]);
@@ -43,28 +26,37 @@ export function ChatPage({ recommendation, onRunAnalysis }: ChatPageProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
     const userMsg: Message = { role: "user", text, id: crypto.randomUUID() };
     setMessages((m) => [...m, userMsg]);
     setThinking(true);
 
-    const wantsAnalysis = /full.?analysis|run analysis|analyse|analyze/i.test(text);
+    try {
+      const response = await sendMessage(sessionId, text);
 
-    window.setTimeout(() => {
+      // Let the backend handle run-analysis requests too, but also honour the
+      // local trigger so the UI transitions immediately after the agent replies.
+      const wantsAnalysis = /full.?analysis|run analysis|analyse|analyze/i.test(text);
       setThinking(false);
+      setMessages((m) => [
+        ...m,
+        { role: "agent", text: response, id: crypto.randomUUID() },
+      ]);
       if (wantsAnalysis) {
-        const agentMsg: Message = {
-          role: "agent",
-          text: "Sure — I'll kick off a fresh analysis now.",
-          id: crypto.randomUUID(),
-        };
-        setMessages((m) => [...m, agentMsg]);
         window.setTimeout(onRunAnalysis, 900);
-        return;
       }
-      const response = generateResponse(text, recommendation);
-      setMessages((m) => [...m, { role: "agent", text: response, id: crypto.randomUUID() }]);
-    }, 900 + Math.random() * 600);
+    } catch (err) {
+      console.warn("Chat API error:", err);
+      setThinking(false);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "agent",
+          text: "I couldn't reach the advisor right now. Please try again.",
+          id: crypto.randomUUID(),
+        },
+      ]);
+    }
   };
 
   return (

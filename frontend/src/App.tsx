@@ -4,6 +4,8 @@ import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
+import { saveProfile, activatePersona } from "./api";
+import type { Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -97,6 +99,15 @@ function downloadJson(filename: string, data: unknown) {
 type Phase = "login" | "onboarding" | "main";
 type MainView = "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
 
+function getOrCreateSessionId(): string {
+  const key = "mobility_advisor_session_id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const id = crypto.randomUUID();
+  localStorage.setItem(key, id);
+  return id;
+}
+
 export default function App() {
   const [phase, setPhase] = useState<Phase>("login");
   const [loginCanGoBack, setLoginCanGoBack] = useState(false);
@@ -106,6 +117,8 @@ export default function App() {
   const [preferences, setPreferences] = useState<OnboardingPreferences>(EMPTY_PROFILE);
   const [mainView, setMainView] = useState<MainView>("analysis");
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
+  const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
+  const [sessionId] = useState(getOrCreateSessionId);
   // When deep-linking from the dropdown, store the view to return to after saving
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
 
@@ -130,6 +143,7 @@ export default function App() {
       const profile = saved.profileData ?? persona?.profileData ?? EMPTY_PROFILE;
       setPreferences(profile);
       setActiveArchetypeId(classifyArchetype(profile));
+      activatePersona(id).catch(console.warn);
       setMainView("dashboard");
       setPhase("main");
     } else {
@@ -162,17 +176,25 @@ export default function App() {
       setPersonas((ps) => ps.map((p) => p.id === activePersonaId ? { ...p, onboardingComplete: true } : p));
     }
     setActiveArchetypeId(classifyArchetype(preferences));
+    setLiveRecommendation(null);
+    saveProfile(activePersonaId ?? "current", preferences).catch(console.warn);
     setMainView("analysis");
     setPhase("main");
   };
 
   // ── Main app navigation ───────────────────────────────────────────────────
 
-  const handleAnalysisComplete = useCallback(() => setMainView("dashboard"), []);
+  const handleAnalysisComplete = useCallback((rec?: Recommendation) => {
+    if (rec) setLiveRecommendation(rec);
+    setMainView("dashboard");
+  }, []);
   const handleProceedToApproval = () => setMainView("approval");
   const handleConfirm = () => setMainView("confirmation");
   const handleBackToDashboard = () => setMainView("dashboard");
-  const handleRunAnalysis = () => setMainView("analysis");
+  const handleRunAnalysis = () => {
+    setLiveRecommendation(null);
+    setMainView("analysis");
+  };
 
   // Deep-link from dropdown → a specific onboarding step, then return to main
   const deepLinkToStep = (step: number) => {
@@ -188,6 +210,7 @@ export default function App() {
       savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
     }
     setActiveArchetypeId(classifyArchetype(preferences));
+    saveProfile(activePersonaId ?? "current", preferences).catch(console.warn);
     setMainView(target);
     setPhase("main");
   };
@@ -378,12 +401,12 @@ export default function App() {
       onSwitchProfile={handleSwitchProfile}
     >
       {mainView === "analysis" && (
-        <AnalysisPage onComplete={handleAnalysisComplete} />
+        <AnalysisPage sessionId={sessionId} onComplete={handleAnalysisComplete} />
       )}
 
       {mainView === "dashboard" && (
         <DashboardPage
-          recommendation={activePersona.mockRecommendation}
+          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
           mobilityArchetype={activeArchetypeId ? MOBILITY_ARCHETYPES[activeArchetypeId] : undefined}
           onProceed={handleProceedToApproval}
         />
@@ -391,7 +414,7 @@ export default function App() {
 
       {mainView === "approval" && (
         <ApprovalPage
-          recommendation={activePersona.mockRecommendation}
+          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
           onConfirm={handleConfirm}
           onCancel={handleBackToDashboard}
         />
@@ -399,14 +422,15 @@ export default function App() {
 
       {mainView === "confirmation" && (
         <ConfirmationPage
-          actionTitle={activePersona.mockRecommendation.proposedAction.title}
+          actionTitle={(liveRecommendation ?? activePersona.mockRecommendation).proposedAction.title}
           onBackToDashboard={handleBackToDashboard}
         />
       )}
 
       {mainView === "chat" && (
         <ChatPage
-          recommendation={activePersona.mockRecommendation}
+          sessionId={sessionId}
+          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
           onRunAnalysis={handleRunAnalysis}
         />
       )}

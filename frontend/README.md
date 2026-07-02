@@ -6,7 +6,7 @@ A React/TypeScript prototype for a personalised mobility portfolio advisor. Buil
 
 ## Quick Start
 
-**Requirements:** Node.js 18+. No `.env` file or API key required — all data is mocked.
+**Requirements:** Node.js 18+.
 
 ```bash
 cd frontend
@@ -16,6 +16,10 @@ npm run dev
 ```
 
 To stop: `Ctrl + C`
+
+This starts the frontend only. It runs standalone with no `.env` file or API key — onboarding and the persona login always work, and if the backend isn't reachable, the analysis screen silently falls back to each persona's canned `mockRecommendation` and chat shows a "couldn't reach the advisor" message.
+
+For **live AI-generated recommendations and chat**, the FastAPI backend (`../main.py`) must also be running on port 8000 — see the [root README](../README.md#running-the-full-stack) for backend setup (`.env` keys, `uv sync`, `uvicorn`). Vite proxies `/api/*` to `localhost:8000` automatically in dev (`vite.config.ts`), so nothing needs to be configured on the frontend side once the backend is up.
 
 ---
 
@@ -54,7 +58,7 @@ The post-onboarding experience, wrapped in a persistent `AppShell` top bar. Cont
 
 | View | Purpose |
 |---|---|
-| `analysis` | Animated loading screen; auto-advances after ~4 s |
+| `analysis` | Animated loading screen; calls `POST /api/analyze` and advances once the real recommendation arrives (typically 60–90s), or falls back to mock data on failure |
 | `dashboard` | Recommendation verdict, metrics, reasoning, alternatives |
 | `approval` | User explicitly confirms or declines the proposed action |
 | `confirmation` | Simulated success screen |
@@ -78,6 +82,7 @@ frontend/
 │   │
 │   ├── personas.ts              # Persona definitions + mock recommendations (add/edit here)
 │   ├── mobility-archetypes.ts   # Archetype definitions + classifyArchetype() scoring function
+│   ├── api.ts                   # fetch() wrappers for the FastAPI backend (/api/profile, /activate, /analyze, /chat)
 │   │
 │   ├── types.ts                 # Shared onboarding data types (OnboardingPreferences, etc.)
 │   ├── types/
@@ -252,17 +257,18 @@ The archetype is recomputed whenever `classifyArchetype()` is called (on onboard
 
 ---
 
-## Mock Data and API Layer
+## Data and API Layer
 
-All data consumed by the frontend comes from one of three sources:
+The frontend talks to a live FastAPI backend (`../main.py`) through `src/api.ts`, but degrades gracefully to static mock data wherever a call can fail or isn't wired up yet:
 
-1. **Persona profile data** — defined statically in `src/personas.ts` and pre-populated into the onboarding form
-2. **Mock recommendations** — also defined in `src/personas.ts` as `mockRecommendation` per persona, passed to `DashboardPage`, `ApprovalPage`, and `ChatPage`
-3. **Archetype classification** — computed client-side by `classifyArchetype()` in `src/mobility-archetypes.ts` from the user's onboarding answers; no external data source
+1. **Persona profile data** — defined statically in `src/personas.ts` and pre-populated into the onboarding form. On onboarding completion (or a profile edit via the dropdown deep-links), `api.ts#saveProfile` POSTs it to `/api/profile`, which persists it server-side and makes it the backend's active dataset; on returning-persona login, `api.ts#activatePersona` re-activates it via `/api/activate`. Both calls are fire-and-forget (`.catch(console.warn)`) — a failure never blocks navigation.
+2. **Live recommendations** — `AnalysisPage` calls `api.ts#runAnalysis`, which `POST`s to `/api/analyze` and runs the full 4-agent pipeline server-side (~60–90s). On success, the result replaces `liveRecommendation` in `App.tsx` state and is used everywhere the old `mockRecommendation` was. On failure, it falls back to the active persona's static `mockRecommendation` from `src/personas.ts`.
+3. **Live chat** — `ChatPage` calls `api.ts#sendMessage`, which `POST`s to `/api/chat` and routes through the same coordinator agent used by the backend. On failure, it shows a static "couldn't reach the advisor" bubble instead of throwing.
+4. **Archetype classification** — computed client-side by `classifyArchetype()` in `src/mobility-archetypes.ts` from the user's onboarding answers; no backend call, live or mocked.
 
-The `MobilityStackPage` (step 6) additionally attempts a `fetch('/api/detected-subscriptions.json')` to simulate auto-detection of subscriptions from connected accounts. If the file is not present (it isn't, by default), it fails silently and starts with an empty list.
+The `MobilityStackPage` (step 6) additionally attempts a `fetch('/api/detected-subscriptions.json')` to simulate auto-detection of subscriptions from connected accounts. If the file is not present (it isn't, by default), it fails silently and starts with an empty list. Unlike the calls above, this one isn't backed by a real backend route — it's a placeholder for a future integration.
 
-To add a real API backend: replace the `mockRecommendation` lookup in `App.tsx`'s main-phase render with a real fetch, returning the same `Recommendation` shape defined in `src/types/recommendation.ts`.
+See the [root README](../README.md#running-the-full-stack) for how to start the backend so these live calls actually resolve.
 
 ---
 
@@ -285,15 +291,16 @@ To add a real API backend: replace the `mockRecommendation` lookup in `App.tsx`'
 - AHP priority weights with Consistency Ratio check (CR > 0.10 shows a warning)
 - DB design system: brand-red, off-white background, Inter font, CSS animations
 - TypeScript strict mode throughout; zero build errors
+- **Live backend integration** (`src/api.ts`) — profile save/activate, real 4-agent analysis, and live chat against the FastAPI backend, each with a mock/static fallback on failure
 
 ### Known Limitations
 
 - No real authentication — the persona selector is for demo purposes only
-- No live backend calls — analysis result is pre-computed per persona, not live
 - No real contract execution — approval/confirmation screens simulate an action
 - AHP consistency ratio warning is advisory only — users can proceed with inconsistent answers
 - `localStorage` state is cleared if the user clears browser storage
-- The `MobilityStackPage` auto-detection stub will silently 404 in dev (harmless)
+- The `MobilityStackPage` auto-detection stub will silently 404 in dev (harmless) — it has no backend route
+- Live analysis (`/api/analyze`) takes ~60–90s; the analysis screen's progress animation is currently tuned for a shorter wait (see root README/backend notes)
 
 ---
 

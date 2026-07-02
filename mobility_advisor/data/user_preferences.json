@@ -1,7 +1,7 @@
 {
-  "name": "Maja Hoffmann",
-  "flexibility_need": "low",
-  "sustainability_weight": 0.4,
+  "name": "Test User",
+  "flexibility_need": "medium",
+  "sustainability_weight": 0.2,
   "values_time_over_money": false,
-  "notes": "Primary goal is cost reduction. Happy to plan ahead and book cheap fares. Sustainability is a nice-to-have but not the priority. No upcoming long-distance trips planned."
+  "notes": ""
 }

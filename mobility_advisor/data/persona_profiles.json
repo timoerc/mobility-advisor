@@ -1,0 +1,14 @@
+{
+  "test": {
+    "user_preferences": {
+      "name": "Test User",
+      "flexibility_need": "medium",
+      "sustainability_weight": 0.2,
+      "values_time_over_money": false,
+      "notes": ""
+    },
+    "current_subscriptions": {
+      "subscriptions": []
+    }
+  }
+}
