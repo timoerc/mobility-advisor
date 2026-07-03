@@ -10,17 +10,10 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 27, "max_age": 64 },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 25,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
       "notes": "25% auf Flexpreise, 25% auf Sparpreise. 111 €/Jahr."
@@ -35,17 +28,10 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 19, "max_age": 26 },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 25,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
       "notes": "25% auf Flexpreise, 25% auf Sparpreise. 69,90 €/Jahr."
@@ -60,20 +46,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 65, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 25,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "25% auf Flexpreise, 25% auf Sparpreise"
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise."
     },
     {
       "id": "db_bc25_2nd_probe",
@@ -85,17 +64,10 @@
       "minimum_months": 3,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 25,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
       "notes": "25% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
@@ -110,20 +82,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 27, "max_age": 64 },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 25,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "25% Rabatt auf Flexpreise 1.-Klasse-Tickets, 25% Rabatt auf Sparpreise 1.-Klasse-Tickets. 220 €/Jahr."
+      "notes": "25% auf Flexpreise 1. Klasse, 25% auf Sparpreise 1. Klasse. 220 €/Jahr."
     },
     {
       "id": "db_bc50_2nd_annual_standard",
@@ -135,20 +100,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 27, "max_age": 64 },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 50,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "50% Rabatt auf Flexpreise, 25% Rabatt auf Sparpreise. 244 €/Jahr."
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
     },
     {
       "id": "db_bc50_2nd_annual_young",
@@ -160,20 +118,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 19, "max_age": 26 },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 50,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "50% Rabatt auf Flexpreise, 25% Rabatt auf Sparpreise. 122 €/Jahr."
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 122 €/Jahr."
     },
     {
       "id": "db_bc50_2nd_annual_senior",
@@ -185,20 +136,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 65, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 50,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "50% Rabatt auf Flexpreise, 25% Rabatt auf Sparpreise"
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise."
     },
     {
       "id": "db_bc50_2nd_probe",
@@ -210,20 +154,13 @@
       "minimum_months": 3,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 50,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "50% Rabatt auf Flexpreise, 25% Rabatt auf Sparpreise. Keine automatische Verlängerung."
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
     },
     {
       "id": "db_bc50_1st_annual_standard",
@@ -235,20 +172,13 @@
       "minimum_months": 12,
       "eligibility": { "min_age": 27, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": 25,
-        "discount_long_distance_pct_flexpreis": 50,
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
         "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "50% Rabatt auf Flexpreise der 1. Klasse, 25% Rabatt auf Sparpreise der 1. Klasse. 492 €/Jahr."
+      "notes": "50% auf Flexpreise 1. Klasse, 25% auf Sparpreise 1. Klasse. 492 €/Jahr."
     },
     {
       "id": "db_bc100_2nd_annual",
@@ -260,17 +190,10 @@
       "minimum_months": 12,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
         "unlimited_long_distance": true,
-        "unlimited_regional": true,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": true
       },
       "qualifying_threshold": null,
       "notes": "Unbegrenzte Fahrten im gesamten DB-Netz (Fern- und Nahverkehr), 2. Klasse. 4.944 €/Jahr."
@@ -285,17 +208,10 @@
       "minimum_months": 12,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
         "unlimited_long_distance": true,
-        "unlimited_regional": true,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": true
       },
       "qualifying_threshold": null,
       "notes": "Unbegrenzte Fahrten im gesamten DB-Netz, 1. Klasse. 8.244 €/Jahr."
@@ -310,17 +226,10 @@
       "minimum_months": 1,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
         "unlimited_long_distance": false,
-        "unlimited_regional": true,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlimited_regional": true
       },
       "qualifying_threshold": null,
       "notes": "Unbegrenzte Nutzung aller Nahverkehrsmittel (S-Bahn, U-Bahn, Bus, RegionalBahn) deutschlandweit. Monatlich kündbar."
@@ -335,20 +244,14 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
         "monthly_credit_eur": 0.00,
         "discount_km_pct": 0,
         "discount_time_pct": 0,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 3.90
       },
       "qualifying_threshold": null,
-      "notes": "Kein Mitgliedsbeitrag. Standard km-Tarif. Unlock Fee anfällig."
+      "notes": "Kein Mitgliedsbeitrag. Standard km-Tarif."
     },
     {
       "id": "miles_silber",
@@ -360,20 +263,14 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
         "monthly_credit_eur": 10.00,
         "discount_km_pct": 10,
         "discount_time_pct": 5,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 3.90
       },
       "qualifying_threshold": null,
-      "notes": "9,99 €/Monat. 10 € Guthaben/Monat inklusive. 10% auf Standard-km-Tarif, 5% auf Stunden-/Tagestarife & Zusatzkilometer."
+      "notes": "10 € Guthaben/Monat. 10% auf km-Tarif, 5% auf Zeitarife."
     },
     {
       "id": "miles_gold",
@@ -385,20 +282,14 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
         "monthly_credit_eur": 50.00,
         "discount_km_pct": 15,
         "discount_time_pct": 10,
-        "unlock_fee_waived": false,
-        "protection_plus_included": true,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 0.00
       },
       "qualifying_threshold": null,
-      "notes": "49,99 €/Monat. 50 € Guthaben/Monat inklusive. 15% auf km-Tarif, 10% auf Zeitarife. Protection Plus inklusive."
+      "notes": "50 € Guthaben/Monat. 15% auf km-Tarif, 10% auf Zeitarife. Protection Plus inklusive."
     },
     {
       "id": "miles_platin",
@@ -410,20 +301,14 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
         "monthly_credit_eur": 50.00,
         "discount_km_pct": 15,
         "discount_time_pct": 10,
-        "unlock_fee_waived": true,
-        "protection_plus_included": true,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlock_fee_eur_per_trip": 0.00,
+        "protection_plus_eur_per_trip": 0.00
       },
       "qualifying_threshold": null,
-      "notes": "59,99 €/Monat. 50 € Guthaben/Monat inklusive. 15% auf km-Tarif, 10% auf Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
+      "notes": "50 € Guthaben/Monat. 15% auf km-Tarif, 10% auf Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
     },
     {
       "id": "miles_black",
@@ -435,20 +320,14 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
         "monthly_credit_eur": 250.00,
         "discount_km_pct": 15,
         "discount_time_pct": 15,
-        "unlock_fee_waived": true,
-        "protection_plus_included": true,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
+        "unlock_fee_eur_per_trip": 0.00,
+        "protection_plus_eur_per_trip": 0.00
       },
       "qualifying_threshold": null,
-      "notes": "250 €/Monat. 250 € Guthaben/Monat inklusive. 15% auf km- und Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
+      "notes": "250 € Guthaben/Monat. 15% auf km- und Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
     },
     {
       "id": "enterprise_plus",
@@ -460,23 +339,14 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 21, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
         "bonus_points_pct": 0,
-        "bonus_miles_pct": null
+        "point_value_eur": 0.046
       },
       "qualifying_threshold": {
         "rentals_per_year": 0,
         "rental_days_per_year": null
       },
-      "notes": "Kostenloses Basisprogramm. Punkte und Elite-Status bei jeder qualifizierenden Anmietung. 0–5 Anmietungen/Jahr."
+      "notes": "Kostenloses Basisprogramm. 0–5 Anmietungen/Jahr."
     },
     {
       "id": "enterprise_silver",
@@ -488,23 +358,14 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 21, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
         "bonus_points_pct": 10,
-        "bonus_miles_pct": null
+        "point_value_eur": 0.046
       },
       "qualifying_threshold": {
         "rentals_per_year": 6,
         "rental_days_per_year": null
       },
-      "notes": "Erreicht ab 6–11 qualifizierenden Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
+      "notes": "Erreicht ab 6–11 Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
     },
     {
       "id": "enterprise_gold",
@@ -516,17 +377,8 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 21, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
         "bonus_points_pct": 15,
-        "bonus_miles_pct": null
+        "point_value_eur": 0.046
       },
       "qualifying_threshold": {
         "rentals_per_year": 12,
@@ -544,17 +396,8 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 21, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
         "bonus_points_pct": 20,
-        "bonus_miles_pct": null
+        "point_value_eur": 0.046
       },
       "qualifying_threshold": {
         "rentals_per_year": 24,
@@ -572,23 +415,14 @@
       "minimum_months": 0,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": 0
+        "bonus_miles_pct": 0,
+        "mile_value_eur": 0.012
       },
       "qualifying_threshold": {
         "status_miles_per_year": 0,
         "flights_per_year": null
       },
-      "notes": "Kostenloses Basisprogramm. Prämienmeilen auf Lufthansa-Group-Flügen und Partnergesellschaften. Keine Statusprivilegien."
+      "notes": "Kostenloses Basisprogramm. Prämienmeilen auf Lufthansa-Group-Flügen und Partnergesellschaften."
     },
     {
       "id": "lh_miles_frequent_traveller",
@@ -600,17 +434,8 @@
       "minimum_months": 0,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": 25
+        "bonus_miles_pct": 25,
+        "mile_value_eur": 0.012
       },
       "qualifying_threshold": {
         "status_miles_per_year": 35000,
@@ -628,17 +453,8 @@
       "minimum_months": 0,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": 50
+        "bonus_miles_pct": 50,
+        "mile_value_eur": 0.012
       },
       "qualifying_threshold": {
         "status_miles_per_year": 100000,
@@ -656,17 +472,8 @@
       "minimum_months": 0,
       "eligibility": { "min_age": null, "max_age": null },
       "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": 100
+        "bonus_miles_pct": 100,
+        "mile_value_eur": 0.012
       },
       "qualifying_threshold": {
         "status_miles_per_year": 600000,
@@ -683,21 +490,9 @@
       "billing_cycle": "monthly",
       "minimum_months": 0,
       "eligibility": { "min_age": null, "max_age": null },
-      "benefits": {
-        "discount_long_distance_pct_sparpreis": null,
-        "discount_long_distance_pct_flexpreis": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false,
-        "monthly_credit_eur": null,
-        "discount_km_pct": null,
-        "discount_time_pct": null,
-        "unlock_fee_waived": false,
-        "protection_plus_included": false,
-        "bonus_points_pct": null,
-        "bonus_miles_pct": null
-      },
+      "benefits": {},
       "qualifying_threshold": null,
-      "notes": "Kein Abonnement oder Treueprogramm. Tickets einzeln buchbar. Günstigster CO₂-Footprint unter allen motorisierten Langstreckenmodes."
+      "notes": "Kein Abonnement oder Treueprogramm. Tickets einzeln buchbar."
     }
   ]
 }
