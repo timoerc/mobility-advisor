@@ -103,6 +103,7 @@ class _Priorities(BaseModel):
 class ProfilePayload(BaseModel):
     model_config = {"extra": "ignore"}
     persona_id: str = "current"
+    avatarBg: str = "#888888"
     personal: _Personal = _Personal()
     location: dict = {}
     commute: _Commute = _Commute()
@@ -167,7 +168,7 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
         "name": full_name,
         "tagline": payload.personal.profession or "New user",
         "avatar": initials,
-        "avatarBg": "#888888",
+        "avatarBg": payload.avatarBg,
         "profileData": {
             "personal": payload.personal.model_dump(),
             "location": payload.location,

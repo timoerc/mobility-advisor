@@ -3,6 +3,7 @@ import { ProfileDropdown } from "./ProfileDropdown";
 type AppShellProps = {
   personaName: string;
   personaTagline: string;
+  avatarBg: string;
   onBack?: () => void;
   onChatOpen: () => void;
   onEditPreferences: () => void;
@@ -16,6 +17,7 @@ type AppShellProps = {
 export function AppShell({
   personaName,
   personaTagline,
+  avatarBg,
   onBack,
   onChatOpen,
   onEditPreferences,
@@ -57,6 +59,7 @@ export function AppShell({
             <ProfileDropdown
               name={personaName}
               tagline={personaTagline}
+              avatarBg={avatarBg}
               onEditPreferences={onEditPreferences}
               onEditProfile={onEditProfile}
               onMobilityModes={onMobilityModes}

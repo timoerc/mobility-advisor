@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 type ProfileDropdownProps = {
   name: string;
   tagline: string;
+  avatarBg: string;
   onEditPreferences: () => void;
   onEditProfile: () => void;
   onMobilityModes: () => void;
@@ -36,6 +37,7 @@ function DropdownItem({
 export function ProfileDropdown({
   name,
   tagline,
+  avatarBg,
   onEditPreferences,
   onEditProfile,
   onMobilityModes,
@@ -79,7 +81,8 @@ export function ProfileDropdown({
         aria-label="Profile and settings"
         aria-expanded={open}
         aria-haspopup="true"
-        className="h-8 w-8 rounded-full bg-brand-red text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+        className="h-8 w-8 rounded-full text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+        style={{ backgroundColor: avatarBg }}
       >
         {initials}
       </button>

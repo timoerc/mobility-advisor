@@ -1,3 +1,22 @@
 {
-  "subscriptions": []
+  "subscriptions": [
+    {
+      "provider": "HVV",
+      "product": "Deutschlandticket",
+      "monthly_cost_eur": 49.0,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "",
+      "started": "2023-05-01",
+      "notes": ""
+    },
+    {
+      "provider": "Sixt",
+      "product": "Membership",
+      "monthly_cost_eur": 5.0,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "",
+      "started": "",
+      "notes": ""
+    }
+  ]
 }

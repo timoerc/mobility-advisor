@@ -1,50 +1,51 @@
 {
-  "id": "new",
-  "name": "Timo Tamo",
-  "tagline": "professional",
-  "avatar": "TT",
-  "avatarBg": "#888888",
+  "id": "lena",
+  "name": "Lena Brandt",
+  "tagline": "Student",
+  "avatar": "LB",
+  "avatarBg": "#1a7f37",
   "profileData": {
     "personal": {
-      "full_name": "Timo Tamo",
-      "employment_status": "employed",
-      "profession": "professional",
+      "full_name": "Lena Brandt",
+      "employment_status": "student",
+      "profession": "Student",
       "household_context": "single"
     },
     "location": {
-      "home_city": "colonia"
+      "home_city": "Hamburg"
     },
     "commute": {
       "wfh_days": [
+        "fri"
+      ],
+      "office_days": [
         "mon",
-        "fri",
         "tue",
         "wed",
         "thu"
-      ],
-      "office_days": []
+      ]
     },
     "car": {
-      "owns_car": false,
-      "fuel_type": null,
-      "car_size": null,
-      "efficiency": null,
-      "efficiency_unit": null,
-      "monthly_km_estimate": null
+      "owns_car": true,
+      "fuel_type": "Diesel",
+      "car_size": "Large car",
+      "efficiency": 9.0,
+      "efficiency_unit": "L/100km",
+      "monthly_km_estimate": 200.0
     },
     "priorities": {
-      "cost": 0.3108136826071823,
-      "time": 0.4933859667367513,
-      "sustainability": 0.1958003506560665
+      "cost": 0.5,
+      "time": 0.2,
+      "sustainability": 0.3
     },
     "integrations": {
-      "outlook_connected": true,
-      "gmail_connected": true,
-      "calendar_connected": true,
-      "db_connected": true,
-      "miles_connected": true,
+      "outlook_connected": false,
+      "gmail_connected": false,
+      "calendar_connected": false,
+      "db_connected": false,
+      "miles_connected": false,
       "deutschlandticket_connected": true
     },
-    "notes": ""
+    "notes": "Commute to university by U-Bahn and S-Bahn."
   }
 }

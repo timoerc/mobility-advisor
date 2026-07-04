@@ -17,8 +17,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function saveProfile(personaId: string, prefs: OnboardingPreferences): Promise<void> {
-  await post<{ ok: boolean }>("/profile", { persona_id: personaId, ...prefs });
+export async function saveProfile(personaId: string, prefs: OnboardingPreferences, avatarBg?: string): Promise<void> {
+  await post<{ ok: boolean }>("/profile", { persona_id: personaId, ...prefs, ...(avatarBg !== undefined ? { avatarBg } : {}) });
 }
 
 export async function activatePersona(personaId: string): Promise<void> {

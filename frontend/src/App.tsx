@@ -95,8 +95,9 @@ function downloadJson(filename: string, data: unknown) {
 
 // ── App ──────────────────────────────────────────────────────────────────────
 
-type Phase = "login" | "onboarding" | "main";
+type Phase = "login" | "onboarding" | "editing" | "main";
 type MainView = "home" | "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
+type EditConfig = { steps: number[]; currentIndex: number; label: string };
 
 function getOrCreateSessionId(): string {
   const key = "mobility_advisor_session_id";
@@ -118,8 +119,8 @@ export default function App() {
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
   const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
   const [sessionId] = useState(getOrCreateSessionId);
-  // When deep-linking from the dropdown, store the view to return to after saving
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
+  const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
 
   const activePersona = personas.find((p) => p.id === activePersonaId) ?? DEFAULT_PERSONAS[0];
 
@@ -141,6 +142,60 @@ export default function App() {
       })
       .catch(console.warn);
   }, []);
+
+  // ── Step renderer (shared by onboarding and editing phases) ───────────────
+
+  const renderStep = (step: number) => {
+    switch (step) {
+      case 1: return <AgentIntroPage />;
+      case 2: return (
+        <PersonalProfilePage
+          profile={preferences.personal}
+          onChange={(personal) => setPreferences((c) => ({ ...c, personal }))}
+        />
+      );
+      case 3: return (
+        <LocationCommutePage
+          homeCity={preferences.location.home_city}
+          commute={preferences.commute}
+          onCityChange={(home_city) => setPreferences((c) => ({ ...c, location: { home_city } }))}
+          onCommuteChange={(commute) => setPreferences((c) => ({ ...c, commute }))}
+        />
+      );
+      case 4: return (
+        <CarProfilePage
+          car={preferences.car}
+          onChange={(car) => setPreferences((c) => ({ ...c, car }))}
+        />
+      );
+      case 5: return (
+        <IntegrationsPage
+          integrations={preferences.integrations}
+          onChange={(integrations) => setPreferences((c) => ({ ...c, integrations }))}
+        />
+      );
+      case 6: return (
+        <MobilityStackPage
+          subscriptions={preferences.subscriptions}
+          onChange={(subscriptions) => setPreferences((c) => ({ ...c, subscriptions }))}
+        />
+      );
+      case 7: return (
+        <PrioritiesPage
+          priorities={preferences.priorities}
+          onChange={(priorities) => setPreferences((c) => ({ ...c, priorities }))}
+        />
+      );
+      case 8: return (
+        <NotesPage
+          notes={preferences.notes}
+          onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
+        />
+      );
+      case 9: return <FinalPage onGoHome={handleOnboardingComplete} />;
+      default: return null;
+    }
+  };
 
   // ── Login ──────────────────────────────────────────────────────────────────
 
@@ -197,7 +252,7 @@ export default function App() {
     }
     setActiveArchetypeId(classifyArchetype(preferences));
     setLiveRecommendation(null);
-    saveProfile(activePersonaId ?? "current", preferences).catch(console.warn);
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
     setMainView("home");
     setPhase("main");
   };
@@ -216,11 +271,42 @@ export default function App() {
     setMainView("analysis");
   };
 
-  // Deep-link from dropdown → a specific onboarding step, then return to main
-  const deepLinkToStep = (step: number) => {
+  // ── Deep-link editing (clean single-section edit pages) ──────────────────
+
+  const startEditing = (steps: number[], label: string) => {
     setReturnToMain(mainView);
-    setOnboardingStep(step);
-    setPhase("onboarding");
+    setEditConfig({ steps, currentIndex: 0, label });
+    setPhase("editing");
+  };
+
+  const handleEditCancel = () => {
+    const target = returnToMain ?? "home";
+    setReturnToMain(null);
+    setEditConfig(null);
+    setMainView(target);
+    setPhase("main");
+  };
+
+  const handleEditSave = () => {
+    const target = returnToMain ?? "home";
+    setReturnToMain(null);
+    setEditConfig(null);
+    if (activePersonaId && activePersonaId !== "new") {
+      savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
+    }
+    setActiveArchetypeId(classifyArchetype(preferences));
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
+    setMainView(target);
+    setPhase("main");
+  };
+
+  const handleEditNext = () => {
+    if (!editConfig) return;
+    if (editConfig.currentIndex < editConfig.steps.length - 1) {
+      setEditConfig({ ...editConfig, currentIndex: editConfig.currentIndex + 1 });
+    } else {
+      handleEditSave();
+    }
   };
 
   const handleSaveAndReturn = () => {
@@ -230,7 +316,7 @@ export default function App() {
       savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
     }
     setActiveArchetypeId(classifyArchetype(preferences));
-    saveProfile(activePersonaId ?? "current", preferences).catch(console.warn);
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
     setMainView(target);
     setPhase("main");
   };
@@ -287,65 +373,7 @@ export default function App() {
 
         <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
           {showSkip && <SkipButton onSkip={handleSkip} />}
-
-          {onboardingStep === 1 && <AgentIntroPage />}
-
-          {onboardingStep === 2 && (
-            <PersonalProfilePage
-              profile={preferences.personal}
-              onChange={(personal) => setPreferences((c) => ({ ...c, personal }))}
-            />
-          )}
-
-          {onboardingStep === 3 && (
-            <LocationCommutePage
-              homeCity={preferences.location.home_city}
-              commute={preferences.commute}
-              onCityChange={(home_city) => setPreferences((c) => ({ ...c, location: { home_city } }))}
-              onCommuteChange={(commute) => setPreferences((c) => ({ ...c, commute }))}
-            />
-          )}
-
-          {onboardingStep === 4 && (
-            <CarProfilePage
-              car={preferences.car}
-              onChange={(car) => setPreferences((c) => ({ ...c, car }))}
-            />
-          )}
-
-          {onboardingStep === 5 && (
-            <IntegrationsPage
-              integrations={preferences.integrations}
-              onChange={(integrations) => setPreferences((c) => ({ ...c, integrations }))}
-            />
-          )}
-
-          {onboardingStep === 6 && (
-            <MobilityStackPage
-              subscriptions={preferences.subscriptions}
-              onChange={(subscriptions) => setPreferences((c) => ({ ...c, subscriptions }))}
-            />
-          )}
-
-          {onboardingStep === 7 && (
-            <PrioritiesPage
-              priorities={preferences.priorities}
-              onChange={(priorities) => setPreferences((c) => ({ ...c, priorities }))}
-            />
-          )}
-
-          {onboardingStep === 8 && (
-            <NotesPage
-              notes={preferences.notes}
-              onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
-            />
-          )}
-
-          {onboardingStep === 9 && (
-            <FinalPage
-              onGoHome={handleOnboardingComplete}
-            />
-          )}
+          {renderStep(onboardingStep)}
         </main>
 
         <footer
@@ -390,17 +418,64 @@ export default function App() {
     );
   }
 
+  // ── Phase: editing ────────────────────────────────────────────────────────
+
+  if (phase === "editing" && editConfig) {
+    const currentStep = editConfig.steps[editConfig.currentIndex];
+    const isLast = editConfig.currentIndex === editConfig.steps.length - 1;
+
+    return (
+      <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
+            <span className="font-bold text-sm">{editConfig.label}</span>
+            <button
+              type="button"
+              onClick={handleEditCancel}
+              className="ml-auto text-sm text-gray-500 hover:text-gray-900 cursor-pointer border-0 bg-transparent"
+            >
+              Cancel
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
+          {renderStep(currentStep)}
+        </main>
+
+        <footer className="max-w-2xl mx-auto w-full px-4 pb-8 flex gap-3">
+          <button
+            type="button"
+            onClick={handleEditCancel}
+            className="h-[52px] px-6 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50 cursor-pointer flex-shrink-0"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={isLast ? handleEditSave : handleEditNext}
+            className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
+          >
+            {isLast ? "Save" : "Next →"}
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
   // ── Phase: main ───────────────────────────────────────────────────────────
 
   return (
     <AppShell
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
+      avatarBg={activePersona.avatarBg}
       onBack={mainView === "chat" ? () => setMainView("home") : undefined}
       onChatOpen={() => setMainView("chat")}
-      onEditPreferences={() => deepLinkToStep(7)}
-      onEditProfile={() => deepLinkToStep(2)}
-      onMobilityModes={() => deepLinkToStep(4)}
+      onEditPreferences={() => startEditing([7], "Edit preferences")}
+      onEditProfile={() => startEditing([2, 3], "Edit profile")}
+      onMobilityModes={() => startEditing([4, 6], "Mobility modes")}
       onRedoOnboarding={handleRedoOnboarding}
       onSwitchProfile={handleSwitchProfile}
     >
