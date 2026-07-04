@@ -9,12 +9,12 @@ _SCENARIOS = Path(__file__).parent.parent / "scenarios"
 
 @pytest.fixture
 def happy_path(monkeypatch):
-    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "01_happy_path")
+    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "maja")
 
 
 @pytest.fixture
 def failure_recovery(monkeypatch):
-    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "03_failure_recovery")
+    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "lena")
 
 
 def test_total_trip_count(happy_path):

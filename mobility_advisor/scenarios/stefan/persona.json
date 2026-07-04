@@ -1,0 +1,39 @@
+{
+  "id": "stefan",
+  "name": "Stefan Kurz",
+  "tagline": "Car owner · Occasional train traveller",
+  "avatar": "SK",
+  "avatarBg": "#1f6feb",
+  "profileData": {
+    "personal": {
+      "full_name": "Stefan Kurz",
+      "employment_status": "employed",
+      "profession": "Engineer",
+      "household_context": "partner"
+    },
+    "location": { "home_city": "München" },
+    "commute": {
+      "office_days": ["mon", "tue", "wed", "thu", "fri"],
+      "wfh_days": []
+    },
+    "car": {
+      "owns_car": true,
+      "fuel_type": "Petrol",
+      "car_size": "Medium car",
+      "efficiency": 7.5,
+      "efficiency_unit": "L/100km",
+      "monthly_km_estimate": 600
+    },
+    "priorities": { "cost": 0.3, "time": 0.5, "sustainability": 0.2 },
+    "integrations": {
+      "outlook_connected": false,
+      "gmail_connected": true,
+      "calendar_connected": false,
+      "db_connected": false,
+      "miles_connected": false,
+      "deutschlandticket_connected": false
+    },
+    "monthlyBudgetEur": 500,
+    "notes": "Drive to work daily. Train maybe once a month."
+  }
+}

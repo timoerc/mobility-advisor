@@ -1,6 +1,7 @@
 """Mobility Advisor API — thin FastAPI wrapper over the ADK agent pipeline."""
 import json
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from uuid import uuid4
@@ -25,6 +26,15 @@ from mobility_advisor.agent import root_agent
 from mobility_advisor.pipeline import optimization_pipeline
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
+_SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
+_KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena"})
+_SCENARIO_FILES = [
+    "user_preferences.json",
+    "current_subscriptions.json",
+    "travel_history.json",
+    "calendar_events.json",
+    "mobility_catalog.json",
+]
 _MODEL_ID = "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw"
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -175,8 +185,20 @@ def _prefs_and_subs_from_payload(payload: ProfilePayload) -> tuple[dict, dict]:
     return prefs, subs
 
 
+def _activate_from_scenario(persona_id: str) -> bool:
+    """Copy all 5 pipeline JSON files from scenarios/{persona_id}/ into data/."""
+    scenario_dir = _SCENARIOS / persona_id
+    if not scenario_dir.is_dir():
+        return False
+    for fname in _SCENARIO_FILES:
+        src = scenario_dir / fname
+        if src.exists():
+            shutil.copy2(src, _DATA / fname)
+    return True
+
+
 def _activate_from_stored(persona_id: str) -> bool:
-    """Write a stored persona's data to the active data files. Returns False if not found."""
+    """Write a stored custom persona's data to the active data files. Returns False if not found."""
     profiles = _load_persona_profiles()
     entry = profiles.get(persona_id)
     if not entry:
@@ -207,14 +229,35 @@ async def save_profile(payload: ProfilePayload):
     return {"ok": True}
 
 
+@app.get("/api/personas")
+async def list_personas():
+    """Assemble each persona from persona.json + current_subscriptions.json."""
+    result = []
+    for folder in sorted(_SCENARIOS.iterdir()):
+        if not folder.is_dir():
+            continue
+        pf = folder / "persona.json"
+        if not pf.exists():
+            continue
+        persona = json.loads(pf.read_text())
+        sf = folder / "current_subscriptions.json"
+        subscriptions = json.loads(sf.read_text()).get("subscriptions", []) if sf.exists() else []
+        persona["profileData"]["subscriptions"] = subscriptions
+        result.append(persona)
+    return result
+
+
 @app.post("/api/activate")
 async def activate_persona(req: ActivateRequest):
-    """Switch the active data set to a previously saved persona."""
-    found = _activate_from_stored(req.persona_id)
+    """Switch the active data set to a named scenario or a previously saved custom persona."""
+    if req.persona_id in _KNOWN_PERSONAS:
+        found = _activate_from_scenario(req.persona_id)
+    else:
+        found = _activate_from_stored(req.persona_id)
     if not found:
         raise HTTPException(
             status_code=404,
-            detail=f"No saved profile for persona '{req.persona_id}'. Complete onboarding first.",
+            detail=f"No scenario or saved profile for persona '{req.persona_id}'.",
         )
     return {"ok": True}
 

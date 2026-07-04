@@ -12,7 +12,7 @@ _SCENARIOS = Path(__file__).parent.parent / "scenarios"
 
 @pytest.fixture
 def isolated_data_dir(tmp_path, monkeypatch):
-    for f in (_SCENARIOS / "01_happy_path").glob("*.json"):
+    for f in (_SCENARIOS / "maja").glob("*.json"):
         shutil.copy(f, tmp_path / f.name)
     monkeypatch.setattr(tools, "_DATA", tmp_path)
     return tmp_path

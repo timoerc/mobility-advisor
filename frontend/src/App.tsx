@@ -4,7 +4,7 @@ import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
-import { saveProfile, activatePersona } from "./api";
+import { saveProfile, activatePersona, fetchPersonas } from "./api";
 import type { Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
@@ -28,6 +28,7 @@ import { DashboardPage } from "./pages/main/DashboardPage";
 import { ApprovalPage } from "./pages/main/ApprovalPage";
 import { ConfirmationPage } from "./pages/main/ConfirmationPage";
 import { ChatPage } from "./pages/main/ChatPage";
+import { HomePage } from "./pages/main/HomePage";
 import type { OnboardingPreferences } from "./types";
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -97,7 +98,7 @@ function downloadJson(filename: string, data: unknown) {
 // ── App ──────────────────────────────────────────────────────────────────────
 
 type Phase = "login" | "onboarding" | "main";
-type MainView = "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
+type MainView = "home" | "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
 
 function getOrCreateSessionId(): string {
   const key = "mobility_advisor_session_id";
@@ -124,6 +125,25 @@ export default function App() {
 
   const activePersona = personas.find((p) => p.id === activePersonaId) ?? DEFAULT_PERSONAS[0];
 
+  // ── Fetch personas from backend on mount ───────────────────────────────────
+
+  useEffect(() => {
+    fetchPersonas()
+      .then((backendPersonas) => {
+        setPersonas((current) =>
+          backendPersonas.map((bp) => {
+            const local = current.find((p) => p.id === bp.id);
+            return {
+              ...bp,
+              onboardingComplete: local?.onboardingComplete ?? false,
+              mockRecommendation: local?.mockRecommendation ?? (bp as any).mockRecommendation,
+            };
+          })
+        );
+      })
+      .catch(console.warn);
+  }, []);
+
   // ── Login ──────────────────────────────────────────────────────────────────
 
   const handlePersonaSelect = (id: string) => {
@@ -136,14 +156,16 @@ export default function App() {
       return;
     }
 
-    const persona = DEFAULT_PERSONAS.find((p) => p.id === id);
+    // Always activate the backend scenario for pre-built personas
+    activatePersona(id).catch(console.warn);
+
+    const persona = personas.find((p) => p.id === id) ?? DEFAULT_PERSONAS.find((p) => p.id === id);
     const saved = loadPersistedPersona(id);
 
     if (saved?.onboardingComplete) {
       const profile = saved.profileData ?? persona?.profileData ?? EMPTY_PROFILE;
       setPreferences(profile);
       setActiveArchetypeId(classifyArchetype(profile));
-      activatePersona(id).catch(console.warn);
       setMainView("dashboard");
       setPhase("main");
     } else {
@@ -178,7 +200,7 @@ export default function App() {
     setActiveArchetypeId(classifyArchetype(preferences));
     setLiveRecommendation(null);
     saveProfile(activePersonaId ?? "current", preferences).catch(console.warn);
-    setMainView("analysis");
+    setMainView("home");
     setPhase("main");
   };
 
@@ -330,7 +352,7 @@ export default function App() {
 
           {onboardingStep === 10 && (
             <FinalPage
-              onDownload={() => downloadJson("user_profile.json", buildExportJson(preferences))}
+              onGoHome={handleOnboardingComplete}
             />
           )}
         </main>
@@ -370,15 +392,6 @@ export default function App() {
                   <span className="nav-arrow nav-arrow-white" aria-hidden="true" />
                 </button>
               )}
-              {onboardingStep === TOTAL_ONBOARDING_STEPS - 1 && (
-                <button
-                  type="button"
-                  onClick={handleOnboardingComplete}
-                  className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
-                >
-                  Start analysis →
-                </button>
-              )}
             </>
           )}
         </footer>
@@ -392,7 +405,7 @@ export default function App() {
     <AppShell
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
-      onBack={mainView === "chat" ? () => setMainView("dashboard") : undefined}
+      onBack={mainView === "chat" ? () => setMainView("home") : undefined}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => deepLinkToStep(7)}
       onEditProfile={() => deepLinkToStep(2)}
@@ -400,6 +413,10 @@ export default function App() {
       onRedoOnboarding={handleRedoOnboarding}
       onSwitchProfile={handleSwitchProfile}
     >
+      {mainView === "home" && (
+        <HomePage onChat={() => setMainView("chat")} onAnalysis={handleRunAnalysis} />
+      )}
+
       {mainView === "analysis" && (
         <AnalysisPage sessionId={sessionId} onComplete={handleAnalysisComplete} />
       )}

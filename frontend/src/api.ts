@@ -1,5 +1,6 @@
 import type { OnboardingPreferences } from "./types";
 import type { Recommendation } from "./types/recommendation";
+import type { Persona } from "./personas";
 
 const BASE = "/api";
 
@@ -31,4 +32,10 @@ export async function runAnalysis(sessionId: string): Promise<Recommendation> {
 export async function sendMessage(sessionId: string, text: string): Promise<string> {
   const data = await post<{ text: string }>("/chat", { session_id: sessionId, text });
   return data.text;
+}
+
+export async function fetchPersonas(): Promise<Persona[]> {
+  const res = await fetch(`${BASE}/personas`);
+  if (!res.ok) throw new Error(`GET /api/personas ${res.status}`);
+  return res.json() as Promise<Persona[]>;
 }

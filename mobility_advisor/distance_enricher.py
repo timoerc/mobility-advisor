@@ -16,8 +16,9 @@ ORS_API_KEY = os.getenv("ORS_API_KEY", "")
 ORS_BASE = "https://api.openrouteservice.org"
 
 _DATA = Path(__file__).parent / "data"
+_STATIC = Path(__file__).parent / "static"
 _RAW_OUTPUT = _DATA / "travel_history_raw.json"
-_CO2_CSV = _DATA / "co2_factors.csv"
+_CO2_CSV = _STATIC / "co2_factors.csv"
 
 ROUTABLE_MODES = {"rail", "bus", "car_share", "car_rental"}
 

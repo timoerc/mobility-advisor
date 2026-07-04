@@ -323,7 +323,10 @@ def apply_subscription_change(
     if action in ("add", "replace") and not new_product:
         return _error(f"new_product is required for action={action!r}")
 
-    subs_list = load_current_subscriptions()["subscriptions"]
+    # Load raw dicts to preserve all fields (e.g. id, category) that the Pydantic
+    # model doesn't know about — model_dump() would strip them on write-back.
+    raw_file = json.loads((_DATA / "current_subscriptions.json").read_text())
+    subs_list = raw_file["subscriptions"]
     before_count = len(subs_list)
 
     target_match = None
@@ -383,12 +386,13 @@ def apply_subscription_change(
     after_count = len(new_subs_list)
 
     try:
-        validated = CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
+        CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
     except Exception as exc:
         return _error(f"resulting subscriptions failed validation: {exc}", before_count)
 
     backup_path = _backup_subscriptions_file()
-    _atomic_write_json(_DATA / "current_subscriptions.json", validated.model_dump())
+    # Write raw dicts (not model_dump) to preserve all fields beyond the pipeline schema.
+    _atomic_write_json(_DATA / "current_subscriptions.json", {"subscriptions": new_subs_list})
 
     return {
         "status": "applied",

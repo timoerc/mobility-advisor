@@ -1,0 +1,39 @@
+{
+  "id": "lena",
+  "name": "Lena Brandt",
+  "tagline": "Student · Deutschlandticket",
+  "avatar": "LB",
+  "avatarBg": "#1a7f37",
+  "profileData": {
+    "personal": {
+      "full_name": "Lena Brandt",
+      "employment_status": "student",
+      "profession": "Student",
+      "household_context": "single"
+    },
+    "location": { "home_city": "Hamburg" },
+    "commute": {
+      "office_days": ["mon", "tue", "wed", "thu"],
+      "wfh_days": ["fri"]
+    },
+    "car": {
+      "owns_car": false,
+      "fuel_type": null,
+      "car_size": null,
+      "efficiency": null,
+      "efficiency_unit": null,
+      "monthly_km_estimate": null
+    },
+    "priorities": { "cost": 0.5, "time": 0.2, "sustainability": 0.3 },
+    "integrations": {
+      "outlook_connected": false,
+      "gmail_connected": false,
+      "calendar_connected": false,
+      "db_connected": false,
+      "miles_connected": false,
+      "deutschlandticket_connected": true
+    },
+    "monthlyBudgetEur": 80,
+    "notes": "Commute to university by U-Bahn and S-Bahn."
+  }
+}

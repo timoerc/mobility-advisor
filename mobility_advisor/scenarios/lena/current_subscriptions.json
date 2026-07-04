@@ -1,0 +1,17 @@
+{
+  "subscriptions": [
+    {
+      "id": "1",
+      "category": "rail_subscription",
+      "cost_structure": "fixed_recurring",
+      "provider": "HVV",
+      "product": "Deutschlandticket",
+      "monthly_cost_eur": 49.00,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "2026-08-01",
+      "started": "2023-05-01",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
+    }
+  ]
+}
