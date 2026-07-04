@@ -83,6 +83,5 @@ export type OnboardingPreferences = {
   subscriptions: SubscriptionEntry[];
   priorities: PriorityWeights;
   integrations: Integrations;
-  monthlyBudgetEur: number;
   notes: string;
 };

@@ -22,13 +22,25 @@ _DATA = Path(__file__).parent / "data"
 USE_MOCK_DATA = True
 
 def load_user_preferences() -> dict:
-    """Load Maja's personal mobility preferences and constraints from the mock data store.
+    """Load the active user's mobility preferences derived from their persona profile.
 
-    Returns a dict with keys: flexibility_need (str: low/medium/high),
+    Returns a dict with keys: name (str), flexibility_need (str: low/medium/high),
     sustainability_weight (float 0-1), values_time_over_money (bool), and notes (str).
     """
-    raw = json.loads((_DATA / "user_preferences.json").read_text())
-    return UserPreferences.model_validate(raw).model_dump()
+    raw = json.loads((_DATA / "persona.json").read_text())
+    pd = raw["profileData"]
+    wfh = pd["commute"]["wfh_days"]
+    n = len(wfh)
+    flexibility = "high" if n >= 4 else "medium" if n >= 2 else "low"
+    p = pd["priorities"]
+    prefs = {
+        "name": pd["personal"]["full_name"] or "the user",
+        "flexibility_need": flexibility,
+        "sustainability_weight": round(p["sustainability"], 4),
+        "values_time_over_money": p["time"] > p["cost"],
+        "notes": pd.get("notes", ""),
+    }
+    return UserPreferences.model_validate(prefs).model_dump()
 
 
 def load_current_subscriptions() -> dict:

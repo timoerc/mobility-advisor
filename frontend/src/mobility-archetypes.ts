@@ -175,8 +175,6 @@ export function classifyArchetype(prefs: OnboardingPreferences): ArchetypeId {
   // Budget optimizer
   if (prefs.priorities.cost > 0.4) scores.budget_optimizer += 3;
   else if (prefs.priorities.cost > 0.3) scores.budget_optimizer += 1;
-  if (prefs.monthlyBudgetEur > 0 && prefs.monthlyBudgetEur < 100) scores.budget_optimizer += 2;
-  else if (prefs.monthlyBudgetEur > 0 && prefs.monthlyBudgetEur < 200) scores.budget_optimizer += 1;
   if (prefs.personal.employment_status === "student") scores.budget_optimizer += 1;
 
   return (Object.entries(scores) as [ArchetypeId, number][]).sort(([, a], [, b]) => b - a)[0][0];

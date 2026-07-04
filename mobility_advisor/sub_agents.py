@@ -28,7 +28,7 @@ def build_model() -> LiteLlm:
     return _MODEL
 _TODAY = date.today().isoformat()
 _DATA_DIR = Path(__file__).parent / "data"
-_prefs = json.loads((_DATA_DIR / "user_preferences.json").read_text())
+_prefs = json.loads((_DATA_DIR / "persona.json").read_text())
 _USER_NAME = _prefs.get("name", "the user")
 _USER_FIRST_NAME = _USER_NAME.split()[0]
 

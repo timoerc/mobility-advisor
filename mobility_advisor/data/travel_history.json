@@ -1,32 +1,122 @@
 {
   "trips": [
     {
+      "date": "2025-06-03",
+      "mode": "rail",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Berlin Hbf",
+      "distance_km": 550,
+      "cost_eur": 49.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-06-06",
+      "mode": "rail",
+      "origin": "Berlin Hbf",
+      "destination": "Frankfurt (Main) Hbf",
+      "distance_km": 550,
+      "cost_eur": 49.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
       "date": "2025-05-14",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
-      "destination": "Mannheim Hbf",
-      "distance_km": 80,
-      "cost_eur": 12.00,
+      "destination": "München Hbf",
+      "distance_km": 400,
+      "cost_eur": 39.50,
       "provider": "Deutsche Bahn",
       "booked_under": "BahnCard 50 (2. Klasse)"
     },
     {
       "date": "2025-05-16",
       "mode": "rail",
-      "origin": "Mannheim Hbf",
+      "origin": "München Hbf",
       "destination": "Frankfurt (Main) Hbf",
-      "distance_km": 80,
-      "cost_eur": 12.00,
+      "distance_km": 400,
+      "cost_eur": 39.50,
       "provider": "Deutsche Bahn",
       "booked_under": "BahnCard 50 (2. Klasse)"
     },
     {
-      "date": "2025-02-10",
+      "date": "2025-04-22",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
-      "destination": "Heidelberg Hbf",
-      "distance_km": 80,
-      "cost_eur": 12.00,
+      "destination": "Hamburg Hbf",
+      "distance_km": 490,
+      "cost_eur": 44.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-04-24",
+      "mode": "rail",
+      "origin": "Hamburg Hbf",
+      "destination": "Frankfurt (Main) Hbf",
+      "distance_km": 490,
+      "cost_eur": 44.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-03-11",
+      "mode": "rail",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Köln Hbf",
+      "distance_km": 190,
+      "cost_eur": 29.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-03-12",
+      "mode": "rail",
+      "origin": "Köln Hbf",
+      "destination": "Frankfurt (Main) Hbf",
+      "distance_km": 190,
+      "cost_eur": 29.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-02-18",
+      "mode": "rail",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Stuttgart Hbf",
+      "distance_km": 205,
+      "cost_eur": 27.00,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-02-20",
+      "mode": "rail",
+      "origin": "Stuttgart Hbf",
+      "destination": "Frankfurt (Main) Hbf",
+      "distance_km": 205,
+      "cost_eur": 27.00,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-01-28",
+      "mode": "rail",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Düsseldorf Hbf",
+      "distance_km": 225,
+      "cost_eur": 31.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2025-01-30",
+      "mode": "rail",
+      "origin": "Düsseldorf Hbf",
+      "destination": "Frankfurt (Main) Hbf",
+      "distance_km": 225,
+      "cost_eur": 31.50,
       "provider": "Deutsche Bahn",
       "booked_under": "BahnCard 50 (2. Klasse)"
     },
@@ -41,12 +131,72 @@
       "booked_under": "MILES+ Abo"
     },
     {
-      "date": "2024-11-20",
+      "date": "2025-01-18",
       "mode": "car_share",
       "origin": "Frankfurt Westend",
+      "destination": "Frankfurt Airport Terminal 1",
+      "distance_km": 11.0,
+      "cost_eur": 16.50,
+      "provider": "MILES Mobility",
+      "booked_under": "MILES+ Abo"
+    },
+    {
+      "date": "2025-05-28",
+      "mode": "rail",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Nürnberg Hbf",
+      "distance_km": 225,
+      "cost_eur": null,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2024-11-30",
+      "mode": "car_share",
+      "origin": "Frankfurt Innenstadt",
       "destination": "Frankfurt Bornheim",
-      "distance_km": 3.8,
-      "cost_eur": 9.50,
+      "distance_km": 3.5,
+      "cost_eur": null,
+      "provider": "MILES Mobility",
+      "booked_under": "MILES+ Abo"
+    },
+    {
+      "date": "2025-02-05",
+      "mode": "",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Hannover Hbf",
+      "distance_km": 360,
+      "cost_eur": 35.00,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2024-12-10",
+      "mode": "",
+      "origin": "Frankfurt Bornheim",
+      "destination": "Frankfurt Airport Terminal 1",
+      "distance_km": 12.0,
+      "cost_eur": 18.00,
+      "provider": "MILES Mobility",
+      "booked_under": "MILES+ Abo"
+    },
+    {
+      "date": "2024-10-14",
+      "mode": "hovercraft",
+      "origin": "Frankfurt (Main) Hbf",
+      "destination": "Bremen Hbf",
+      "distance_km": 420,
+      "cost_eur": 38.50,
+      "provider": "Deutsche Bahn",
+      "booked_under": "BahnCard 50 (2. Klasse)"
+    },
+    {
+      "date": "2024-08-19",
+      "mode": "hovercraft",
+      "origin": "Frankfurt Westend",
+      "destination": "Frankfurt Nordend",
+      "distance_km": 3.2,
+      "cost_eur": 9.00,
       "provider": "MILES Mobility",
       "booked_under": "MILES+ Abo"
     }

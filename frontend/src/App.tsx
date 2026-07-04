@@ -20,7 +20,6 @@ import { CarProfilePage } from "./pages/4_CarProfilePage";
 import { IntegrationsPage } from "./pages/8_IntegrationsPage";
 import { MobilityStackPage } from "./pages/5_MobilityStackPage";
 import { PrioritiesPage } from "./pages/7_PrioritiesPage";
-import { BudgetPage } from "./pages/6_BudgetPage";
 import { NotesPage } from "./pages/9_NotesPage";
 import { FinalPage } from "./pages/10_FinalPage";
 import { AnalysisPage } from "./pages/main/AnalysisPage";
@@ -66,7 +65,6 @@ const EMPTY_PROFILE: OnboardingPreferences = {
   subscriptions: [],
   priorities: { cost: 1 / 3, time: 1 / 3, sustainability: 1 / 3 },
   integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false },
-  monthlyBudgetEur: 0,
   notes: "",
 };
 
@@ -76,14 +74,14 @@ const STEP_SKIP_DEFAULTS: Partial<Record<number, Partial<OnboardingPreferences>>
   4: { car: { owns_car: false, fuel_type: null, car_size: null, efficiency: null, efficiency_unit: null, monthly_km_estimate: null } },
   5: { integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false } },
   6: { subscriptions: [] },
-  9: { notes: "" },
+  8: { notes: "" },
 };
 
-// Step count: 0 (logo) → 10 (final), totalSteps = 11
-const TOTAL_ONBOARDING_STEPS = 11;
+// Step count: 0 (logo) → 9 (final), totalSteps = 10
+const TOTAL_ONBOARDING_STEPS = 10;
 
 function buildExportJson(p: OnboardingPreferences) {
-  return { personal: p.personal, location: p.location, commute: p.commute, car: p.car, subscriptions: p.subscriptions, priorities: p.priorities, integrations: p.integrations, monthlyBudgetEur: p.monthlyBudgetEur, notes: p.notes };
+  return { personal: p.personal, location: p.location, commute: p.commute, car: p.car, subscriptions: p.subscriptions, priorities: p.priorities, integrations: p.integrations, notes: p.notes };
 }
 
 function downloadJson(filename: string, data: unknown) {
@@ -271,7 +269,7 @@ export default function App() {
       return <LogoIntroPage />;
     }
 
-    const showSkip = onboardingStep >= 4 && onboardingStep <= 9 && onboardingStep !== 7 && onboardingStep !== 8;
+    const showSkip = onboardingStep >= 4 && onboardingStep <= 8 && onboardingStep !== 7;
 
     return (
       <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
@@ -337,20 +335,13 @@ export default function App() {
           )}
 
           {onboardingStep === 8 && (
-            <BudgetPage
-              monthlyBudgetEur={preferences.monthlyBudgetEur}
-              onChange={(monthlyBudgetEur) => setPreferences((c) => ({ ...c, monthlyBudgetEur }))}
-            />
-          )}
-
-          {onboardingStep === 9 && (
             <NotesPage
               notes={preferences.notes}
               onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
             />
           )}
 
-          {onboardingStep === 10 && (
+          {onboardingStep === 9 && (
             <FinalPage
               onGoHome={handleOnboardingComplete}
             />

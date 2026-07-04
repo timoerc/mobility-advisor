@@ -29,7 +29,7 @@ _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
 _KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena"})
 _SCENARIO_FILES = [
-    "user_preferences.json",
+    "persona.json",
     "current_subscriptions.json",
     "travel_history.json",
     "calendar_events.json",
@@ -110,7 +110,6 @@ class ProfilePayload(BaseModel):
     subscriptions: list[_Subscription] = []
     priorities: _Priorities = _Priorities()
     integrations: dict = {}
-    monthlyBudgetEur: float = 0
     notes: str = ""
 
 
@@ -129,23 +128,6 @@ class ChatRequest(BaseModel):
 
 # ── Profile helpers ───────────────────────────────────────────────────────────
 
-_PERSONA_PROFILES = _DATA / "persona_profiles.json"
-
-
-def _load_persona_profiles() -> dict:
-    if _PERSONA_PROFILES.exists():
-        return json.loads(_PERSONA_PROFILES.read_text())
-    return {}
-
-
-def _flexibility(wfh_days: list[str]) -> str:
-    n = len(wfh_days)
-    if n >= 4:
-        return "high"
-    if n >= 2:
-        return "medium"
-    return "low"
-
 
 def _atomic_write(path: Path, data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
@@ -160,15 +142,8 @@ def _atomic_write(path: Path, data: dict) -> None:
         raise
 
 
-def _prefs_and_subs_from_payload(payload: ProfilePayload) -> tuple[dict, dict]:
-    prefs = {
-        "name": payload.personal.full_name or "the user",
-        "flexibility_need": _flexibility(payload.commute.wfh_days),
-        "sustainability_weight": round(payload.priorities.sustainability, 4),
-        "values_time_over_money": payload.priorities.time > payload.priorities.cost,
-        "notes": payload.notes,
-    }
-    subs = {
+def _subs_from_payload(payload: ProfilePayload) -> dict:
+    return {
         "subscriptions": [
             {
                 "provider": s.provider,
@@ -182,7 +157,27 @@ def _prefs_and_subs_from_payload(payload: ProfilePayload) -> tuple[dict, dict]:
             for s in payload.subscriptions
         ]
     }
-    return prefs, subs
+
+
+def _persona_from_payload(payload: ProfilePayload) -> dict:
+    full_name = payload.personal.full_name or "the user"
+    initials = "".join(w[0].upper() for w in full_name.split()[:2]) if full_name != "the user" else "?"
+    return {
+        "id": payload.persona_id,
+        "name": full_name,
+        "tagline": payload.personal.profession or "New user",
+        "avatar": initials,
+        "avatarBg": "#888888",
+        "profileData": {
+            "personal": payload.personal.model_dump(),
+            "location": payload.location,
+            "commute": payload.commute.model_dump(),
+            "car": payload.car.model_dump(),
+            "priorities": payload.priorities.model_dump(),
+            "integrations": payload.integrations,
+            "notes": payload.notes,
+        },
+    }
 
 
 def _activate_from_scenario(persona_id: str) -> bool:
@@ -197,35 +192,13 @@ def _activate_from_scenario(persona_id: str) -> bool:
     return True
 
 
-def _activate_from_stored(persona_id: str) -> bool:
-    """Write a stored custom persona's data to the active data files. Returns False if not found."""
-    profiles = _load_persona_profiles()
-    entry = profiles.get(persona_id)
-    if not entry:
-        return False
-    _atomic_write(_DATA / "user_preferences.json", entry["user_preferences"])
-    _atomic_write(_DATA / "current_subscriptions.json", entry["current_subscriptions"])
-    return True
-
-
 # ── Profile endpoints ─────────────────────────────────────────────────────────
 
 @app.post("/api/profile")
 async def save_profile(payload: ProfilePayload):
-    """Save a persona's profile and make it the active data set."""
-    prefs, subs = _prefs_and_subs_from_payload(payload)
-
-    # Persist per-persona
-    profiles = _load_persona_profiles()
-    profiles[payload.persona_id] = {
-        "user_preferences": prefs,
-        "current_subscriptions": subs,
-    }
-    _atomic_write(_PERSONA_PROFILES, profiles)
-
-    # Make active
-    _atomic_write(_DATA / "user_preferences.json", prefs)
-    _atomic_write(_DATA / "current_subscriptions.json", subs)
+    """Save a persona's full profile and make it the active data set."""
+    _atomic_write(_DATA / "persona.json", _persona_from_payload(payload))
+    _atomic_write(_DATA / "current_subscriptions.json", _subs_from_payload(payload))
     return {"ok": True}
 
 
@@ -249,15 +222,17 @@ async def list_personas():
 
 @app.post("/api/activate")
 async def activate_persona(req: ActivateRequest):
-    """Switch the active data set to a named scenario or a previously saved custom persona."""
-    if req.persona_id in _KNOWN_PERSONAS:
-        found = _activate_from_scenario(req.persona_id)
-    else:
-        found = _activate_from_stored(req.persona_id)
+    """Switch the active data set to a named scenario."""
+    if req.persona_id not in _KNOWN_PERSONAS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No scenario for persona '{req.persona_id}'.",
+        )
+    found = _activate_from_scenario(req.persona_id)
     if not found:
         raise HTTPException(
             status_code=404,
-            detail=f"No scenario or saved profile for persona '{req.persona_id}'.",
+            detail=f"No scenario directory for persona '{req.persona_id}'.",
         )
     return {"ok": True}
 
