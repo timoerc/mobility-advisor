@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Integrations } from "../types";
 
 type IntegrationsPageProps = {
@@ -55,6 +56,23 @@ const MORE_PROVIDERS = [
   "Nextbike", "Tier", "Lime", "Bolt", "FreeNow",
 ];
 
+const PROVIDER_FULL_NAMES: Record<string, string> = {
+  BVG: "Berliner Verkehrsbetriebe (BVG)",
+  MVV: "Münchner Verkehrsgesellschaft (MVV)",
+  HVV: "Hamburger Verkehrsverbund (HVV)",
+  RMV: "Rhein-Main-Verkehrsverbund (RMV)",
+  KVB: "Kölner Verkehrs-Betriebe (KVB)",
+  VVS: "Verkehrs- und Tarifverbund Stuttgart (VVS)",
+  Flinkster: "Flinkster",
+  Stadtmobil: "Stadtmobil",
+  ShareNow: "ShareNow",
+  Nextbike: "Nextbike",
+  Tier: "TIER Mobility",
+  Lime: "Lime",
+  Bolt: "Bolt",
+  FreeNow: "FREE NOW",
+};
+
 function ServiceRow({
   label,
   description,
@@ -91,8 +109,27 @@ export function IntegrationsPage({
   integrations,
   onChange,
 }: IntegrationsPageProps) {
+  const [confirmingProvider, setConfirmingProvider] = useState<string | null>(null);
+
   const toggle = (key: keyof Integrations) =>
     onChange({ ...integrations, [key]: !integrations[key] });
+
+  const additionalConnections = integrations.additional_connections ?? [];
+
+  const connectProvider = (name: string) => {
+    onChange({
+      ...integrations,
+      additional_connections: [...additionalConnections, name],
+    });
+    setConfirmingProvider(null);
+  };
+
+  const disconnectProvider = (name: string) => {
+    onChange({
+      ...integrations,
+      additional_connections: additionalConnections.filter((n) => n !== name),
+    });
+  };
 
   const mobilityCount = MOBILITY_SERVICES.filter(
     (s) => integrations[s.key]
@@ -106,8 +143,7 @@ export function IntegrationsPage({
         </h1>
         <p className="text-gray-500 leading-relaxed m-0">
           Connect your mobility and email accounts so we can detect your active
-          subscriptions automatically. You can skip this and enter them manually
-          on the next screen.
+          subscriptions and travel history automatically.
         </p>
       </div>
 
@@ -134,21 +170,29 @@ export function IntegrationsPage({
           ))}
         </div>
 
-        {/* More providers teaser */}
+        {/* More providers — interactive pills */}
         <div className="mt-1 p-3 rounded-lg border border-dashed border-gray-200 bg-white">
-          <p className="text-xs text-gray-400 mb-2 font-medium">Also supported</p>
+          <p className="text-xs text-gray-500 mb-2 font-medium">More providers</p>
           <div className="flex flex-wrap gap-1.5">
-            {MORE_PROVIDERS.map((name) => (
-              <span
-                key={name}
-                className="px-2.5 py-1 rounded-full text-xs bg-gray-50 text-gray-300 border border-gray-100 select-none"
-              >
-                {name}
-              </span>
-            ))}
-            <span className="px-2.5 py-1 rounded-full text-xs bg-gray-50 text-gray-300 border border-gray-100 select-none">
-              + more
-            </span>
+            {MORE_PROVIDERS.map((name) => {
+              const connected = additionalConnections.includes(name);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() =>
+                    connected ? disconnectProvider(name) : setConfirmingProvider(name)
+                  }
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors ${
+                    connected
+                      ? "bg-brand-red border-brand-red text-white"
+                      : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700"
+                  }`}
+                >
+                  {connected ? `${name} ✓` : name}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -170,9 +214,44 @@ export function IntegrationsPage({
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 text-center">
-        These are stubs — no data is actually sent anywhere.
-      </p>
+      {/* Connect confirmation dialog */}
+      {confirmingProvider !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
+          onClick={() => setConfirmingProvider(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <p className="font-bold text-base m-0">
+                Connect {PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider}?
+              </p>
+              <p className="text-sm text-gray-500 mt-1 m-0">
+                Link your {PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider} account to import ticket and trip data.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmingProvider(null)}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 bg-transparent border border-gray-200 rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => connectProvider(confirmingProvider)}
+                className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-full border-0 cursor-pointer hover:opacity-90"
+              >
+                Connect ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

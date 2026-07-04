@@ -64,16 +64,15 @@ const EMPTY_PROFILE: OnboardingPreferences = {
   car: { owns_car: false, fuel_type: null, car_size: null, efficiency: null, efficiency_unit: null, monthly_km_estimate: null },
   subscriptions: [],
   priorities: { cost: 1 / 3, time: 1 / 3, sustainability: 1 / 3 },
-  integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false },
+  integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false, additional_connections: [] },
   notes: "",
 };
 
 // ── Onboarding skip defaults ─────────────────────────────────────────────────
 
 const STEP_SKIP_DEFAULTS: Partial<Record<number, Partial<OnboardingPreferences>>> = {
-  4: { car: { owns_car: false, fuel_type: null, car_size: null, efficiency: null, efficiency_unit: null, monthly_km_estimate: null } },
-  5: { integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false } },
-  6: { subscriptions: [] },
+  // Steps 4 (car), 5 (integrations), 6 (subscriptions) intentionally have no skip default:
+  // skipping just advances without clearing pre-filled persona data.
   8: { notes: "" },
 };
 
@@ -216,7 +215,9 @@ export default function App() {
     const saved = loadPersistedPersona(id);
 
     if (saved?.onboardingComplete) {
-      const profile = saved.profileData ?? persona?.profileData ?? EMPTY_PROFILE;
+      // Always use fresh persona profileData for pre-built personas so that
+      // edit pages always reflect the current mock setup, never stale localStorage.
+      const profile = persona?.profileData ?? EMPTY_PROFILE;
       setPreferences(profile);
       setActiveArchetypeId(classifyArchetype(profile));
       setMainView("home");
@@ -326,10 +327,15 @@ export default function App() {
     if (activePersonaId) {
       savePersistedPersona(activePersonaId, { onboardingComplete: false });
       setPersonas((ps) => ps.map((p) => p.id === activePersonaId ? { ...p, onboardingComplete: false } : p));
+      // Reset to fresh persona profile so all steps show correct pre-filled data
+      const freshPersona = personas.find((p) => p.id === activePersonaId);
+      if (freshPersona) setPreferences(freshPersona.profileData);
     }
     setOnboardingStep(0);
     setPhase("onboarding");
   };
+
+  const handleEditConnections = () => startEditing([5], "Connections");
 
   const handleSwitchProfile = () => {
     setPhase("login");
@@ -476,6 +482,7 @@ export default function App() {
       onEditPreferences={() => startEditing([7], "Edit preferences")}
       onEditProfile={() => startEditing([2, 3], "Edit profile")}
       onMobilityModes={() => startEditing([4, 6], "Mobility modes")}
+      onEditConnections={handleEditConnections}
       onRedoOnboarding={handleRedoOnboarding}
       onSwitchProfile={handleSwitchProfile}
     >

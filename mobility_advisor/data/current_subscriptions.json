@@ -1,22 +1,33 @@
 {
   "subscriptions": [
     {
-      "provider": "HVV",
-      "product": "Deutschlandticket",
-      "monthly_cost_eur": 49.0,
-      "billing_cycle": "monthly",
-      "next_renewal_date": "",
-      "started": "2023-05-01",
-      "notes": ""
+      "id": "1",
+      "category": "rail_subscription",
+      "cost_structure": "fixed_annual_discount",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse)",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "next_renewal_date": "2027-01-15",
+      "started": "2023-01-15",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares.",
+      "annual_price": 244,
+      "discount_rate": 50,
+      "travel_class": "2nd"
     },
     {
-      "provider": "Sixt",
-      "product": "Membership",
-      "monthly_cost_eur": 5.0,
+      "id": "2",
+      "category": "rail_subscription",
+      "cost_structure": "fixed_recurring",
+      "provider": "HVV",
+      "product": "Deutschlandticket",
+      "monthly_cost_eur": 49.00,
       "billing_cycle": "monthly",
-      "next_renewal_date": "",
-      "started": "",
-      "notes": ""
+      "next_renewal_date": "2026-08-01",
+      "started": "2023-05-01",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
     }
   ]
 }

@@ -9,6 +9,7 @@ type AppShellProps = {
   onEditPreferences: () => void;
   onEditProfile: () => void;
   onMobilityModes: () => void;
+  onEditConnections: () => void;
   onRedoOnboarding: () => void;
   onSwitchProfile: () => void;
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function AppShell({
   onEditPreferences,
   onEditProfile,
   onMobilityModes,
+  onEditConnections,
   onRedoOnboarding,
   onSwitchProfile,
   children,
@@ -63,6 +65,7 @@ export function AppShell({
               onEditPreferences={onEditPreferences}
               onEditProfile={onEditProfile}
               onMobilityModes={onMobilityModes}
+              onEditConnections={onEditConnections}
               onRedoOnboarding={onRedoOnboarding}
               onSwitchProfile={onSwitchProfile}
             />

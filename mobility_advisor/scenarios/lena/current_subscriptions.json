@@ -3,6 +3,22 @@
     {
       "id": "1",
       "category": "rail_subscription",
+      "cost_structure": "fixed_annual_discount",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse)",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "next_renewal_date": "2027-01-15",
+      "started": "2023-01-15",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares.",
+      "annual_price": 244,
+      "discount_rate": 50,
+      "travel_class": "2nd"
+    },
+    {
+      "id": "2",
+      "category": "rail_subscription",
       "cost_structure": "fixed_recurring",
       "provider": "HVV",
       "product": "Deutschlandticket",

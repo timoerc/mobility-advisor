@@ -27,11 +27,12 @@
     "priorities": { "cost": 0.5, "time": 0.2, "sustainability": 0.3 },
     "integrations": {
       "outlook_connected": false,
-      "gmail_connected": false,
+      "gmail_connected": true,
       "calendar_connected": false,
-      "db_connected": false,
+      "db_connected": true,
       "miles_connected": false,
-      "deutschlandticket_connected": true
+      "deutschlandticket_connected": true,
+      "additional_connections": ["HVV", "Nextbike"]
     },
     "notes": "Commute to university by U-Bahn and S-Bahn."
   }

@@ -73,6 +73,8 @@ export type Integrations = {
   db_connected: boolean;
   miles_connected: boolean;
   deutschlandticket_connected: boolean;
+  // additional providers connected via the "more" section
+  additional_connections?: string[];
 };
 
 export type OnboardingPreferences = {

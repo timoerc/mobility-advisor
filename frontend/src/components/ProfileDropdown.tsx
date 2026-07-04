@@ -7,6 +7,7 @@ type ProfileDropdownProps = {
   onEditPreferences: () => void;
   onEditProfile: () => void;
   onMobilityModes: () => void;
+  onEditConnections: () => void;
   onRedoOnboarding: () => void;
   onSwitchProfile: () => void;
 };
@@ -41,6 +42,7 @@ export function ProfileDropdown({
   onEditPreferences,
   onEditProfile,
   onMobilityModes,
+  onEditConnections,
   onRedoOnboarding,
   onSwitchProfile,
 }: ProfileDropdownProps) {
@@ -111,6 +113,11 @@ export function ProfileDropdown({
               label="Mobility modes"
               sublabel="Car, subscriptions, modes"
               onClick={wrap(onMobilityModes)}
+            />
+            <DropdownItem
+              label="Connections"
+              sublabel="Linked accounts & services"
+              onClick={wrap(onEditConnections)}
             />
             <DropdownItem
               label="Re-do full onboarding"

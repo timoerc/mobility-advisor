@@ -1,3 +1,47 @@
 {
-  "subscriptions": []
+  "subscriptions": [
+    {
+      "id": "1",
+      "category": "rail_subscription",
+      "cost_structure": "fixed_annual_discount",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse)",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "next_renewal_date": "2027-01-15",
+      "started": "2024-01-15",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares.",
+      "annual_price": 244,
+      "discount_rate": 50,
+      "travel_class": "2nd"
+    },
+    {
+      "id": "2",
+      "category": "rail_subscription",
+      "cost_structure": "fixed_recurring",
+      "provider": "Deutschlandticket",
+      "product": "Deutschland-Ticket",
+      "monthly_cost_eur": 58.00,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "2026-07-01",
+      "started": "2023-05-01",
+      "coverage_scope": "Germany nationwide",
+      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
+    },
+    {
+      "id": "3",
+      "category": "carsharing",
+      "cost_structure": "usage_membership",
+      "provider": "MILES Mobility",
+      "product": "MILES+ Abo",
+      "monthly_cost_eur": 4.90,
+      "monthly_fee": 4.90,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "2026-07-01",
+      "started": "2022-06-15",
+      "coverage_scope": "",
+      "notes": "Car-sharing membership tier. Provides 5% cashback on MILES trip costs and slightly reduced per-minute rate."
+    }
+  ]
 }

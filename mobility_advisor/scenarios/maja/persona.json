@@ -26,12 +26,13 @@
     },
     "priorities": { "cost": 0.54, "time": 0.16, "sustainability": 0.3 },
     "integrations": {
-      "outlook_connected": false,
+      "outlook_connected": true,
       "gmail_connected": false,
       "calendar_connected": false,
       "db_connected": true,
-      "miles_connected": false,
-      "deutschlandticket_connected": false
+      "miles_connected": true,
+      "deutschlandticket_connected": true,
+      "additional_connections": ["KVB", "RMV", "FreeNow"]
     },
     "notes": "Mostly travel Cologne–Frankfurt, sometimes Hamburg."
   }
