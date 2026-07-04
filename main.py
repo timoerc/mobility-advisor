@@ -43,7 +43,7 @@ app = FastAPI(title="Mobility Advisor API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -382,6 +382,10 @@ def _collect_text(event) -> str:
     )
 
 
+def _has_function_call(event) -> bool:
+    return bool(event.get_function_calls() or event.get_function_responses())
+
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     svc = _chat_service(req.session_id)
@@ -402,6 +406,7 @@ async def chat(req: ChatRequest):
         )
 
     last_text = ""
+    fallback_text = ""
     async for event in runner.run_async(
         user_id="user",
         session_id=req.session_id,
@@ -414,8 +419,13 @@ async def chat(req: ChatRequest):
             t = _collect_text(event)
             if t.strip():
                 last_text = t
+        else:
+            t = _collect_text(event)
+            if t.strip() and not _has_function_call(event):
+                fallback_text = t
 
-    if not last_text:
+    reply = last_text or fallback_text
+    if not reply:
         raise HTTPException(status_code=500, detail="Agent produced no response")
 
-    return {"text": last_text}
+    return {"text": reply}

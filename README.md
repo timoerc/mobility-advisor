@@ -93,6 +93,8 @@ If the backend isn't running, the frontend still loads and falls back to canned 
 
 ### Agent-only debugging (no frontend)
 
+> **Important:** `adk web` and `adk api_server` both bind to port 8000. Stop them before starting `uvicorn main:app`, or the frontend will hit the wrong server and receive 403 errors.
+
 To interact with the agents directly via the ADK web UI, without the FastAPI/React layer:
 
 ```bash

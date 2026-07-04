@@ -116,7 +116,7 @@ export default function App() {
   const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [preferences, setPreferences] = useState<OnboardingPreferences>(EMPTY_PROFILE);
-  const [mainView, setMainView] = useState<MainView>("analysis");
+  const [mainView, setMainView] = useState<MainView>("home");
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
   const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
   const [sessionId] = useState(getOrCreateSessionId);
@@ -166,7 +166,7 @@ export default function App() {
       const profile = saved.profileData ?? persona?.profileData ?? EMPTY_PROFILE;
       setPreferences(profile);
       setActiveArchetypeId(classifyArchetype(profile));
-      setMainView("dashboard");
+      setMainView("home");
       setPhase("main");
     } else {
       setPreferences(persona?.profileData ?? EMPTY_PROFILE);

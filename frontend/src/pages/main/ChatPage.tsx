@@ -60,8 +60,8 @@ export function ChatPage({ sessionId, onRunAnalysis }: ChatPageProps) {
   };
 
   return (
-    <div className="flex flex-col" style={{ minHeight: "calc(100vh - 57px)" }}>
-      <div className="flex-1 flex flex-col gap-4 pb-4">
+    <div className="flex flex-col" style={{ height: "calc(100vh - 105px)" }}>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-4 pb-4">
         {messages.map((msg) => (
           <ChatBubble key={msg.id} role={msg.role} text={msg.text} />
         ))}
