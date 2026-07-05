@@ -200,6 +200,12 @@ async def save_profile(payload: ProfilePayload):
     """Save a persona's full profile and make it the active data set."""
     _atomic_write(_DATA / "persona.json", _persona_from_payload(payload))
     _atomic_write(_DATA / "current_subscriptions.json", _subs_from_payload(payload))
+    if payload.persona_id not in _KNOWN_PERSONAS:
+        # Custom/new profile, not one of the pre-built scenario personas: there is no
+        # real travel or calendar history for them, so clear out whatever scenario data
+        # happened to be active last instead of silently analysing it as if it were theirs.
+        _atomic_write(_DATA / "travel_history.json", {"trips": []})
+        _atomic_write(_DATA / "calendar_events.json", {"events": []})
     return {"ok": True}
 
 

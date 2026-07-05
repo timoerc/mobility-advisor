@@ -19,6 +19,14 @@ class Subscription(BaseModel):
     next_renewal_date: str
     started: str
     notes: str
+    id: str | None = None
+    category: str | None = None
+    cost_structure: str | None = None
+    coverage_scope: str | None = None
+    annual_price: float | None = None
+    discount_rate: float | None = None
+    monthly_fee: float | None = None
+    travel_class: str | None = None
 
 
 class CurrentSubscriptions(BaseModel):
