@@ -357,11 +357,18 @@ async def analyze(req: AnalyzeRequest):
 def _collect_text(event) -> str:
     if not event.content:
         return ""
-    return "".join(
-        part.text
-        for part in (event.content.parts or [])
-        if hasattr(part, "text") and part.text
-    )
+    texts = []
+    for part in event.content.parts or []:
+        if getattr(part, "text", None):
+            texts.append(part.text)
+        elif getattr(part, "function_response", None):
+            # skip_summarization=True (optimization_pipeline, execution_agent,
+            # annual_report_pipeline) makes the coordinator relay the sub-agent's report
+            # as a raw function_response instead of a text part — surface it the same way.
+            result = part.function_response.response.get("result")
+            if isinstance(result, str):
+                texts.append(result)
+    return "".join(texts)
 
 
 def _has_function_call(event) -> bool:
