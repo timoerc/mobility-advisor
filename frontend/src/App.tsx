@@ -134,7 +134,6 @@ export default function App() {
             return {
               ...bp,
               onboardingComplete: local?.onboardingComplete ?? false,
-              mockRecommendation: local?.mockRecommendation ?? (bp as any).mockRecommendation,
             };
           })
         );
@@ -260,8 +259,8 @@ export default function App() {
 
   // ── Main app navigation ───────────────────────────────────────────────────
 
-  const handleAnalysisComplete = useCallback((rec?: Recommendation) => {
-    if (rec) setLiveRecommendation(rec);
+  const handleAnalysisComplete = useCallback((rec: Recommendation) => {
+    setLiveRecommendation(rec);
     setMainView("dashboard");
   }, []);
   const handleProceedToApproval = () => setMainView("approval");
@@ -494,35 +493,31 @@ export default function App() {
         <AnalysisPage sessionId={sessionId} onComplete={handleAnalysisComplete} />
       )}
 
-      {mainView === "dashboard" && (
+      {mainView === "dashboard" && liveRecommendation && (
         <DashboardPage
-          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
+          recommendation={liveRecommendation}
           mobilityArchetype={activeArchetypeId ? MOBILITY_ARCHETYPES[activeArchetypeId] : undefined}
           onProceed={handleProceedToApproval}
         />
       )}
 
-      {mainView === "approval" && (
+      {mainView === "approval" && liveRecommendation && (
         <ApprovalPage
-          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
+          recommendation={liveRecommendation}
           onConfirm={handleConfirm}
           onCancel={handleBackToDashboard}
         />
       )}
 
-      {mainView === "confirmation" && (
+      {mainView === "confirmation" && liveRecommendation && (
         <ConfirmationPage
-          actionTitle={(liveRecommendation ?? activePersona.mockRecommendation).proposedAction.title}
+          actionTitle={liveRecommendation.proposedAction.title}
           onBackToDashboard={handleBackToDashboard}
         />
       )}
 
       {mainView === "chat" && (
-        <ChatPage
-          sessionId={sessionId}
-          recommendation={liveRecommendation ?? activePersona.mockRecommendation}
-          onRunAnalysis={handleRunAnalysis}
-        />
+        <ChatPage sessionId={sessionId} onRunAnalysis={handleRunAnalysis} />
       )}
     </AppShell>
   );

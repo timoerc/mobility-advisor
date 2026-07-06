@@ -15,17 +15,17 @@ const STATUS_MESSAGES = [
 
 type AnalysisPageProps = {
   sessionId: string;
-  onComplete: (recommendation?: Recommendation) => void;
+  onComplete: (recommendation: Recommendation) => void;
 };
 
 export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
   const [done, setDone] = useState(false);
-  const calledRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
-  useEffect(() => {
-    if (calledRef.current) return;
-    calledRef.current = true;
-
+  const start = () => {
+    setError(null);
+    setDone(false);
     runAnalysis(sessionId)
       .then((rec) => {
         setDone(true);
@@ -33,11 +33,42 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
         window.setTimeout(() => onComplete(rec), 600);
       })
       .catch((err) => {
-        console.warn("Analysis API failed, falling back to mock data:", err);
-        setDone(true);
-        window.setTimeout(() => onComplete(undefined), 600);
+        console.error("Analysis failed:", err);
+        setError(err instanceof Error ? err.message : "The analysis pipeline failed. Please try again.");
       });
-  }, [sessionId, onComplete]);
+  };
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  if (error) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 py-12 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-red">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <div className="flex flex-col gap-2 max-w-xs">
+          <h2 className="text-xl font-bold text-[#1f1f1f] m-0">Analysis failed</h2>
+          <p className="text-sm text-gray-500 m-0 leading-relaxed">{error}</p>
+        </div>
+        <button
+          type="button"
+          onClick={start}
+          className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 py-12 text-center">
