@@ -33,3 +33,8 @@ export type Recommendation = {
   alternatives: Alternative[];
   proposedAction: ProposedAction;
 };
+
+export type ExecutionResult = {
+  success: boolean;
+  message: string;
+};

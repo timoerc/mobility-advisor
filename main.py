@@ -23,6 +23,7 @@ from google.genai import types as gtypes
 from pydantic import BaseModel
 
 from mobility_advisor.agent import root_agent
+from mobility_advisor.execution_agent import execution_agent
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
@@ -125,6 +126,12 @@ class AnalyzeRequest(BaseModel):
 class ChatRequest(BaseModel):
     session_id: str
     text: str
+
+
+class ExecuteRequest(BaseModel):
+    session_id: str
+    action_title: str
+    action_description: str
 
 
 # ── Profile helpers ───────────────────────────────────────────────────────────
@@ -247,7 +254,7 @@ async def activate_persona(req: ActivateRequest):
 # ── JSON extraction ───────────────────────────────────────────────────────────
 
 _JSON_SYSTEM_PROMPT = """
-Convert the optimizer recommendation into this exact JSON structure.
+Convert the mobility advisor's recommendation report into this exact JSON structure.
 Output ONLY valid JSON — no markdown fences, no surrounding text.
 
 {
@@ -278,7 +285,7 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
   "proposedAction": {
     "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 renewal'>",
     "description": "<1-2 sentences with action details and deadline>",
-    "consequence": "<what happens after the action is taken>"
+    "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 will be cancelled and BahnCard 25 will start in its place.' Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
   }
 }
 
@@ -287,17 +294,17 @@ Rules:
 - alternatives must include at minimum: the recommended action (isRecommended: true) and the status-quo 'Keep current setup' (isRecommended: false, savingsVsCurrentEur: 0)
 - for 'Keep current setup': annualCostEur = current monthly cost x 12, savingsVsCurrentEur = 0
 - for the recommended action: annualCostEur = proposed monthly cost x 12, savingsVsCurrentEur = monthly saving x 12
-- all numbers must come verbatim from the optimizer output — never invent figures
-- if a field value cannot be determined from the optimizer output, use a sensible default (e.g. 'Neutral' for co2Impact, [] for assumptions)
+- all numbers must come verbatim from the report below — never invent figures
+- if a field value cannot be determined from the report below, use a sensible default (e.g. 'Neutral' for co2Impact, [] for assumptions)
 """.strip()
 
 
-async def _extract_recommendation_json(optimizer_output: str) -> dict:
+async def _extract_recommendation_json(report_text: str) -> dict:
     response = await litellm.acompletion(
         model=_MODEL_ID,
         messages=[
             {"role": "system", "content": _JSON_SYSTEM_PROMPT},
-            {"role": "user", "content": optimizer_output},
+            {"role": "user", "content": report_text},
         ],
         temperature=0.0,
     )
@@ -324,7 +331,9 @@ async def analyze(req: AnalyzeRequest):
         session_id=sid,
     )
 
-    async for _ in runner.run_async(
+    last_text = ""
+    fallback_text = ""
+    async for event in runner.run_async(
         user_id="user",
         session_id=sid,
         new_message=gtypes.Content(
@@ -332,20 +341,26 @@ async def analyze(req: AnalyzeRequest):
             parts=[gtypes.Part(text="Analyse my current mobility setup and subscriptions.")],
         ),
     ):
-        pass
+        if event.is_final_response():
+            t = _collect_text(event)
+            if t.strip():
+                last_text = t
+        else:
+            t = _collect_text(event)
+            if t.strip() and not _has_function_call(event):
+                fallback_text = t
 
-    session = await runner.session_service.get_session(
-        app_name="mobility_advisor_analyze",
-        user_id="user",
-        session_id=sid,
-    )
-    optimizer_output = (session.state or {}).get("recommendation", "")
+    # communicator_agent (the pipeline's last stage) has no output_key, so its actual
+    # final report is only available from the event stream above — NOT from
+    # session.state["recommendation"], which is optimizer_agent's pre-Communicator
+    # draft (see its output_key in sub_agents.py) and is not what adk web/chat show.
+    report_text = last_text or fallback_text
 
-    if not optimizer_output:
+    if not report_text:
         raise HTTPException(status_code=500, detail="Pipeline produced no recommendation")
 
     try:
-        return await _extract_recommendation_json(optimizer_output)
+        return await _extract_recommendation_json(report_text)
     except Exception as exc:
         raise HTTPException(
             status_code=500, detail=f"JSON extraction failed: {exc}"
@@ -384,6 +399,52 @@ async def annual_report(req: AnalyzeRequest):
         raise HTTPException(status_code=500, detail="Pipeline produced no annual report")
 
     return {"report": report_text}
+
+
+# ── Execute endpoint ──────────────────────────────────────────────────────────
+
+@app.post("/api/execute")
+async def execute(req: ExecuteRequest):
+    runner = InMemoryRunner(agent=execution_agent, app_name="mobility_advisor_execute")
+    sid = f"execute_{uuid4().hex[:12]}"
+
+    await runner.session_service.create_session(
+        app_name="mobility_advisor_execute",
+        user_id="user",
+        session_id=sid,
+    )
+
+    instruction = f"{req.action_title}\n\n{req.action_description}"
+
+    last_text = ""
+    fallback_text = ""
+    tool_result: dict | None = None
+    async for event in runner.run_async(
+        user_id="user",
+        session_id=sid,
+        new_message=gtypes.Content(
+            role="user",
+            parts=[gtypes.Part(text=instruction)],
+        ),
+    ):
+        for fr in event.get_function_responses():
+            if fr.name == "apply_subscription_change":
+                tool_result = fr.response
+        if event.is_final_response():
+            t = _collect_text(event)
+            if t.strip():
+                last_text = t
+        else:
+            t = _collect_text(event)
+            if t.strip() and not _has_function_call(event):
+                fallback_text = t
+
+    reply = last_text or fallback_text
+    if not reply:
+        raise HTTPException(status_code=500, detail="Execution agent produced no response")
+
+    success = bool(tool_result and tool_result.get("status") == "applied")
+    return {"success": success, "message": reply}
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────

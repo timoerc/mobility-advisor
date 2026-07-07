@@ -1,86 +1,58 @@
 {
   "events": [
     {
-      "date": "2026-07-01",
+      "date": "2026-06-12",
       "type": "meeting",
       "description": "Weekly Frankfurt office day",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-07-07",
+      "date": "2026-06-19",
       "type": "meeting",
-      "description": "University seminar — Goethe-Universität Frankfurt, Wirtschaftswissenschaften",
+      "description": "Weekly Frankfurt office day",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-07-09",
+      "date": "2026-06-26",
       "type": "meeting",
-      "description": "Library study session — UB Johann Christian Senckenberg, exam preparation",
+      "description": "Weekly Frankfurt office day",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-07-14",
+      "date": "2026-07-03",
       "type": "meeting",
-      "description": "Internship interview — financial district, Deutsche Börse Group",
+      "description": "Weekly Frankfurt office day",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-07-18",
-      "type": "trip",
-      "description": "Weekend trip to Hamburg — visiting family, long-distance rail (BahnCard 50 applicable)",
-      "location": "Hamburg",
-      "signals": ["long_distance_rail_likely"]
+      "date": "2026-07-10",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
       "date": "2026-07-20",
       "type": "trip",
-      "description": "Return from Hamburg to Frankfurt",
-      "location": "Frankfurt",
-      "signals": ["long_distance_rail_likely"]
-    },
-    {
-      "date": "2026-07-28",
-      "type": "meeting",
-      "description": "Group project meeting — campus café, Goethe-Universität",
-      "location": "Frankfurt",
-      "signals": ["local_transit_regular"]
-    },
-    {
-      "date": "2026-08-05",
-      "type": "trip",
-      "description": "Student conference — Humboldt-Universität Berlin, collaborative sustainability lecture series",
-      "location": "Berlin",
-      "signals": ["long_distance_rail_likely"]
-    },
-    {
-      "date": "2026-08-07",
-      "type": "trip",
-      "description": "Return from Berlin conference",
-      "location": "Frankfurt",
-      "signals": ["long_distance_rail_likely"]
-    },
-    {
-      "date": "2026-08-15",
-      "type": "trip",
-      "description": "Short leisure trip to Heidelberg — reachable by D-Ticket",
+      "description": "Weekend trip to Heidelberg — leisure, accessible by D-Ticket",
       "location": "Heidelberg",
       "signals": ["leisure"]
     },
     {
-      "date": "2026-09-01",
+      "date": "2026-06-25",
       "type": "meeting",
-      "description": "Winter semester orientation day — Goethe-Universität Frankfurt",
+      "description": "Doctor appointment — local errand in Frankfurt",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-09-10",
+      "date": "2026-08-08",
       "type": "meeting",
-      "description": "First seminar of winter semester — lecture hall campus Westend",
+      "description": "Team lunch in Frankfurt Innenstadt",
       "location": "Frankfurt",
       "signals": ["local_transit_regular"]
     }

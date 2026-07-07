@@ -31,7 +31,7 @@ export function ApprovalPage({ recommendation: rec, onConfirm, onCancel }: Appro
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
         <p className="text-sm text-yellow-800 m-0 leading-relaxed">
-          <span className="font-semibold">Prototype note:</span> No real changes will be made. This is a simulation — confirming does not contact Deutsche Bahn or modify any contract.
+          <span className="font-semibold">Prototype note:</span> Confirming applies this change to your saved profile data for this prototype — it does not contact Deutsche Bahn or any real provider.
         </p>
       </div>
 
@@ -49,12 +49,6 @@ export function ApprovalPage({ recommendation: rec, onConfirm, onCancel }: Appro
           className="w-full bg-white text-gray-600 rounded-full px-8 py-3.5 font-semibold hover:bg-gray-50 cursor-pointer border border-gray-300 text-sm transition-colors"
         >
           Not now
-        </button>
-        <button
-          type="button"
-          className="text-xs text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-0 text-center w-full underline underline-offset-2 transition-colors"
-        >
-          Remind me in 3 months
         </button>
       </div>
     </div>

@@ -1,40 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { StatusMessage } from "../../components/StatusMessage";
-import { runAnalysis } from "../../api";
-import type { Recommendation } from "../../types/recommendation";
+import { executeAction } from "../../api";
+import type { ExecutionResult, ProposedAction } from "../../types/recommendation";
 
-const STATUS_MESSAGES = [
-  "Loading your travel history…",
-  "Checking subscription costs…",
-  "Forecasting upcoming travel…",
-  "Comparing contract alternatives…",
-  "Computing CO₂ impact…",
-  "Preparing your recommendation…",
-  "Almost there…",
-];
+const STATUS_MESSAGES = ["Confirming with the execution agent…", "Updating your subscriptions…"];
 
-type AnalysisPageProps = {
+type ExecutingPageProps = {
   sessionId: string;
-  onComplete: (recommendation: Recommendation) => void;
+  action: ProposedAction;
+  onComplete: (result: ExecutionResult) => void;
+  onCancel: () => void;
 };
 
-export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
+export function ExecutingPage({ sessionId, action, onComplete, onCancel }: ExecutingPageProps) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Declined/ambiguous responses are deterministic (temperature 0) — retrying the same
+  // input won't help, so route those to "Back to dashboard" instead of "Try again".
+  const [canRetry, setCanRetry] = useState(true);
   const startedRef = useRef(false);
 
   const start = () => {
     setError(null);
     setDone(false);
-    runAnalysis(sessionId)
-      .then((rec) => {
-        setDone(true);
-        // Brief pause so the progress bar visually completes before navigating
-        window.setTimeout(() => onComplete(rec), 600);
+    executeAction(sessionId, action)
+      .then((result) => {
+        if (result.success) {
+          setDone(true);
+          window.setTimeout(() => onComplete(result), 600);
+        } else {
+          setCanRetry(false);
+          setError(result.message || "The execution agent could not apply this change.");
+        }
       })
       .catch((err) => {
-        console.error("Analysis failed:", err);
-        setError(err instanceof Error ? err.message : "The analysis pipeline failed. Please try again.");
+        console.error("Execution failed:", err);
+        setCanRetry(true);
+        setError(err instanceof Error ? err.message : "The execution agent failed. Please try again.");
       });
   };
 
@@ -43,7 +45,7 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
     startedRef.current = true;
     start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, []);
 
   if (error) {
     return (
@@ -56,15 +58,15 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
           </svg>
         </div>
         <div className="flex flex-col gap-2 max-w-xs">
-          <h2 className="text-xl font-bold text-[#1f1f1f] m-0">Analysis failed</h2>
+          <h2 className="text-xl font-bold text-[#1f1f1f] m-0">Couldn't apply this change</h2>
           <p className="text-sm text-gray-500 m-0 leading-relaxed">{error}</p>
         </div>
         <button
           type="button"
-          onClick={start}
+          onClick={canRetry ? start : onCancel}
           className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
         >
-          Try again
+          {canRetry ? "Try again" : "Back to dashboard"}
         </button>
       </div>
     );
@@ -77,8 +79,8 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
       </div>
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">Analysing your setup…</h2>
-        <StatusMessage messages={STATUS_MESSAGES} intervalMs={4200} />
+        <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">Applying your change…</h2>
+        <StatusMessage messages={STATUS_MESSAGES} intervalMs={2200} />
       </div>
 
       <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -86,16 +88,15 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
           className="h-full bg-brand-red rounded-full transition-all duration-700"
           style={{
             width: done ? "100%" : undefined,
-            animation: done ? "none" : "analysisProgress 40s ease-out forwards",
+            animation: done ? "none" : "executionProgress 8s ease-out forwards",
           }}
         />
       </div>
 
       <style>{`
-        @keyframes analysisProgress {
+        @keyframes executionProgress {
           0%   { width: 0% }
-          30%  { width: 40% }
-          70%  { width: 72% }
+          50%  { width: 55% }
           100% { width: 85% }
         }
       `}</style>

@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
 import { sendMessage } from "../../api";
-import type { Recommendation } from "../../types/recommendation";
 
 type Message = { role: "agent" | "user"; text: string; id: string };
 
 type ChatPageProps = {
   sessionId: string;
-  recommendation: Recommendation;
   onRunAnalysis: () => void;
   onDataChanged?: () => void;
 };

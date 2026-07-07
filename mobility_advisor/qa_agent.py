@@ -1,8 +1,6 @@
-from datetime import date
-
 from google.adk.agents import LlmAgent
 
-from .sub_agents import _USER_FIRST_NAME, _USER_NAME, build_model
+from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
 from .tools import (
     compute_travel_stats,
     load_calendar_events,
@@ -11,8 +9,6 @@ from .tools import (
     load_travel_history,
     load_user_preferences,
 )
-
-_TODAY = date.today().isoformat()
 
 qa_agent = LlmAgent(
     name="qa_agent",
