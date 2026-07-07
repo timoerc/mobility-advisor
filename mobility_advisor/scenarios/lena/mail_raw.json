@@ -1,0 +1,220 @@
+{
+  "emails": [
+    {
+      "id": "mail_001",
+      "received_datetime": "2026-07-02T10:30",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 231847506391)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 25.05.2025 um 11:44 Uhr wurde der Auftrag mit der Auftragsnummer 231847506391 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 03.06.2025 07:00 Uhr\nnach Berlin Hbf, 03.06.2025 10:48 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 49,50 EUR wird per Kreditkarte (Zahlungsreferenz: 3748291053) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_002",
+      "received_datetime": "2026-07-02T10:29",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 231847506392)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 25.05.2025 um 11:47 Uhr wurde der Auftrag mit der Auftragsnummer 231847506392 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Berlin Hbf, 06.06.2025 17:05 Uhr\nnach Frankfurt (Main) Hbf, 06.06.2025 20:53 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 49,50 EUR wird per Kreditkarte (Zahlungsreferenz: 3748291054) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_003",
+      "received_datetime": "2026-07-02T10:28",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 342958617402)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 07.05.2025 um 09:15 Uhr wurde der Auftrag mit der Auftragsnummer 342958617402 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 14.05.2025 06:55 Uhr\nnach München Hbf, 14.05.2025 10:10 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 39,50 EUR wird per Kreditkarte (Zahlungsreferenz: 4859302164) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_004",
+      "received_datetime": "2026-07-02T10:27",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 342958617403)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 07.05.2025 um 09:18 Uhr wurde der Auftrag mit der Auftragsnummer 342958617403 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon München Hbf, 16.05.2025 17:00 Uhr\nnach Frankfurt (Main) Hbf, 16.05.2025 20:15 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 39,50 EUR wird per Kreditkarte (Zahlungsreferenz: 4859302165) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_005",
+      "received_datetime": "2026-07-02T10:26",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 453069728513)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 12.04.2025 um 14:30 Uhr wurde der Auftrag mit der Auftragsnummer 453069728513 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 22.04.2025 07:30 Uhr\nnach Hamburg Hbf, 22.04.2025 10:31 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 44,50 EUR wird per Kreditkarte (Zahlungsreferenz: 5960413275) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_006",
+      "received_datetime": "2026-07-02T10:25",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 453069728514)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 12.04.2025 um 14:33 Uhr wurde der Auftrag mit der Auftragsnummer 453069728514 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Hamburg Hbf, 24.04.2025 16:55 Uhr\nnach Frankfurt (Main) Hbf, 24.04.2025 19:58 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 44,50 EUR wird per Kreditkarte (Zahlungsreferenz: 5960413276) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_007",
+      "received_datetime": "2026-07-02T10:24",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 564180839624)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 02.03.2025 um 16:05 Uhr wurde der Auftrag mit der Auftragsnummer 564180839624 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 11.03.2025 08:00 Uhr\nnach Köln Hbf, 11.03.2025 09:45 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 29,50 EUR wird per Kreditkarte (Zahlungsreferenz: 6071524386) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_008",
+      "received_datetime": "2026-07-02T10:23",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 564180839625)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 02.03.2025 um 16:08 Uhr wurde der Auftrag mit der Auftragsnummer 564180839625 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Köln Hbf, 12.03.2025 17:00 Uhr\nnach Frankfurt (Main) Hbf, 12.03.2025 18:45 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 29,50 EUR wird per Kreditkarte (Zahlungsreferenz: 6071524387) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_009",
+      "received_datetime": "2026-07-02T10:22",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 675291940735)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 10.02.2025 um 09:30 Uhr wurde der Auftrag mit der Auftragsnummer 675291940735 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 18.02.2025 07:45 Uhr\nnach Stuttgart Hbf, 18.02.2025 09:05 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 27,00 EUR wird per Kreditkarte (Zahlungsreferenz: 7182635497) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_010",
+      "received_datetime": "2026-07-02T10:21",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 675291940736)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 10.02.2025 um 09:33 Uhr wurde der Auftrag mit der Auftragsnummer 675291940736 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Stuttgart Hbf, 20.02.2025 16:30 Uhr\nnach Frankfurt (Main) Hbf, 20.02.2025 17:50 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 27,00 EUR wird per Kreditkarte (Zahlungsreferenz: 7182635498) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_011",
+      "received_datetime": "2026-07-02T10:20",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 786302051846)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 17.01.2025 um 12:10 Uhr wurde der Auftrag mit der Auftragsnummer 786302051846 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 28.01.2025 08:00 Uhr\nnach Düsseldorf Hbf, 28.01.2025 09:55 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 31,50 EUR wird per Kreditkarte (Zahlungsreferenz: 8293746508) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_012",
+      "received_datetime": "2026-07-02T10:19",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 786302051847)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 17.01.2025 um 12:13 Uhr wurde der Auftrag mit der Auftragsnummer 786302051847 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Düsseldorf Hbf, 30.01.2025 17:00 Uhr\nnach Frankfurt (Main) Hbf, 30.01.2025 18:55 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 31,50 EUR wird per Kreditkarte (Zahlungsreferenz: 8293746509) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_013",
+      "received_datetime": "2026-07-02T10:18",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 05.04.2025",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Lena,\n\nhier ist deine Quittung für deine Fahrt am 05.04.2025.\n\nStartort: Frankfurt Sachsenhausen\nZielort: Frankfurt Messe\nStrecke: 5,2 km\nDauer: 18 Minuten\nBetrag: 13,80 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_014",
+      "received_datetime": "2026-07-02T10:17",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 18.01.2025",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Lena,\n\nhier ist deine Quittung für deine Fahrt am 18.01.2025.\n\nStartort: Frankfurt Westend\nZielort: Frankfurt Airport Terminal 1\nStrecke: 11,0 km\nDauer: 32 Minuten\nBetrag: 16,50 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_015",
+      "received_datetime": "2026-07-02T10:16",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 897413162957)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Frau Lena Brandt,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 19.05.2025 um 08:22 Uhr wurde der Auftrag mit der Auftragsnummer 897413162957 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 28.05.2025 09:00 Uhr\nnach Nürnberg Hbf, 28.05.2025 11:09 Uhr\n\n[ZAHLUNGSINFORMATIONEN NICHT VERFÜGBAR – technischer Fehler bei der Belegausstellung]\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_016",
+      "received_datetime": "2026-07-02T10:15",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 30.11.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Lena,\n\nhier ist deine Quittung für deine Fahrt am 30.11.2024.\n\nStartort: Frankfurt Innenstadt\nZielort: Frankfurt Bornheim\nStrecke: 3,5 km\nDauer: 12 Minuten\nBetrag: --,-- €\n\nEs gab ein technisches Problem bei der Abrechnung. Dein Betrag wird in Kürze aktualisiert. Prüfe deine Transaktionen in der App.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_017",
+      "received_datetime": "2026-07-02T10:14",
+      "sender_email": "lena.brandt@student.uni-frankfurt.de",
+      "subject": "Fwd: FYI – Fahrtbelege",
+      "body_text": "---------- Forwarded message ---------\nVon: reisekostenerstattung@uni-frankfurt.de\nAn: lena.brandt@student.uni-frankfurt.de\n\nHallo,\n\nim Anhang die Fahrtbelege für Ihre eingereichten Reisekosten.\n\nBitte prüfen Sie die beigefügten Unterlagen.\n\nTicket 1: Frankfurt – Hannover, 05.02.2025, 35,00 €\nTicket 2: Frankfurt Bornheim – Flughafen Terminal 1, 10.12.2024, 18,00 €\n\nDie Erstattung erfolgt innerhalb von 10 Werktagen.\n\nMit freundlichen Grüßen\nReisekostenabrechnung\nGoethe-Universität Frankfurt",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_018",
+      "received_datetime": "2026-07-02T10:13",
+      "sender_email": "noreply@postmaster.internal",
+      "subject": "=?utf-8?B?UmVpc2ViZWxlZw==?= 14.10.2024 / 19.08.2024",
+      "body_text": "ðÃ¼ ÃÂ³Ã¶Ã¯Â¿Â½ EisenbahnÃ¼Ã ð\n\nFahrt 1: Frankfurt (Main) Hbf â†' Bremen Hbf\nDatum: 14.10.2024\nZug: ICE 617\nKosten: 38,50 â‚¬\n\nFahrt 2: Frankfurt Westend â†' Frankfurt Nordend\nDatum: 19.08.2024\nVehikel: hover-transport / schwimmend / Luftkissenfahrzeug\nKosten: 9,00 â‚¬\n\nÃ¢â‚¬â€¢ÃÂ ð ÃÂ³Ã¶ðÃ½Ã¦",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_019",
+      "received_datetime": "2026-07-02T10:12",
+      "sender_email": "kein-reply@hvv.de",
+      "subject": "Ihr Deutschlandticket ist aktiviert – Abo-Bestätigung HVV",
+      "body_text": "Herzlichen Glückwunsch, Lena!\n\nIhr Deutschlandticket (HVV) ist ab sofort aktiv.\n\nAbo-Beginn: 01.05.2023\nMonatlicher Betrag: 49,00 €\nAbrechnung: monatlich zum 1. des Monats\nGültigkeitsbereich: Deutschlandweit im gesamten ÖPNV (Nahverkehr)\n\nSie können Ihr Abo jederzeit zum Monatsende kündigen.\n\nBei Fragen wenden Sie sich an: abo@hvv.de\n\nMit freundlichen Grüßen\nIhr HVV-Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_020",
+      "received_datetime": "2026-07-02T10:11",
+      "sender_email": "bahncard@bahn.de",
+      "subject": "Ihre BahnCard 50 wird nicht verlängert – Auslaufen am 30.06.2025",
+      "body_text": "Sehr geehrte Frau Brandt,\n\nwir möchten Sie darüber informieren, dass Ihre BahnCard 50 (2. Klasse) zum 30.06.2025 ausläuft und nicht automatisch verlängert wird, da Sie die automatische Verlängerung deaktiviert haben.\n\nIhre BahnCard:\nProdukt: BahnCard 50, 2. Klasse\nGültig bis: 30.06.2025\nJahrespreis: 244,00 €\n\nWenn Sie weiterhin von 50% Rabatt auf Flexpreise profitieren möchten, können Sie Ihre BahnCard jederzeit unter bahn.de/bahncard neu bestellen.\n\nWir wünschen Ihnen weiterhin angenehme Reisen!\n\nMit freundlichen Grüßen\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_021",
+      "received_datetime": "2026-07-02T10:05",
+      "sender_email": "bibliothek@ub.uni-frankfurt.de",
+      "subject": "Erinnerung: Ausgeliehene Bücher bitte zurückgeben",
+      "body_text": "Sehr geehrte Frau Brandt,\n\nhiermit erinnern wir Sie daran, dass folgende Bücher demnächst zurückgegeben werden müssen:\n\n- Mobility as a Service: Concepts and Challenges (fällig: 10.07.2026)\n- Urban Transport Planning (fällig: 14.07.2026)\n\nBitte geben Sie die Bücher rechtzeitig zurück oder verlängern Sie die Ausleihe online unter ub.uni-frankfurt.de.\n\nMit freundlichen Grüßen\nUniversitätsbibliothek Frankfurt",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_022",
+      "received_datetime": "2026-07-02T09:55",
+      "sender_email": "newsletter@studentenwerk-frankfurt.de",
+      "subject": "Mensaplan KW 27 – neue Gerichte und Öffnungszeiten",
+      "body_text": "Hallo,\n\nhier ist der Mensaplan für die Woche 27 (30.06. – 04.07.2026).\n\nMontag: Pasta Bolognese / Veggie-Burger\nDienstag: Schnitzel mit Pommes / Linsensuppe\nMittwoch: Currywurst / Falafel-Wrap\nDonnerstag: Lachsfilet / Gemüse-Quiche\nFreitag: Pizza / Tomatensuppe\n\nÖffnungszeiten: Mo-Fr 11:30-14:30 Uhr\n\nGuten Appetit wünscht Ihr Studentenwerk Frankfurt",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_023",
+      "received_datetime": "2026-07-02T09:50",
+      "sender_email": "no-reply@spotify.com",
+      "subject": "Deine Spotify-Rechnung – Juli 2026",
+      "body_text": "Hallo Lena,\n\nwir haben deine Zahlung für Spotify Premium erhalten.\n\nBetrag: 10,99 €\nDatum: 01.07.2026\nPlan: Spotify Premium (Einzel)\n\nDanke!\nDein Spotify-Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_024",
+      "received_datetime": "2026-07-02T09:45",
+      "sender_email": "noreply@amazon.de",
+      "subject": "Zugestellt: 1 Artikel | Bestellung # 304-9938502-6614322",
+      "body_text": "Dein Paket wurde zugestellt!\n\nHallo Lena,\n\ndein Paket wurde heute an der Haustür hinterlegt.\n\nBestellnummer: 304-9938502-6614322\n\nMit freundlichen Grüßen\nAmazon",
+      "has_attachment": false,
+      "attachments": []
+    }
+  ]
+}

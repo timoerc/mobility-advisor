@@ -1,211 +1,60 @@
 {
   "events": [
     {
-      "date": "2026-09-09",
-      "time_start": "10:00",
-      "time_end": "13:00",
-      "type": "in_person",
-      "description": "Besichtigung Schifffahrtsflotte Warnemünde",
-      "location": null,
-      "signals": []
+      "date": "2026-06-12",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-09-07",
-      "time_start": "10:00",
-      "time_end": "18:00",
-      "type": "in_person",
-      "description": "Tag der offenen Tür in München",
-      "location": "München",
-      "signals": []
+      "date": "2026-06-19",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-08-31",
-      "time_start": null,
-      "time_end": null,
-      "type": "all_day",
-      "description": "Urlaub Malediven",
-      "location": null,
-      "signals": []
+      "date": "2026-06-26",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-08-28",
-      "time_start": "08:00",
-      "time_end": "12:30",
-      "type": "in_person",
-      "description": "Termin in Bonn",
-      "location": "Bonn UN Campus",
-      "signals": []
+      "date": "2026-07-03",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-08-26",
-      "time_start": null,
-      "time_end": null,
-      "type": "all_day",
-      "description": "Homeoffice",
-      "location": null,
-      "signals": []
+      "date": "2026-07-10",
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-08-25",
-      "time_start": "07:00",
-      "time_end": "09:00",
-      "type": "in_person",
-      "description": "Workshop mit Kienbaum Berlin",
-      "location": "Kienbaum Consultants International (Standort Berlin)",
-      "signals": []
+      "date": "2026-07-20",
+      "type": "trip",
+      "description": "Weekend trip to Heidelberg — leisure, accessible by D-Ticket",
+      "location": "Heidelberg",
+      "signals": ["leisure"]
     },
     {
-      "date": "2026-08-24",
-      "time_start": "12:00",
-      "time_end": "16:00",
-      "type": "in_person",
-      "description": "Workshop mit Kienbaum Hamburg",
-      "location": "Kienbaum Consultants International (Standort Hamburg)",
-      "signals": []
+      "date": "2026-06-25",
+      "type": "meeting",
+      "description": "Doctor appointment — local errand in Frankfurt",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     },
     {
-      "date": "2026-08-21",
-      "time_start": "09:30",
-      "time_end": "10:30",
-      "type": "in_person",
-      "description": "Lunch mit Maria",
-      "location": null,
-      "signals": []
-    },
-    {
-      "date": "2026-08-20",
-      "time_start": null,
-      "time_end": null,
-      "type": "all_day",
-      "description": "Homeoffice",
-      "location": null,
-      "signals": []
-    },
-    {
-      "date": "2026-08-19",
-      "time_start": "12:30",
-      "time_end": "14:00",
-      "type": "in_person",
-      "description": "Treffen mit Thomas von DEKRA",
-      "location": "DEKRA Automobil GmbH Außenstelle Bergisch Gladbach",
-      "signals": []
-    },
-    {
-      "date": "2026-08-18",
-      "time_start": "10:00",
-      "time_end": "14:00",
-      "type": "in_person",
-      "description": "Geschäftsreise Düsseldorf",
-      "location": "BCG Platinion",
-      "signals": []
-    },
-    {
-      "date": "2026-08-17",
-      "time_start": "17:00",
-      "time_end": "17:30",
-      "type": "in_person",
-      "description": "Abendessen mit Thorben",
-      "location": "Restaurant Weissenburg",
-      "signals": []
-    },
-    {
-      "date": "2026-08-11",
-      "time_start": null,
-      "time_end": null,
-      "type": "all_day",
-      "description": "Workshop Berlin",
-      "location": "Berlin Kicks",
-      "signals": []
-    },
-    {
-      "date": "2026-08-04",
-      "time_start": "08:00",
-      "time_end": "08:30",
-      "type": "unclear",
-      "description": "Treffen mit CEO Stadtplanung Konstanz",
-      "location": "Douglas Konstanz LAGO",
-      "signals": []
-    },
-    {
-      "date": "2026-08-03",
-      "time_start": "08:00",
-      "time_end": "19:00",
-      "type": "in_person",
-      "description": "JF in München mit BCG",
-      "location": "BCG Platinion",
-      "signals": []
-    },
-    {
-      "date": "2026-07-09",
-      "time_start": "17:00",
-      "time_end": "19:00",
-      "type": "unclear",
-      "description": "Eventuell Abendessen mit CEO talentdirect",
-      "location": "Köln Atawitsch Burger Restaurant",
-      "signals": []
-    },
-    {
-      "date": "2026-07-09",
-      "time_start": "11:00",
-      "time_end": "11:30",
-      "type": "online",
-      "description": "JF Projekt Schienenersatzverkehr",
-      "location": "Microsoft Teams-Besprechung",
-      "signals": []
-    },
-    {
-      "date": "2026-07-08",
-      "time_start": "08:00",
-      "time_end": "08:30",
-      "type": "in_person",
-      "description": "Meeting Vorstand ZF",
-      "location": "ZF Friedrichshafen AG - Forum",
-      "signals": []
-    },
-    {
-      "date": "2026-07-07",
-      "time_start": "08:00",
-      "time_end": "19:00",
-      "type": "in_person",
-      "description": "Workshop, Nürnberger Versicherungen",
-      "location": "Nürnberger Versicherungen AG",
-      "signals": []
-    },
-    {
-      "date": "2026-06-18",
-      "time_start": "10:00",
-      "time_end": "10:30",
-      "type": "in_person",
-      "description": "NICHT CHEF ERZÄHLEN, Lunch mit Thorsten",
-      "location": "Kölner Dom",
-      "signals": []
-    },
-    {
-      "date": "2026-06-17",
-      "time_start": "17:00",
-      "time_end": "19:00",
-      "type": "unclear",
-      "description": "Essen Düsseldorf mit Tsotne",
-      "location": "Wilma Wunder Düsseldorf",
-      "signals": []
-    },
-    {
-      "date": "2026-06-16",
-      "time_start": "09:30",
-      "time_end": "10:00",
-      "type": "online",
-      "description": "JF Datengrundlage",
-      "location": "Microsoft Teams Meeting",
-      "signals": []
-    },
-    {
-      "date": "2026-06-15",
-      "time_start": "10:00",
-      "time_end": "15:00",
-      "type": "unclear",
-      "description": "Geschäftsreise Berlin",
-      "location": "Georgenstraße 14/17, 10117 Berlin",
-      "signals": []
+      "date": "2026-08-08",
+      "type": "meeting",
+      "description": "Team lunch in Frankfurt Innenstadt",
+      "location": "Frankfurt",
+      "signals": ["local_transit_regular"]
     }
   ]
 }

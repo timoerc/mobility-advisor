@@ -515,9 +515,12 @@ export function MobilityStackPage({
     fetchedRef.current = true;
     setLoading(true);
     fetch("/api/detected-subscriptions.json")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.json();
+      })
       .then((data: SubscriptionEntry[]) => {
-        onChange(data);
+        if (Array.isArray(data)) onChange(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));

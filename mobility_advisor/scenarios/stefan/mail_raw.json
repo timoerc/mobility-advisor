@@ -1,0 +1,238 @@
+{
+  "emails": [
+    {
+      "id": "mail_001",
+      "received_datetime": "2026-07-01T09:15",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 481739204867)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 24.07.2024 um 16:32 Uhr wurde der Auftrag mit der Auftragsnummer 481739204867 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 05.08.2024 08:00 Uhr\nnach Köln Hbf, 05.08.2024 09:45 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 29,50 EUR wird per Kreditkarte (Zahlungsreferenz: 2847392041) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_002",
+      "received_datetime": "2026-07-01T09:14",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 481739204868)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 24.07.2024 um 16:35 Uhr wurde der Auftrag mit der Auftragsnummer 481739204868 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Köln Hbf, 06.08.2024 17:00 Uhr\nnach Frankfurt (Main) Hbf, 06.08.2024 18:45 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 29,50 EUR wird per Kreditkarte (Zahlungsreferenz: 2847392042) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_003",
+      "received_datetime": "2026-07-01T09:13",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 592840315978)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 08.08.2024 um 10:15 Uhr wurde der Auftrag mit der Auftragsnummer 592840315978 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 19.08.2024 07:45 Uhr\nnach Stuttgart Hbf, 19.08.2024 09:05 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 27,00 EUR wird per Kreditkarte (Zahlungsreferenz: 3920481750) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_004",
+      "received_datetime": "2026-07-01T09:12",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 592840315979)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 08.08.2024 um 10:18 Uhr wurde der Auftrag mit der Auftragsnummer 592840315979 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Stuttgart Hbf, 21.08.2024 16:30 Uhr\nnach Frankfurt (Main) Hbf, 21.08.2024 17:50 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 27,00 EUR wird per Kreditkarte (Zahlungsreferenz: 3920481751) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_005",
+      "received_datetime": "2026-07-01T09:11",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 673921048502)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 28.09.2024 um 09:44 Uhr wurde der Auftrag mit der Auftragsnummer 673921048502 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 07.10.2024 09:00 Uhr\nnach Mannheim Hbf, 07.10.2024 09:42 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 12,00 EUR wird per Kreditkarte (Zahlungsreferenz: 4851023974) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_006",
+      "received_datetime": "2026-07-01T09:10",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 673921048503)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 28.09.2024 um 09:47 Uhr wurde der Auftrag mit der Auftragsnummer 673921048503 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Mannheim Hbf, 08.10.2024 17:15 Uhr\nnach Frankfurt (Main) Hbf, 08.10.2024 17:57 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 12,00 EUR wird per Kreditkarte (Zahlungsreferenz: 4851023975) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_007",
+      "received_datetime": "2026-07-01T09:09",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 784032159613)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 18.11.2024 um 14:20 Uhr wurde der Auftrag mit der Auftragsnummer 784032159613 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 02.12.2024 07:05 Uhr\nnach München Hbf, 02.12.2024 10:17 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 39,50 EUR wird per Kreditkarte (Zahlungsreferenz: 5902847163) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_008",
+      "received_datetime": "2026-07-01T09:08",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 784032159614)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 18.11.2024 um 14:23 Uhr wurde der Auftrag mit der Auftragsnummer 784032159614 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon München Hbf, 04.12.2024 16:50 Uhr\nnach Frankfurt (Main) Hbf, 04.12.2024 20:05 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 39,50 EUR wird per Kreditkarte (Zahlungsreferenz: 5902847164) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_009",
+      "received_datetime": "2026-07-01T09:07",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 895143260724)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 10.12.2024 um 11:05 Uhr wurde der Auftrag mit der Auftragsnummer 895143260724 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 16.12.2024 10:00 Uhr\nnach Wiesbaden Hbf, 16.12.2024 10:38 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 8,00 EUR wird per Kreditkarte (Zahlungsreferenz: 6013958274) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_010",
+      "received_datetime": "2026-07-01T09:06",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 906254371835)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 03.03.2025 um 08:50 Uhr wurde der Auftrag mit der Auftragsnummer 906254371835 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 11.03.2025 09:30 Uhr\nnach Darmstadt Hbf, 11.03.2025 09:55 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 7,00 EUR wird per Kreditkarte (Zahlungsreferenz: 7124069385) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_011",
+      "received_datetime": "2026-07-01T09:05",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 017365482946)",
+      "body_text": "Hier Ihre Buchungsbestätigung.\n\nHallo Herr Stefan Kurz,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nAm 28.04.2025 um 13:22 Uhr wurde der Auftrag mit der Auftragsnummer 017365482946 wie folgt gebucht:\n\n\n\nLeistungen\n\n\n\nBahnCard 50, 2. Klasse\n\nvon Frankfurt (Main) Hbf, 08.05.2025 09:00 Uhr\nnach Heidelberg Hbf, 08.05.2025 09:42 Uhr\n\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 8,00 EUR wird per Kreditkarte (Zahlungsreferenz: 8235170496) durchgeführt.\n\nDiese E-Mail stellt keinen gültigen Fahrausweis und keine gültige Rechnung dar.\n\nWir wünschen Ihnen eine gute Reise!\n\nMit freundlichen Grüßen\n\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_012",
+      "received_datetime": "2026-07-01T09:04",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 10.08.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 10.08.2024.\n\nStartort: Frankfurt Sachsenhausen\nZielort: Frankfurt Airport Terminal 1\nStrecke: 9,0 km\nDauer: 25 Minuten\nBetrag: 14,50 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt. Die Quittung findest du auch in der MILES App.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_013",
+      "received_datetime": "2026-07-01T09:03",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 22.08.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 22.08.2024.\n\nStartort: Frankfurt Innenstadt\nZielort: Frankfurt Westend\nStrecke: 4,0 km\nDauer: 15 Minuten\nBetrag: 11,00 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_014",
+      "received_datetime": "2026-07-01T09:02",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 28.08.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 28.08.2024.\n\nStartort: Frankfurt Bornheim\nZielort: Frankfurt Nordend\nStrecke: 2,0 km\nDauer: 10 Minuten\nBetrag: 8,00 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_015",
+      "received_datetime": "2026-07-01T09:01",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 04.11.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 04.11.2024.\n\nStartort: Frankfurt Westend\nZielort: Frankfurt Airport Terminal 1\nStrecke: 11,0 km\nDauer: 32 Minuten\nBetrag: 16,50 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_016",
+      "received_datetime": "2026-07-01T09:00",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 12.11.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 12.11.2024.\n\nStartort: Frankfurt Sachsenhausen\nZielort: Frankfurt Messe\nStrecke: 5,2 km\nDauer: 18 Minuten\nBetrag: 13,80 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_017",
+      "received_datetime": "2026-07-01T08:59",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 19.11.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 19.11.2024.\n\nStartort: Frankfurt Innenstadt\nZielort: Frankfurt Sachsenhausen\nStrecke: 2,5 km\nDauer: 12 Minuten\nBetrag: 7,40 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_018",
+      "received_datetime": "2026-07-01T08:58",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 25.11.2024",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 25.11.2024.\n\nStartort: Frankfurt Bornheim\nZielort: Frankfurt Nordend\nStrecke: 3,8 km\nDauer: 15 Minuten\nBetrag: 10,20 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_019",
+      "received_datetime": "2026-07-01T08:57",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 20.05.2025",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Stefan,\n\nhier ist deine Quittung für deine Fahrt am 20.05.2025.\n\nStartort: Frankfurt Westend\nZielort: Frankfurt Sachsenhausen\nStrecke: 3,0 km\nDauer: 12 Minuten\nBetrag: 9,00 €\n\nDie Zahlung wurde mit deiner hinterlegten Zahlungsmethode durchgeführt.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_020",
+      "received_datetime": "2026-07-01T08:45",
+      "sender_email": "vermietung@immobilien-hamburg.de",
+      "subject": "Bestätigung Besichtigungstermin – Stresemannstraße 48, Hamburg-Altona",
+      "body_text": "Sehr geehrter Herr Kurz,\n\nhiermit bestätige ich Ihren Besichtigungstermin für folgende Immobilie:\n\nObjekt: Stresemannstraße 48, 22769 Hamburg-Altona\nWohnfläche: 62 m² (2 Zimmer)\nKaltmiete: 850 € / Monat\nNebenkosten: ca. 100 €\nGesamtmiete: ca. 950 € warm\n\nBesichtigungstermin: Samstag, 12.07.2026, 11:00 Uhr\n\nBitte kommen Sie pünktlich und bringen Sie wenn möglich einen Identitätsnachweis sowie aktuelle Bonitätsauskünfte mit (SCHUFA, Einkommensnachweis).\n\nDie Wohnung befindet sich im 3. Obergeschoss, kein Aufzug. Haustürcode: 4812.\n\nBei Rückfragen erreichen Sie mich unter 040-98765432.\n\nMit freundlichen Grüßen\nKlaus Meier\nHausverwaltung Meier & Partner GmbH\nHamburg",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_021",
+      "received_datetime": "2026-07-01T08:30",
+      "sender_email": "recruiting@technord-gmbh.de",
+      "subject": "Stellenangebot: Senior Software Engineer bei TechNord GmbH – Rückmeldung bis 15.08.2026",
+      "body_text": "Sehr geehrter Herr Kurz,\n\nes freut uns sehr, Ihnen offiziell das nachfolgende Stellenangebot unterbreiten zu dürfen:\n\nPosition: Senior Software Engineer (m/w/d)\nUnternehmen: TechNord GmbH\nStandort: Hamburg-Altona (Holstenstraße 120)\nHome-Office: bis zu 2 Tage pro Woche möglich\nVertragsbeginn: 01.09.2026\nJahresgehalt: 85.000 € brutto\nBenefits: BVG-Jobticket, 30 Urlaubstage, betriebliche Altersvorsorge\n\nWir haben Ihre Unterlagen und den persönlichen Gesprächstermin sehr positiv wahrgenommen und sind überzeugt, dass Sie hervorragend zu unserem Team passen.\n\nBitte teilen Sie uns bis spätestens 15.08.2026 Ihre Entscheidung mit – entweder per E-Mail an recruiting@technord-gmbh.de oder telefonisch unter 040-4711-200.\n\nWir freuen uns auf Ihre Rückmeldung!\n\nMit freundlichen Grüßen\nAnna Schulte\nHR & Recruiting\nTechNord GmbH",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_022",
+      "received_datetime": "2026-07-01T08:20",
+      "sender_email": "noreply@amazon.de",
+      "subject": "Zugestellt: 1 Artikel | Bestellung # 303-8827491-5503211",
+      "body_text": "Dein Paket wurde zugestellt!\n\nHallo Stefan,\n\ndein Paket wurde heute an der Haustür hinterlegt.\n\nBestellnummer: 303-8827491-5503211\n\nMit freundlichen Grüßen\nAmazon",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_023",
+      "received_datetime": "2026-07-01T08:10",
+      "sender_email": "messages-noreply@linkedin.com",
+      "subject": "Stefan, du hast 3 neue Kontaktanfragen",
+      "body_text": "Hallo Stefan,\n\ndu hast 3 neue Kontaktanfragen auf LinkedIn. Melde dich an, um sie zu sehen und zu beantworten.\n\nDein LinkedIn-Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_024",
+      "received_datetime": "2026-07-01T08:05",
+      "sender_email": "kundenservice@sparkasse.de",
+      "subject": "Ihre monatliche Kontoübersicht – Juni 2026",
+      "body_text": "Sehr geehrter Herr Kurz,\n\nIhre Kontoübersicht für Juni 2026 steht in Ihrem Online-Banking bereit. Bitte melden Sie sich in Ihrem Konto an, um die Details einzusehen.\n\nMit freundlichen Grüßen\nIhre Sparkasse Frankfurt",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_025",
+      "received_datetime": "2026-07-01T07:55",
+      "sender_email": "newsletter@mediamarkt.de",
+      "subject": "Neue Angebote diese Woche – bis zu 30% Rabatt",
+      "body_text": "Entdecken Sie unsere Topangebote der Woche!\n\nBis zu 30% Rabatt auf ausgewählte Haushaltsgeräte und Unterhaltungselektronik. Angebote gültig bis 07.07.2026.\n\nJetzt shoppen unter www.mediamarkt.de",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_026",
+      "received_datetime": "2026-07-01T07:50",
+      "sender_email": "service@paypal.de",
+      "subject": "Zahlung von 32,00 € an Lieferando bestätigt",
+      "body_text": "Hallo Stefan Kurz,\n\nSie haben am 30.06.2026 eine Zahlung von 32,00 € an Lieferando.de gesendet.\n\nTransaktions-ID: 7K291837HX482910P\n\nMit freundlichen Grüßen\nIhr PayPal-Team",
+      "has_attachment": false,
+      "attachments": []
+    }
+  ]
+}

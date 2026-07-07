@@ -44,7 +44,7 @@ Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid work
 
 1. Clone the repo and enter the directory.
 
-2. Install dependencies:
+2. Install backend dependencies:
    ```bash
    uv sync
    ```
@@ -56,18 +56,58 @@ Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid work
    KICONNECT_API_KEY=<your_kiconnect_key>
    ```
 
-4. Run the ADK web UI:
+4. Install frontend dependencies:
    ```bash
-   uv run adk web
+   cd frontend && npm install
    ```
 
-5. Open the URL shown in the terminal. Two pipelines are available:
+---
 
-   **Single-run recommendation** — select **mobility_advisor_pipeline** and send:
-   > Is my mobility setup optimal right now?
+## Running the full stack
 
-   **Annual report** — select **annual_report_pipeline** and send:
-   > Generate my annual mobility report.
+The React frontend talks to a FastAPI backend (`main.py`), which wraps the ADK agent pipeline. Run both processes in separate terminals:
+
+**Terminal 1 — backend** (from the repo root):
+```bash
+uv run uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 — frontend**:
+```bash
+cd frontend
+npm run dev
+```
+
+Open **http://localhost:5173**. Vite proxies any `/api/*` request to `localhost:8000` (see `frontend/vite.config.ts`), so no CORS setup is needed in dev.
+
+If the backend isn't running, the frontend still loads and falls back to canned mock data for the analysis screen — but live analysis (`/api/analyze`) and chat (`/api/chat`) won't work. See `frontend/README.md` for details on that fallback behaviour.
+
+### Backend API endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/profile` | Save onboarding answers for a persona and make them the active dataset |
+| `POST /api/activate` | Switch the active dataset to a previously saved persona |
+| `POST /api/analyze` | Run the full 4-agent pipeline and return a structured `Recommendation` (takes ~60–90s) |
+| `POST /api/chat` | Send a chat message to the coordinator agent, session-scoped by `session_id` |
+
+### Agent-only debugging (no frontend)
+
+> **Important:** `adk web` and `adk api_server` both bind to port 8000. Stop them before starting `uvicorn main:app`, or the frontend will hit the wrong server and receive 403 errors.
+
+To interact with the agents directly via the ADK web UI, without the FastAPI/React layer:
+
+```bash
+uv run adk web
+```
+
+Open the URL shown in the terminal. Two pipelines are available:
+
+**Single-run recommendation** — select **mobility_advisor_pipeline** and send:
+> Is my mobility setup optimal right now?
+
+**Annual report** — select **annual_report_pipeline** and send:
+> Generate my annual mobility report.
 
 The four agents run in sequence. The final output includes savings, CO₂ impact, and a clear "awaiting your approval" note.
 

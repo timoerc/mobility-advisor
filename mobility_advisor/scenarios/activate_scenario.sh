@@ -1,9 +1,10 @@
 #!/bin/bash
 # Usage: ./scenarios/activate_scenario.sh <scenario_name>
-# Example: ./scenarios/activate_scenario.sh 01_happy_path
+# Example: ./scenarios/activate_scenario.sh maja
 #
 # Backs up the current data/ directory, then copies the chosen scenario's
 # JSON fixtures into data/, making it the active scenario.
+# Available scenarios: maja, stefan, lena
 
 set -euo pipefail
 

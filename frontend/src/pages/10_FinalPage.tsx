@@ -1,10 +1,10 @@
 import { TypewriterHeading } from "../components/TypewriterHeading";
 
 type FinalPageProps = {
-  onDownload: () => void;
+  onGoHome: () => void;
 };
 
-export function FinalPage({ onDownload }: FinalPageProps) {
+export function FinalPage({ onGoHome }: FinalPageProps) {
   return (
     <div className="flex flex-col items-center gap-8 text-center py-8">
       <div
@@ -24,10 +24,10 @@ export function FinalPage({ onDownload }: FinalPageProps) {
 
       <button
         type="button"
-        onClick={onDownload}
+        onClick={onGoHome}
         className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
       >
-        Download my profile
+        Go to homepage →
       </button>
     </div>
   );

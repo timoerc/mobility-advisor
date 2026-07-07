@@ -21,14 +21,30 @@ _DATA = Path(__file__).parent / "data"
 
 USE_MOCK_DATA = True
 
-def load_user_preferences() -> dict:
-    """Load Maja's personal mobility preferences and constraints from the mock data store.
+# Frozen so mock scenarios (calendar events starting 2026-06-12, travel history
+# ending ~mid-2025) stay reproducible regardless of the host machine's real date.
+MOCK_TODAY = date(2026, 6, 15)
 
-    Returns a dict with keys: flexibility_need (str: low/medium/high),
+def load_user_preferences() -> dict:
+    """Load the active user's mobility preferences derived from their persona profile.
+
+    Returns a dict with keys: name (str), flexibility_need (str: low/medium/high),
     sustainability_weight (float 0-1), values_time_over_money (bool), and notes (str).
     """
-    raw = json.loads((_DATA / "user_preferences.json").read_text())
-    return UserPreferences.model_validate(raw).model_dump()
+    raw = json.loads((_DATA / "persona.json").read_text())
+    pd = raw["profileData"]
+    wfh = pd["commute"]["wfh_days"]
+    n = len(wfh)
+    flexibility = "high" if n >= 4 else "medium" if n >= 2 else "low"
+    p = pd["priorities"]
+    prefs = {
+        "name": pd["personal"]["full_name"] or "the user",
+        "flexibility_need": flexibility,
+        "sustainability_weight": round(p["sustainability"], 4),
+        "values_time_over_money": p["time"] > p["cost"],
+        "notes": pd.get("notes", ""),
+    }
+    return UserPreferences.model_validate(prefs).model_dump()
 
 
 def load_current_subscriptions() -> dict:
@@ -291,7 +307,7 @@ def apply_subscription_change(
             mobility_catalog.json's options. Must resolve to exactly one catalog option —
             zero or multiple matches both return an error with no write.
         as_of: The date to treat as "today" when computing the new entry's started date
-            and next_renewal_date. Defaults to date.today() when omitted. Exists only for
+            and next_renewal_date. Defaults to MOCK_TODAY when omitted. Exists only for
             deterministic testing — leave unset in normal use.
 
     Returns a dict with: status ("applied" or "error"), action, removed (list of removed
@@ -301,7 +317,7 @@ def apply_subscription_change(
     ("current_subscriptions.json"), warnings (list[str], e.g. noting a same-product
     replace), and error (str message, or None on success).
     """
-    as_of = as_of or date.today()
+    as_of = as_of or MOCK_TODAY
     warnings: list[str] = []
 
     def _error(message: str, before_count: int = 0) -> dict:
@@ -323,7 +339,10 @@ def apply_subscription_change(
     if action in ("add", "replace") and not new_product:
         return _error(f"new_product is required for action={action!r}")
 
-    subs_list = load_current_subscriptions()["subscriptions"]
+    # Load raw dicts to preserve all fields (e.g. id, category) that the Pydantic
+    # model doesn't know about — model_dump() would strip them on write-back.
+    raw_file = json.loads((_DATA / "current_subscriptions.json").read_text())
+    subs_list = raw_file["subscriptions"]
     before_count = len(subs_list)
 
     target_match = None
@@ -383,12 +402,13 @@ def apply_subscription_change(
     after_count = len(new_subs_list)
 
     try:
-        validated = CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
+        CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
     except Exception as exc:
         return _error(f"resulting subscriptions failed validation: {exc}", before_count)
 
     backup_path = _backup_subscriptions_file()
-    _atomic_write_json(_DATA / "current_subscriptions.json", validated.model_dump())
+    # Write raw dicts (not model_dump) to preserve all fields beyond the pipeline schema.
+    _atomic_write_json(_DATA / "current_subscriptions.json", {"subscriptions": new_subs_list})
 
     return {
         "status": "applied",

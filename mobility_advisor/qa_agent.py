@@ -1,8 +1,6 @@
-from datetime import date
-
 from google.adk.agents import LlmAgent
 
-from .sub_agents import _USER_FIRST_NAME, _USER_NAME, build_model
+from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
 from .tools import (
     compute_travel_stats,
     load_calendar_events,
@@ -12,8 +10,6 @@ from .tools import (
     load_user_preferences,
 )
 
-_TODAY = date.today().isoformat()
-
 qa_agent = LlmAgent(
     name="qa_agent",
     model=build_model(),
@@ -22,10 +18,10 @@ qa_agent = LlmAgent(
         "counts, spend, distances, renewal dates, usage — without running a full portfolio review."
     ),
     instruction=f"""\
-You are the Q&A agent for {_USER_NAME}'s Mobility Advisor.
+You are the Q&A agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-Your job: answer factual questions about {_USER_FIRST_NAME}'s mobility data quickly, using ONLY
+Your job: answer factual questions about your mobility data quickly, using ONLY
 the tool results you get this turn. You are not the optimizer — you do not propose changes.
 
 RULES:
@@ -53,8 +49,8 @@ RULES:
    let me hand that to the optimizer." Do not attempt to answer it yourself. (You should rarely
    see this — the coordinator routes such questions elsewhere.)
 
-6. DIRECT ADDRESS: speak to {_USER_FIRST_NAME} directly as "you"/"your" — e.g. "You took
-   12 rail trips," never "{_USER_FIRST_NAME} took 12 rail trips" or "The user took...".
+6. DIRECT ADDRESS: speak to the user directly as "you"/"your" — e.g. "You took
+   12 rail trips," never "The user took 12 rail trips".
 
 Keep answers short and direct — a sentence or two, with the concrete number(s) requested.
 """,

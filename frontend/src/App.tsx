@@ -1,121 +1,92 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
+import { DEFAULT_PERSONAS, type Persona } from "./personas";
+import { saveProfile, activatePersona, fetchPersonas } from "./api";
+import type { ExecutionResult, Recommendation } from "./types/recommendation";
+import {
+  classifyArchetype,
+  MOBILITY_ARCHETYPES,
+  type ArchetypeId,
+} from "./mobility-archetypes";
+import { PseudoLoginPage } from "./pages/login/PseudoLoginPage";
 import { LogoIntroPage } from "./pages/0_LogoIntroPage";
 import { AgentIntroPage } from "./pages/1_AgentIntroPage";
 import { PersonalProfilePage } from "./pages/2_PersonalProfilePage";
 import { LocationCommutePage } from "./pages/3_LocationCommutePage";
 import { CarProfilePage } from "./pages/4_CarProfilePage";
+import { IntegrationsPage } from "./pages/8_IntegrationsPage";
 import { MobilityStackPage } from "./pages/5_MobilityStackPage";
 import { PrioritiesPage } from "./pages/7_PrioritiesPage";
-import { IntegrationsPage } from "./pages/8_IntegrationsPage";
 import { NotesPage } from "./pages/9_NotesPage";
 import { FinalPage } from "./pages/10_FinalPage";
+import { AnalysisPage } from "./pages/main/AnalysisPage";
+import { DashboardPage } from "./pages/main/DashboardPage";
+import { ApprovalPage } from "./pages/main/ApprovalPage";
+import { ExecutingPage } from "./pages/main/ExecutingPage";
+import { ConfirmationPage } from "./pages/main/ConfirmationPage";
+import { ChatPage } from "./pages/main/ChatPage";
+import { HomePage } from "./pages/main/HomePage";
+import { AnnualReportPage } from "./pages/main/AnnualReportPage";
 import type { OnboardingPreferences } from "./types";
 
-const initialPreferences: OnboardingPreferences = {
-  personal: {
-    full_name: "",
-    employment_status: "employed",
-    profession: "",
-    household_context: "",
-  },
+// ── Persistence helpers ──────────────────────────────────────────────────────
+
+type PersistedPersona = { onboardingComplete: boolean; profileData?: OnboardingPreferences };
+
+function loadPersistedPersona(id: string): PersistedPersona | null {
+  try {
+    const raw = localStorage.getItem(`persona:${id}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedPersona(id: string, data: PersistedPersona) {
+  localStorage.setItem(`persona:${id}`, JSON.stringify(data));
+}
+
+function loadPersonas(): Persona[] {
+  return DEFAULT_PERSONAS.map((p) => {
+    const saved = loadPersistedPersona(p.id);
+    if (!saved) return p;
+    return { ...p, onboardingComplete: saved.onboardingComplete };
+  });
+}
+
+// ── Empty profile for "new" persona ─────────────────────────────────────────
+
+const EMPTY_PROFILE: OnboardingPreferences = {
+  personal: { full_name: "", employment_status: "employed", profession: "", household_context: "" },
   location: { home_city: "" },
-  commute: {
-    wfh_days: ["mon", "fri"],
-    office_days: ["tue", "wed", "thu"],
-  },
-  car: {
-    owns_car: false,
-    fuel_type: null,
-    car_size: null,
-    efficiency: null,
-    efficiency_unit: null,
-    monthly_km_estimate: null,
-  },
+  commute: { wfh_days: ["mon", "fri"], office_days: ["tue", "wed", "thu"] },
+  car: { owns_car: false, fuel_type: null, car_size: null, efficiency: null, efficiency_unit: null, monthly_km_estimate: null },
   subscriptions: [],
-  priorities: {
-    cost: 1 / 3,
-    time: 1 / 3,
-    sustainability: 1 / 3,
-  },
-  integrations: {
-    outlook_connected: false,
-    gmail_connected: false,
-    calendar_connected: false,
-    db_connected: false,
-    miles_connected: false,
-    deutschlandticket_connected: false,
-  },
+  priorities: { cost: 1 / 3, time: 1 / 3, sustainability: 1 / 3 },
+  integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false, additional_connections: [] },
   notes: "",
 };
 
-const stepSkipDefaults: Partial<Record<number, Partial<OnboardingPreferences>>> = {
-  2: {
-    personal: {
-      full_name: "",
-      employment_status: "employed",
-      profession: "",
-      household_context: "",
-    },
-  },
-  3: {
-    location: { home_city: "" },
-    commute: { wfh_days: ["mon", "fri"], office_days: ["tue", "wed", "thu"] },
-  },
-  4: {
-    car: {
-      owns_car: false,
-      fuel_type: null,
-      car_size: null,
-      efficiency: null,
-      efficiency_unit: null,
-      monthly_km_estimate: null,
-    },
-  },
-  5: {
-    integrations: {
-      outlook_connected: false,
-      gmail_connected: false,
-      calendar_connected: false,
-      db_connected: false,
-      miles_connected: false,
-      deutschlandticket_connected: false,
-    },
-  },
-  6: { subscriptions: [] },
-  7: {
-    priorities: {
-      cost: 1 / 3,
-      time: 1 / 3,
-      sustainability: 1 / 3,
-    },
-  },
+// ── Onboarding skip defaults ─────────────────────────────────────────────────
+
+const STEP_SKIP_DEFAULTS: Partial<Record<number, Partial<OnboardingPreferences>>> = {
+  // Steps 4 (car), 5 (integrations), 6 (subscriptions) intentionally have no skip default:
+  // skipping just advances without clearing pre-filled persona data.
   8: { notes: "" },
 };
 
-const totalSteps = 10;
+// Step count: 0 (logo) → 9 (final), totalSteps = 10
+const TOTAL_ONBOARDING_STEPS = 10;
 
 function buildExportJson(p: OnboardingPreferences) {
-  return {
-    personal: p.personal,
-    location: p.location,
-    commute: p.commute,
-    car: p.car,
-    subscriptions: p.subscriptions,
-    preferences: {
-      priorities: p.priorities,
-      notes: p.notes,
-    },
-    integrations: p.integrations,
-  };
+  return { personal: p.personal, location: p.location, commute: p.commute, car: p.car, subscriptions: p.subscriptions, priorities: p.priorities, integrations: p.integrations, notes: p.notes };
 }
 
 function downloadJson(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;
@@ -123,160 +94,487 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(a.href);
 }
 
-function App() {
-  const [step, setStep] = useState(0);
-  const [preferences, setPreferences] =
-    useState<OnboardingPreferences>(initialPreferences);
+// ── App ──────────────────────────────────────────────────────────────────────
 
-  const goBack = () => setStep((s) => Math.max(s - 1, 0));
-  const goNext = () => setStep((s) => Math.min(s + 1, totalSteps - 1));
+type Phase = "login" | "onboarding" | "editing" | "main";
+type MainView = "home" | "analysis" | "dashboard" | "approval" | "executing" | "confirmation" | "chat" | "annual";
+type EditConfig = { steps: number[]; currentIndex: number; label: string };
+
+function getOrCreateSessionId(): string {
+  const key = "mobility_advisor_session_id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const id = crypto.randomUUID();
+  localStorage.setItem(key, id);
+  return id;
+}
+
+export default function App() {
+  const [phase, setPhase] = useState<Phase>("login");
+  const [loginCanGoBack, setLoginCanGoBack] = useState(false);
+  const [personas, setPersonas] = useState<Persona[]>(loadPersonas);
+  const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [preferences, setPreferences] = useState<OnboardingPreferences>(EMPTY_PROFILE);
+  const [mainView, setMainView] = useState<MainView>("home");
+  const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
+  const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
+  const [sessionId] = useState(getOrCreateSessionId);
+  const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
+  const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
+  // Keyed by persona id so each persona keeps its own generated report — switching
+  // personas and back doesn't lose or regenerate one that's still valid.
+  const [annualReports, setAnnualReports] = useState<Record<string, string>>({});
+
+  const activePersona = personas.find((p) => p.id === activePersonaId) ?? DEFAULT_PERSONAS[0];
+  const annualReportKey = activePersonaId ?? "current";
+
+  const invalidateAnnualReport = (personaId: string | null) => {
+    const key = personaId ?? "current";
+    setAnnualReports((r) => {
+      if (!(key in r)) return r;
+      const { [key]: _removed, ...rest } = r;
+      return rest;
+    });
+  };
+
+  // ── Fetch personas from backend on mount ───────────────────────────────────
+
+  useEffect(() => {
+    fetchPersonas()
+      .then((backendPersonas) => {
+        setPersonas((current) =>
+          backendPersonas.map((bp) => {
+            const local = current.find((p) => p.id === bp.id);
+            return {
+              ...bp,
+              onboardingComplete: local?.onboardingComplete ?? false,
+            };
+          })
+        );
+      })
+      .catch(console.warn);
+  }, []);
+
+  // ── Step renderer (shared by onboarding and editing phases) ───────────────
+
+  const renderStep = (step: number) => {
+    switch (step) {
+      case 1: return <AgentIntroPage />;
+      case 2: return (
+        <PersonalProfilePage
+          profile={preferences.personal}
+          onChange={(personal) => setPreferences((c) => ({ ...c, personal }))}
+        />
+      );
+      case 3: return (
+        <LocationCommutePage
+          homeCity={preferences.location.home_city}
+          commute={preferences.commute}
+          onCityChange={(home_city) => setPreferences((c) => ({ ...c, location: { home_city } }))}
+          onCommuteChange={(commute) => setPreferences((c) => ({ ...c, commute }))}
+        />
+      );
+      case 4: return (
+        <CarProfilePage
+          car={preferences.car}
+          onChange={(car) => setPreferences((c) => ({ ...c, car }))}
+        />
+      );
+      case 5: return (
+        <IntegrationsPage
+          integrations={preferences.integrations}
+          onChange={(integrations) => setPreferences((c) => ({ ...c, integrations }))}
+        />
+      );
+      case 6: return (
+        <MobilityStackPage
+          subscriptions={preferences.subscriptions}
+          onChange={(subscriptions) => setPreferences((c) => ({ ...c, subscriptions }))}
+        />
+      );
+      case 7: return (
+        <PrioritiesPage
+          priorities={preferences.priorities}
+          onChange={(priorities) => setPreferences((c) => ({ ...c, priorities }))}
+        />
+      );
+      case 8: return (
+        <NotesPage
+          notes={preferences.notes}
+          onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
+        />
+      );
+      case 9: return <FinalPage onGoHome={handleOnboardingComplete} />;
+      default: return null;
+    }
+  };
+
+  // ── Login ──────────────────────────────────────────────────────────────────
+
+  const handlePersonaSelect = (id: string) => {
+    // annualReports is keyed per persona, so switching alone doesn't invalidate
+    // anything — each persona's cached report (if any) is simply looked up by id.
+    setActivePersonaId(id);
+
+    if (id === "new") {
+      setPreferences(EMPTY_PROFILE);
+      setOnboardingStep(0);
+      setPhase("onboarding");
+      return;
+    }
+
+    // Always activate the backend scenario for pre-built personas
+    activatePersona(id).catch(console.warn);
+
+    const persona = personas.find((p) => p.id === id) ?? DEFAULT_PERSONAS.find((p) => p.id === id);
+    const saved = loadPersistedPersona(id);
+
+    if (saved?.onboardingComplete) {
+      // Always use fresh persona profileData for pre-built personas so that
+      // edit pages always reflect the current mock setup, never stale localStorage.
+      const profile = persona?.profileData ?? EMPTY_PROFILE;
+      setPreferences(profile);
+      setActiveArchetypeId(classifyArchetype(profile));
+      setMainView("home");
+      setPhase("main");
+    } else {
+      setPreferences(persona?.profileData ?? EMPTY_PROFILE);
+      setOnboardingStep(0);
+      setPhase("onboarding");
+    }
+  };
+
+  // ── Onboarding navigation ─────────────────────────────────────────────────
+
+  const goNext = () => setOnboardingStep((s) => Math.min(s + 1, TOTAL_ONBOARDING_STEPS - 1));
+  const goBack = () => setOnboardingStep((s) => Math.max(s - 1, 0));
 
   const handleSkip = () => {
-    const defaults = stepSkipDefaults[step];
-    if (defaults) {
-      setPreferences((current) => ({ ...current, ...defaults }));
-    }
+    const defaults = STEP_SKIP_DEFAULTS[onboardingStep];
+    if (defaults) setPreferences((c) => ({ ...c, ...defaults }));
     goNext();
   };
 
   useEffect(() => {
-    if (step !== 0) return;
-    const timer = window.setTimeout(() => setStep(1), 2600);
-    return () => window.clearTimeout(timer);
-  }, [step]);
+    if (phase !== "onboarding" || onboardingStep !== 0) return;
+    const t = window.setTimeout(() => setOnboardingStep(1), 2600);
+    return () => window.clearTimeout(t);
+  }, [phase, onboardingStep]);
 
-  if (step === 0) {
-    return <LogoIntroPage />;
+  const handleOnboardingComplete = () => {
+    if (activePersonaId && activePersonaId !== "new") {
+      savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
+      setPersonas((ps) => ps.map((p) => p.id === activePersonaId ? { ...p, onboardingComplete: true } : p));
+    }
+    setActiveArchetypeId(classifyArchetype(preferences));
+    setLiveRecommendation(null);
+    invalidateAnnualReport(activePersonaId);
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
+    setMainView("home");
+    setPhase("main");
+  };
+
+  // ── Main app navigation ───────────────────────────────────────────────────
+
+  const handleAnalysisComplete = useCallback((rec: Recommendation) => {
+    setLiveRecommendation(rec);
+    setMainView((current) => (current === "analysis" ? "dashboard" : current));
+  }, []);
+  const handleExecutionComplete = useCallback((result: ExecutionResult) => {
+    setExecutionResult(result);
+    setMainView((current) => (current === "executing" ? "confirmation" : current));
+  }, []);
+  const handleProceedToApproval = () => setMainView("approval");
+  const handleConfirm = () => setMainView("executing");
+  const handleBackToDashboard = () => setMainView("home");
+  const handleRunAnalysis = () => {
+    setLiveRecommendation(null);
+    setMainView("analysis");
+  };
+  const handleAnnualReport = () => {
+    setMainView("annual");
+  };
+
+  // ── Deep-link editing (clean single-section edit pages) ──────────────────
+
+  const startEditing = (steps: number[], label: string) => {
+    setReturnToMain(mainView);
+    setEditConfig({ steps, currentIndex: 0, label });
+    setPhase("editing");
+  };
+
+  const handleEditCancel = () => {
+    const target = returnToMain ?? "home";
+    setReturnToMain(null);
+    setEditConfig(null);
+    setMainView(target);
+    setPhase("main");
+  };
+
+  const handleEditSave = () => {
+    const target = returnToMain ?? "home";
+    setReturnToMain(null);
+    setEditConfig(null);
+    if (activePersonaId && activePersonaId !== "new") {
+      savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
+    }
+    setActiveArchetypeId(classifyArchetype(preferences));
+    invalidateAnnualReport(activePersonaId);
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
+    setMainView(target);
+    setPhase("main");
+  };
+
+  const handleEditNext = () => {
+    if (!editConfig) return;
+    if (editConfig.currentIndex < editConfig.steps.length - 1) {
+      setEditConfig({ ...editConfig, currentIndex: editConfig.currentIndex + 1 });
+    } else {
+      handleEditSave();
+    }
+  };
+
+  const handleSaveAndReturn = () => {
+    const target = returnToMain ?? "dashboard";
+    setReturnToMain(null);
+    if (activePersonaId && activePersonaId !== "new") {
+      savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
+    }
+    setActiveArchetypeId(classifyArchetype(preferences));
+    invalidateAnnualReport(activePersonaId);
+    saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
+    setMainView(target);
+    setPhase("main");
+  };
+
+  const handleRedoOnboarding = () => {
+    setReturnToMain(null);
+    if (activePersonaId) {
+      savePersistedPersona(activePersonaId, { onboardingComplete: false });
+      setPersonas((ps) => ps.map((p) => p.id === activePersonaId ? { ...p, onboardingComplete: false } : p));
+      // Reset to fresh persona profile so all steps show correct pre-filled data
+      const freshPersona = personas.find((p) => p.id === activePersonaId);
+      if (freshPersona) setPreferences(freshPersona.profileData);
+    }
+    setOnboardingStep(0);
+    setPhase("onboarding");
+  };
+
+  const handleEditConnections = () => startEditing([5], "Connections");
+
+  const handleSwitchProfile = () => {
+    setPhase("login");
+    setLoginCanGoBack(true);
+  };
+
+  // ── Phase: login ──────────────────────────────────────────────────────────
+
+  if (phase === "login") {
+    return (
+      <PseudoLoginPage
+        personas={personas}
+        onSelect={(id) => { setLoginCanGoBack(false); handlePersonaSelect(id); }}
+        onBack={loginCanGoBack ? () => setPhase("main") : undefined}
+      />
+    );
   }
 
-  const showSkipButton = step >= 2 && step <= 8;
+  // ── Phase: onboarding ─────────────────────────────────────────────────────
+
+  if (phase === "onboarding") {
+    if (onboardingStep === 0) {
+      return <LogoIntroPage />;
+    }
+
+    const showSkip = onboardingStep >= 4 && onboardingStep <= 8 && onboardingStep !== 7;
+
+    return (
+      <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
+        <ProgressBar step={onboardingStep} total={TOTAL_ONBOARDING_STEPS} />
+
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
+            <span className="font-bold text-sm">Mobility Advisor</span>
+            <span className="ml-auto text-xs text-gray-400">
+              {onboardingStep} / {TOTAL_ONBOARDING_STEPS - 1}
+            </span>
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
+          {showSkip && <SkipButton onSkip={handleSkip} />}
+          {renderStep(onboardingStep)}
+        </main>
+
+        <footer
+          className={`max-w-2xl mx-auto w-full px-4 pb-8 flex gap-3 ${
+            onboardingStep > 1 ? "justify-between" : "justify-end"
+          }`}
+        >
+          {onboardingStep > 1 && (
+            <button
+              type="button"
+              onClick={returnToMain !== null ? handleSaveAndReturn : goBack}
+              aria-label={returnToMain !== null ? "Back to app" : "Back"}
+              className="h-[52px] w-[52px] rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer flex-shrink-0"
+            >
+              <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
+            </button>
+          )}
+          {returnToMain !== null ? (
+            <button
+              type="button"
+              onClick={handleSaveAndReturn}
+              className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
+            >
+              Save & return →
+            </button>
+          ) : (
+            <>
+              {onboardingStep < TOTAL_ONBOARDING_STEPS - 1 && (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Continue"
+                  className="h-[52px] w-[52px] rounded-full bg-brand-red flex items-center justify-center hover:opacity-90 cursor-pointer border-0 flex-shrink-0"
+                >
+                  <span className="nav-arrow nav-arrow-white" aria-hidden="true" />
+                </button>
+              )}
+            </>
+          )}
+        </footer>
+      </div>
+    );
+  }
+
+  // ── Phase: editing ────────────────────────────────────────────────────────
+
+  if (phase === "editing" && editConfig) {
+    const currentStep = editConfig.steps[editConfig.currentIndex];
+    const isLast = editConfig.currentIndex === editConfig.steps.length - 1;
+
+    return (
+      <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
+            <span className="font-bold text-sm">{editConfig.label}</span>
+            <button
+              type="button"
+              onClick={handleEditCancel}
+              className="ml-auto text-sm text-gray-500 hover:text-gray-900 cursor-pointer border-0 bg-transparent"
+            >
+              Cancel
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
+          {renderStep(currentStep)}
+        </main>
+
+        <footer className="max-w-2xl mx-auto w-full px-4 pb-8 flex gap-3">
+          <button
+            type="button"
+            onClick={handleEditCancel}
+            className="h-[52px] px-6 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50 cursor-pointer flex-shrink-0"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={isLast ? handleEditSave : handleEditNext}
+            className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
+          >
+            {isLast ? "Save" : "Next →"}
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
+  // ── Phase: main ───────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
-      <ProgressBar step={step} total={totalSteps} />
+    <AppShell
+      personaName={activePersona.profileData.personal.full_name || activePersona.name}
+      personaTagline={activePersona.tagline}
+      avatarBg={activePersona.avatarBg}
+      onBack={mainView === "chat" || mainView === "annual" ? () => setMainView("home") : undefined}
+      onLogoClick={() => setMainView("home")}
+      onChatOpen={() => setMainView("chat")}
+      onEditPreferences={() => startEditing([7], "Edit preferences")}
+      onEditProfile={() => startEditing([2, 3], "Edit profile")}
+      onMobilityModes={() => startEditing([4, 6], "Mobility modes")}
+      onEditConnections={handleEditConnections}
+      onRedoOnboarding={handleRedoOnboarding}
+      onSwitchProfile={handleSwitchProfile}
+    >
+      {mainView === "home" && (
+        <HomePage
+          onChat={() => setMainView("chat")}
+          onAnalysis={handleRunAnalysis}
+          onAnnualReport={handleAnnualReport}
+        />
+      )}
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img
-            src="/assets/db-logo.svg"
-            className="h-5 w-8 object-contain block"
-            alt=""
-          />
-          <span className="font-bold text-sm">Mobility Advisor</span>
-          <span className="ml-auto text-xs text-gray-400">
-            {step} / {totalSteps - 1}
-          </span>
-        </div>
-      </header>
+      {mainView === "analysis" && (
+        <AnalysisPage sessionId={sessionId} onComplete={handleAnalysisComplete} />
+      )}
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col gap-4">
-        {showSkipButton && <SkipButton onSkip={handleSkip} />}
+      {mainView === "dashboard" && liveRecommendation && (
+        <DashboardPage
+          recommendation={liveRecommendation}
+          mobilityArchetype={activeArchetypeId ? MOBILITY_ARCHETYPES[activeArchetypeId] : undefined}
+          onProceed={handleProceedToApproval}
+        />
+      )}
 
-        {step === 1 && <AgentIntroPage />}
+      {mainView === "approval" && liveRecommendation && (
+        <ApprovalPage
+          recommendation={liveRecommendation}
+          onConfirm={handleConfirm}
+          onCancel={handleBackToDashboard}
+        />
+      )}
 
-        {step === 2 && (
-          <PersonalProfilePage
-            profile={preferences.personal}
-            onChange={(personal) =>
-              setPreferences((c) => ({ ...c, personal }))
-            }
-          />
-        )}
+      {mainView === "executing" && liveRecommendation && (
+        <ExecutingPage
+          sessionId={sessionId}
+          action={liveRecommendation.proposedAction}
+          onComplete={handleExecutionComplete}
+          onCancel={handleBackToDashboard}
+        />
+      )}
 
-        {step === 3 && (
-          <LocationCommutePage
-            homeCity={preferences.location.home_city}
-            commute={preferences.commute}
-            onCityChange={(home_city) =>
-              setPreferences((c) => ({
-                ...c,
-                location: { home_city },
-              }))
-            }
-            onCommuteChange={(commute) =>
-              setPreferences((c) => ({ ...c, commute }))
-            }
-          />
-        )}
+      {mainView === "confirmation" && executionResult && (
+        <ConfirmationPage
+          resultMessage={executionResult.message}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      )}
 
-        {step === 4 && (
-          <CarProfilePage
-            car={preferences.car}
-            onChange={(car) => setPreferences((c) => ({ ...c, car }))}
-          />
-        )}
+      {mainView === "chat" && (
+        <ChatPage
+          sessionId={sessionId}
+          onRunAnalysis={handleRunAnalysis}
+          onDataChanged={() => invalidateAnnualReport(activePersonaId)}
+        />
+      )}
 
-        {step === 5 && (
-          <IntegrationsPage
-            integrations={preferences.integrations}
-            onChange={(integrations) =>
-              setPreferences((c) => ({ ...c, integrations }))
-            }
-          />
-        )}
-
-        {step === 6 && (
-          <MobilityStackPage
-            subscriptions={preferences.subscriptions}
-            onChange={(subscriptions) =>
-              setPreferences((c) => ({ ...c, subscriptions }))
-            }
-          />
-        )}
-
-        {step === 7 && (
-          <PrioritiesPage
-            priorities={preferences.priorities}
-            onChange={(priorities) =>
-              setPreferences((c) => ({ ...c, priorities }))
-            }
-          />
-        )}
-
-        {step === 8 && (
-          <NotesPage
-            notes={preferences.notes}
-            onChange={(notes) => setPreferences((c) => ({ ...c, notes }))}
-          />
-        )}
-
-        {step === 9 && (
-          <FinalPage
-            onDownload={() =>
-              downloadJson("user_profile.json", buildExportJson(preferences))
-            }
-          />
-        )}
-      </main>
-
-      <footer
-        className={`max-w-2xl mx-auto w-full px-4 pb-8 flex gap-3 ${
-          step > 1 ? "justify-between" : "justify-end"
-        }`}
-      >
-        {step > 1 && (
-          <button
-            type="button"
-            onClick={goBack}
-            aria-label="Back"
-            className="h-[52px] w-[52px] rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer flex-shrink-0"
-          >
-            <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
-          </button>
-        )}
-        {step < totalSteps - 1 && (
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Continue"
-            className="h-[52px] w-[52px] rounded-full bg-brand-red flex items-center justify-center hover:opacity-90 cursor-pointer border-0 flex-shrink-0"
-          >
-            <span className="nav-arrow nav-arrow-white" aria-hidden="true" />
-          </button>
-        )}
-      </footer>
-    </div>
+      {mainView === "annual" && (
+        <AnnualReportPage
+          sessionId={sessionId}
+          cachedReport={annualReports[annualReportKey] ?? null}
+          onReportReady={(report) =>
+            setAnnualReports((r) => ({ ...r, [annualReportKey]: report }))
+          }
+        />
+      )}
+    </AppShell>
   );
 }
-
-export default App;
