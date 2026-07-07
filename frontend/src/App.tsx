@@ -125,7 +125,7 @@ export default function App() {
   const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
   // Keyed by persona id so each persona keeps its own generated report — switching
   // personas and back doesn't lose or regenerate one that's still valid.
-  const [annualReports, setAnnualReports] = useState<Record<string, string>>({});
+  const [annualReports, setAnnualReports] = useState<Record<string, Blob>>({});
 
   const activePersona = personas.find((p) => p.id === activePersonaId) ?? DEFAULT_PERSONAS[0];
   const annualReportKey = activePersonaId ?? "current";

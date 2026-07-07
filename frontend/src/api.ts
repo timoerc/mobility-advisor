@@ -42,9 +42,17 @@ export async function sendMessage(sessionId: string, text: string): Promise<{ te
   return { text: data.text, actionTaken: data.action_taken };
 }
 
-export async function runAnnualReport(sessionId: string): Promise<string> {
-  const data = await post<{ report: string }>("/annual-report", { session_id: sessionId });
-  return data.report;
+export async function runAnnualReport(sessionId: string): Promise<Blob> {
+  const res = await fetch(`${BASE}/annual-report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => res.statusText);
+    throw new Error(`POST /annual-report ${res.status}: ${detail}`);
+  }
+  return res.blob();
 }
 
 export async function fetchPersonas(): Promise<Persona[]> {

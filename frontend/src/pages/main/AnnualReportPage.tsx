@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { StatusMessage } from "../../components/StatusMessage";
 import { runAnnualReport } from "../../api";
 
@@ -14,12 +12,13 @@ const STATUS_MESSAGES = [
 
 type AnnualReportPageProps = {
   sessionId: string;
-  cachedReport: string | null;
-  onReportReady: (report: string) => void;
+  cachedReport: Blob | null;
+  onReportReady: (report: Blob) => void;
 };
 
 export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: AnnualReportPageProps) {
-  const [report, setReport] = useState<string | null>(cachedReport);
+  const [report, setReport] = useState<Blob | null>(cachedReport);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const calledRef = useRef(false);
 
@@ -28,15 +27,28 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
     calledRef.current = true;
 
     runAnnualReport(sessionId)
-      .then((text) => {
-        setReport(text);
-        onReportReady(text);
+      .then((pdf) => {
+        setReport(pdf);
+        onReportReady(pdf);
       })
       .catch((err) => {
         console.warn("Annual report failed:", err);
         setError("Couldn't generate your annual report right now. Please try again.");
       });
   }, [sessionId, cachedReport, onReportReady]);
+
+  // Object URLs are only valid for the lifetime of the Blob they wrap and must be
+  // revoked explicitly. Create one whenever `report` changes and revoke the previous
+  // one on cleanup — covers both a blob swap and unmount.
+  useEffect(() => {
+    if (!report) {
+      setPdfUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(report);
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [report]);
 
   if (error) {
     return (
@@ -46,7 +58,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
     );
   }
 
-  if (!report) {
+  if (!pdfUrl) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 py-12 text-center">
         <div className="w-24 h-24 flex-shrink-0" aria-hidden="true">
@@ -62,32 +74,11 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
 
   return (
     <div className="py-4">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          h1: ({ node, ...p }) => <h1 className="text-2xl font-bold mt-0 mb-3 text-[#1f1f1f]" {...p} />,
-          h2: ({ node, ...p }) => <h2 className="text-lg font-bold mt-6 mb-2 text-[#1f1f1f]" {...p} />,
-          h3: ({ node, ...p }) => <h3 className="text-base font-bold mt-4 mb-1 text-[#1f1f1f]" {...p} />,
-          p: ({ node, ...p }) => <p className="text-sm text-[#1f1f1f] leading-relaxed mb-3" {...p} />,
-          strong: ({ node, ...p }) => <strong className="font-semibold" {...p} />,
-          hr: () => <hr className="border-gray-200 my-4" />,
-          ul: ({ node, ...p }) => <ul className="list-disc pl-5 mb-3 text-sm text-[#1f1f1f]" {...p} />,
-          li: ({ node, ...p }) => <li className="mb-1" {...p} />,
-          blockquote: ({ node, ...p }) => (
-            <blockquote className="border-l-4 border-brand-red pl-3 italic text-gray-600 my-3 text-sm" {...p} />
-          ),
-          table: ({ node, ...p }) => (
-            <div className="overflow-x-auto my-3">
-              <table className="w-full text-sm border-collapse" {...p} />
-            </div>
-          ),
-          thead: ({ node, ...p }) => <thead className="bg-[#f5f5f3]" {...p} />,
-          th: ({ node, ...p }) => <th className="text-left px-3 py-2 border-b border-gray-200 font-semibold" {...p} />,
-          td: ({ node, ...p }) => <td className="px-3 py-2 border-b border-gray-100" {...p} />,
-        }}
-      >
-        {report}
-      </ReactMarkdown>
+      <iframe
+        src={pdfUrl}
+        title="Your Annual Mobility Review"
+        className="w-full h-[80vh] rounded-lg border border-gray-200 bg-white"
+      />
     </div>
   );
 }

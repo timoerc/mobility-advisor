@@ -13,7 +13,7 @@ os.environ.setdefault("OPENAI_API_KEY", os.environ.get("KICONNECT_API_KEY", ""))
 os.environ.setdefault("OPENAI_API_BASE", "https://chat.kiconnect.nrw/api/v1")
 
 import litellm
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
+from mobility_advisor.report_pdf import render_annual_report_pdf
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
@@ -371,9 +372,10 @@ async def analyze(req: AnalyzeRequest):
 
 @app.post("/api/annual-report")
 async def annual_report(req: AnalyzeRequest):
-    """Run annual_report_pipeline directly (no coordinator routing) and return the
-    annual_communicator's report text. Unlike /api/analyze, this pipeline's final agent
-    has no output_key, so its report only exists on the last event, not in session state."""
+    """Run annual_report_pipeline directly (no coordinator routing), then convert the
+    annual_communicator's Markdown report into a styled PDF and return it as
+    application/pdf. Unlike /api/analyze, this pipeline's final agent has no
+    output_key, so its report only exists on the last event, not in session state."""
     runner = InMemoryRunner(agent=annual_report_pipeline, app_name="mobility_advisor_annual")
     sid = f"annual_{uuid4().hex[:12]}"
 
@@ -398,7 +400,16 @@ async def annual_report(req: AnalyzeRequest):
     if not report_text:
         raise HTTPException(status_code=500, detail="Pipeline produced no annual report")
 
-    return {"report": report_text}
+    try:
+        pdf_bytes = render_annual_report_pdf(report_text)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {exc}") from exc
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="annual-mobility-review.pdf"'},
+    )
 
 
 # ── Execute endpoint ──────────────────────────────────────────────────────────
