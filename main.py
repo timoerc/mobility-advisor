@@ -23,7 +23,7 @@ from google.genai import types as gtypes
 from pydantic import BaseModel
 
 from mobility_advisor.agent import root_agent
-from mobility_advisor.pipeline import optimization_pipeline
+from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
@@ -352,6 +352,40 @@ async def analyze(req: AnalyzeRequest):
         ) from exc
 
 
+# ── Annual report endpoint ────────────────────────────────────────────────────
+
+@app.post("/api/annual-report")
+async def annual_report(req: AnalyzeRequest):
+    """Run annual_report_pipeline directly (no coordinator routing) and return the
+    annual_communicator's report text. Unlike /api/analyze, this pipeline's final agent
+    has no output_key, so its report only exists on the last event, not in session state."""
+    runner = InMemoryRunner(agent=annual_report_pipeline, app_name="mobility_advisor_annual")
+    sid = f"annual_{uuid4().hex[:12]}"
+
+    await runner.session_service.create_session(
+        app_name="mobility_advisor_annual",
+        user_id="user",
+        session_id=sid,
+    )
+
+    report_text = ""
+    async for event in runner.run_async(
+        user_id="user",
+        session_id=sid,
+        new_message=gtypes.Content(
+            role="user",
+            parts=[gtypes.Part(text="Generate my full annual mobility report.")],
+        ),
+    ):
+        if event.is_final_response():
+            report_text = _collect_text(event)
+
+    if not report_text:
+        raise HTTPException(status_code=500, detail="Pipeline produced no annual report")
+
+    return {"report": report_text}
+
+
 # ── Chat endpoint ─────────────────────────────────────────────────────────────
 
 def _collect_text(event) -> str:
@@ -396,6 +430,7 @@ async def chat(req: ChatRequest):
 
     last_text = ""
     fallback_text = ""
+    action_taken = False
     async for event in runner.run_async(
         user_id="user",
         session_id=req.session_id,
@@ -404,6 +439,14 @@ async def chat(req: ChatRequest):
             parts=[gtypes.Part(text=req.text)],
         ),
     ):
+        # The coordinator routing to execution_agent at all is treated as a possible data
+        # mutation (execution_agent's only tool is apply_subscription_change) — callers use
+        # this to invalidate anything cached from stale subscription data, e.g. the annual
+        # report. Coarser than checking the inner tool call itself, but that call happens
+        # inside the wrapped AgentTool and isn't visible as a separate event here.
+        if any(call.name == "execution_agent" for call in event.get_function_calls() or []):
+            action_taken = True
+
         if event.is_final_response():
             t = _collect_text(event)
             if t.strip():
@@ -417,4 +460,4 @@ async def chat(req: ChatRequest):
     if not reply:
         raise HTTPException(status_code=500, detail="Agent produced no response")
 
-    return {"text": reply}
+    return {"text": reply, "action_taken": action_taken}

@@ -10,12 +10,13 @@ type ChatPageProps = {
   sessionId: string;
   recommendation: Recommendation;
   onRunAnalysis: () => void;
+  onDataChanged?: () => void;
 };
 
 const INITIAL_MESSAGE =
   "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.";
 
-export function ChatPage({ sessionId, onRunAnalysis }: ChatPageProps) {
+export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "agent", text: INITIAL_MESSAGE, id: "init" },
   ]);
@@ -32,7 +33,7 @@ export function ChatPage({ sessionId, onRunAnalysis }: ChatPageProps) {
     setThinking(true);
 
     try {
-      const response = await sendMessage(sessionId, text);
+      const { text: response, actionTaken } = await sendMessage(sessionId, text);
 
       // Let the backend handle run-analysis requests too, but also honour the
       // local trigger so the UI transitions immediately after the agent replies.
@@ -44,6 +45,9 @@ export function ChatPage({ sessionId, onRunAnalysis }: ChatPageProps) {
       ]);
       if (wantsAnalysis) {
         window.setTimeout(onRunAnalysis, 900);
+      }
+      if (actionTaken) {
+        onDataChanged?.();
       }
     } catch (err) {
       console.warn("Chat API error:", err);

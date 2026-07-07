@@ -29,9 +29,14 @@ export async function runAnalysis(sessionId: string): Promise<Recommendation> {
   return post<Recommendation>("/analyze", { session_id: sessionId });
 }
 
-export async function sendMessage(sessionId: string, text: string): Promise<string> {
-  const data = await post<{ text: string }>("/chat", { session_id: sessionId, text });
-  return data.text;
+export async function sendMessage(sessionId: string, text: string): Promise<{ text: string; actionTaken: boolean }> {
+  const data = await post<{ text: string; action_taken: boolean }>("/chat", { session_id: sessionId, text });
+  return { text: data.text, actionTaken: data.action_taken };
+}
+
+export async function runAnnualReport(sessionId: string): Promise<string> {
+  const data = await post<{ report: string }>("/annual-report", { session_id: sessionId });
+  return data.report;
 }
 
 export async function fetchPersonas(): Promise<Persona[]> {

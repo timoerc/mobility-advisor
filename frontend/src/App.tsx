@@ -28,6 +28,7 @@ import { ApprovalPage } from "./pages/main/ApprovalPage";
 import { ConfirmationPage } from "./pages/main/ConfirmationPage";
 import { ChatPage } from "./pages/main/ChatPage";
 import { HomePage } from "./pages/main/HomePage";
+import { AnnualReportPage } from "./pages/main/AnnualReportPage";
 import type { OnboardingPreferences } from "./types";
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ function downloadJson(filename: string, data: unknown) {
 // ── App ──────────────────────────────────────────────────────────────────────
 
 type Phase = "login" | "onboarding" | "editing" | "main";
-type MainView = "home" | "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
+type MainView = "home" | "analysis" | "dashboard" | "approval" | "confirmation" | "chat" | "annual";
 type EditConfig = { steps: number[]; currentIndex: number; label: string };
 
 function getOrCreateSessionId(): string {
@@ -120,8 +121,21 @@ export default function App() {
   const [sessionId] = useState(getOrCreateSessionId);
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
   const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
+  // Keyed by persona id so each persona keeps its own generated report — switching
+  // personas and back doesn't lose or regenerate one that's still valid.
+  const [annualReports, setAnnualReports] = useState<Record<string, string>>({});
 
   const activePersona = personas.find((p) => p.id === activePersonaId) ?? DEFAULT_PERSONAS[0];
+  const annualReportKey = activePersonaId ?? "current";
+
+  const invalidateAnnualReport = (personaId: string | null) => {
+    const key = personaId ?? "current";
+    setAnnualReports((r) => {
+      if (!(key in r)) return r;
+      const { [key]: _removed, ...rest } = r;
+      return rest;
+    });
+  };
 
   // ── Fetch personas from backend on mount ───────────────────────────────────
 
@@ -199,6 +213,8 @@ export default function App() {
   // ── Login ──────────────────────────────────────────────────────────────────
 
   const handlePersonaSelect = (id: string) => {
+    // annualReports is keyed per persona, so switching alone doesn't invalidate
+    // anything — each persona's cached report (if any) is simply looked up by id.
     setActivePersonaId(id);
 
     if (id === "new") {
@@ -253,6 +269,7 @@ export default function App() {
     }
     setActiveArchetypeId(classifyArchetype(preferences));
     setLiveRecommendation(null);
+    invalidateAnnualReport(activePersonaId);
     saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
     setMainView("home");
     setPhase("main");
@@ -270,6 +287,9 @@ export default function App() {
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
     setMainView("analysis");
+  };
+  const handleAnnualReport = () => {
+    setMainView("annual");
   };
 
   // ── Deep-link editing (clean single-section edit pages) ──────────────────
@@ -296,6 +316,7 @@ export default function App() {
       savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
     }
     setActiveArchetypeId(classifyArchetype(preferences));
+    invalidateAnnualReport(activePersonaId);
     saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
     setMainView(target);
     setPhase("main");
@@ -317,6 +338,7 @@ export default function App() {
       savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: preferences });
     }
     setActiveArchetypeId(classifyArchetype(preferences));
+    invalidateAnnualReport(activePersonaId);
     saveProfile(activePersonaId ?? "current", preferences, activePersona.avatarBg).catch(console.warn);
     setMainView(target);
     setPhase("main");
@@ -477,7 +499,7 @@ export default function App() {
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
-      onBack={mainView === "chat" ? () => setMainView("home") : undefined}
+      onBack={mainView === "chat" || mainView === "annual" ? () => setMainView("home") : undefined}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => startEditing([7], "Edit preferences")}
       onEditProfile={() => startEditing([2, 3], "Edit profile")}
@@ -487,7 +509,11 @@ export default function App() {
       onSwitchProfile={handleSwitchProfile}
     >
       {mainView === "home" && (
-        <HomePage onChat={() => setMainView("chat")} onAnalysis={handleRunAnalysis} />
+        <HomePage
+          onChat={() => setMainView("chat")}
+          onAnalysis={handleRunAnalysis}
+          onAnnualReport={handleAnnualReport}
+        />
       )}
 
       {mainView === "analysis" && (
@@ -522,6 +548,17 @@ export default function App() {
           sessionId={sessionId}
           recommendation={liveRecommendation ?? activePersona.mockRecommendation}
           onRunAnalysis={handleRunAnalysis}
+          onDataChanged={() => invalidateAnnualReport(activePersonaId)}
+        />
+      )}
+
+      {mainView === "annual" && (
+        <AnnualReportPage
+          sessionId={sessionId}
+          cachedReport={annualReports[annualReportKey] ?? null}
+          onReportReady={(report) =>
+            setAnnualReports((r) => ({ ...r, [annualReportKey]: report }))
+          }
         />
       )}
     </AppShell>
