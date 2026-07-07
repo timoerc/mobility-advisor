@@ -20,14 +20,28 @@
       "id": "2",
       "category": "rail_subscription",
       "cost_structure": "fixed_recurring",
-      "provider": "HVV",
-      "product": "Deutschlandticket",
-      "monthly_cost_eur": 49.00,
+      "provider": "Deutschlandticket",
+      "product": "Deutschland-Ticket",
+      "monthly_cost_eur": 58.00,
       "billing_cycle": "monthly",
-      "next_renewal_date": "2026-08-01",
+      "next_renewal_date": "2026-07-01",
       "started": "2023-05-01",
       "coverage_scope": "Germany nationwide",
       "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
+    },
+    {
+      "id": "3",
+      "category": "carsharing",
+      "cost_structure": "usage_membership",
+      "provider": "MILES Mobility",
+      "product": "MILES+ Abo",
+      "monthly_cost_eur": 4.90,
+      "monthly_fee": 4.90,
+      "billing_cycle": "monthly",
+      "next_renewal_date": "2026-07-01",
+      "started": "2022-03-10",
+      "coverage_scope": "",
+      "notes": "Car-sharing membership tier. Provides 5% cashback on MILES trip costs and slightly reduced per-minute rate."
     }
   ]
 }

@@ -1,5 +1,3 @@
-from datetime import date
-
 from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
 from google.genai import types
@@ -8,9 +6,7 @@ from .execution_agent import execution_agent
 from .pipeline import annual_report_pipeline, optimization_pipeline
 from .qa_agent import qa_agent
 from .reject_agent import reject_agent
-from .sub_agents import _USER_FIRST_NAME, _USER_NAME, build_model
-
-_TODAY = date.today().isoformat()
+from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
 
 # TODO (Tier 2): add persistent user state, RAG over contracts catalog, calendar-driven forecasting, constraint capture
 COORDINATOR_INSTRUCTION = f"""\

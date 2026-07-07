@@ -1,17 +1,17 @@
 {
-  "id": "lena",
-  "name": "Lena Brandt",
-  "tagline": "Student · Deutschlandticket",
-  "avatar": "LB",
-  "avatarBg": "#1a7f37",
+  "id": "maja",
+  "name": "Maja Hoffmann",
+  "tagline": "Frequent business traveller · BahnCard 50",
+  "avatar": "MH",
+  "avatarBg": "#ec0016",
   "profileData": {
     "personal": {
-      "full_name": "Lena Brandt",
-      "employment_status": "student",
-      "profession": "Student",
+      "full_name": "Maja Hoffmann",
+      "employment_status": "employed",
+      "profession": "Consultant",
       "household_context": "single"
     },
-    "location": { "home_city": "Hamburg" },
+    "location": { "home_city": "Köln" },
     "commute": {
       "office_days": ["mon", "tue", "wed", "thu"],
       "wfh_days": ["fri"]
@@ -24,16 +24,16 @@
       "efficiency_unit": null,
       "monthly_km_estimate": null
     },
-    "priorities": { "cost": 0.5, "time": 0.2, "sustainability": 0.3 },
+    "priorities": { "cost": 0.54, "time": 0.16, "sustainability": 0.3 },
     "integrations": {
-      "outlook_connected": false,
-      "gmail_connected": true,
+      "outlook_connected": true,
+      "gmail_connected": false,
       "calendar_connected": false,
       "db_connected": true,
-      "miles_connected": false,
+      "miles_connected": true,
       "deutschlandticket_connected": true,
-      "additional_connections": ["HVV", "Nextbike"]
+      "additional_connections": ["KVB", "RMV", "FreeNow"]
     },
-    "notes": "Commute to university by U-Bahn and S-Bahn."
+    "notes": "Mostly travel Cologne–Frankfurt, sometimes Hamburg."
   }
 }

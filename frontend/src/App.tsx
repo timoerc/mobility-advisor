@@ -5,7 +5,7 @@ import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
 import { saveProfile, activatePersona, fetchPersonas } from "./api";
-import type { Recommendation } from "./types/recommendation";
+import type { ExecutionResult, Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -25,6 +25,7 @@ import { FinalPage } from "./pages/10_FinalPage";
 import { AnalysisPage } from "./pages/main/AnalysisPage";
 import { DashboardPage } from "./pages/main/DashboardPage";
 import { ApprovalPage } from "./pages/main/ApprovalPage";
+import { ExecutingPage } from "./pages/main/ExecutingPage";
 import { ConfirmationPage } from "./pages/main/ConfirmationPage";
 import { ChatPage } from "./pages/main/ChatPage";
 import { HomePage } from "./pages/main/HomePage";
@@ -95,7 +96,7 @@ function downloadJson(filename: string, data: unknown) {
 // ── App ──────────────────────────────────────────────────────────────────────
 
 type Phase = "login" | "onboarding" | "editing" | "main";
-type MainView = "home" | "analysis" | "dashboard" | "approval" | "confirmation" | "chat";
+type MainView = "home" | "analysis" | "dashboard" | "approval" | "executing" | "confirmation" | "chat";
 type EditConfig = { steps: number[]; currentIndex: number; label: string };
 
 function getOrCreateSessionId(): string {
@@ -117,6 +118,7 @@ export default function App() {
   const [mainView, setMainView] = useState<MainView>("home");
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
   const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [sessionId] = useState(getOrCreateSessionId);
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
   const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
@@ -261,11 +263,15 @@ export default function App() {
 
   const handleAnalysisComplete = useCallback((rec: Recommendation) => {
     setLiveRecommendation(rec);
-    setMainView("dashboard");
+    setMainView((current) => (current === "analysis" ? "dashboard" : current));
+  }, []);
+  const handleExecutionComplete = useCallback((result: ExecutionResult) => {
+    setExecutionResult(result);
+    setMainView((current) => (current === "executing" ? "confirmation" : current));
   }, []);
   const handleProceedToApproval = () => setMainView("approval");
-  const handleConfirm = () => setMainView("confirmation");
-  const handleBackToDashboard = () => setMainView("dashboard");
+  const handleConfirm = () => setMainView("executing");
+  const handleBackToDashboard = () => setMainView("home");
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
     setMainView("analysis");
@@ -477,6 +483,7 @@ export default function App() {
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
       onBack={mainView === "chat" ? () => setMainView("home") : undefined}
+      onLogoClick={() => setMainView("home")}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => startEditing([7], "Edit preferences")}
       onEditProfile={() => startEditing([2, 3], "Edit profile")}
@@ -509,9 +516,18 @@ export default function App() {
         />
       )}
 
-      {mainView === "confirmation" && liveRecommendation && (
+      {mainView === "executing" && liveRecommendation && (
+        <ExecutingPage
+          sessionId={sessionId}
+          action={liveRecommendation.proposedAction}
+          onComplete={handleExecutionComplete}
+          onCancel={handleBackToDashboard}
+        />
+      )}
+
+      {mainView === "confirmation" && executionResult && (
         <ConfirmationPage
-          actionTitle={liveRecommendation.proposedAction.title}
+          resultMessage={executionResult.message}
           onBackToDashboard={handleBackToDashboard}
         />
       )}

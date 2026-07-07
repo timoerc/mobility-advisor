@@ -1,11 +1,11 @@
 import { TypewriterHeading } from "../../components/TypewriterHeading";
 
 type ConfirmationPageProps = {
-  actionTitle: string;
+  resultMessage: string;
   onBackToDashboard: () => void;
 };
 
-export function ConfirmationPage({ actionTitle, onBackToDashboard }: ConfirmationPageProps) {
+export function ConfirmationPage({ resultMessage, onBackToDashboard }: ConfirmationPageProps) {
   return (
     <div className="flex flex-col items-center gap-8 text-center py-12">
       <div
@@ -15,19 +15,14 @@ export function ConfirmationPage({ actionTitle, onBackToDashboard }: Confirmatio
         ✓
       </div>
 
-      <div className="flex flex-col gap-3 max-w-xs">
+      <div className="flex flex-col gap-3 max-w-sm">
         <TypewriterHeading text="Done!" />
-        <p className="text-gray-500 leading-relaxed m-0 text-sm">
-          We've noted your intent to: <span className="font-semibold text-[#1f1f1f]">{actionTitle}</span>
-        </p>
-        <p className="text-gray-500 leading-relaxed m-0 text-sm">
-          We'll follow up when the renewal date approaches and re-run the analysis to confirm the recommendation.
-        </p>
+        <p className="text-gray-500 leading-relaxed m-0 text-sm whitespace-pre-wrap">{resultMessage}</p>
       </div>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 max-w-xs w-full">
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 max-w-sm w-full">
         <p className="text-xs text-gray-400 m-0 leading-relaxed text-center">
-          No contract change has happened yet — this is a simulation. Nothing was sent to Deutsche Bahn.
+          This updated your saved profile data for this prototype only — no real provider (e.g. Deutsche Bahn) was contacted.
         </p>
       </div>
 

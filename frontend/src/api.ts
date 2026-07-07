@@ -1,5 +1,5 @@
 import type { OnboardingPreferences } from "./types";
-import type { Recommendation } from "./types/recommendation";
+import type { ExecutionResult, ProposedAction, Recommendation } from "./types/recommendation";
 import type { Persona } from "./personas";
 
 const BASE = "/api";
@@ -27,6 +27,14 @@ export async function activatePersona(personaId: string): Promise<void> {
 
 export async function runAnalysis(sessionId: string): Promise<Recommendation> {
   return post<Recommendation>("/analyze", { session_id: sessionId });
+}
+
+export async function executeAction(sessionId: string, action: ProposedAction): Promise<ExecutionResult> {
+  return post<ExecutionResult>("/execute", {
+    session_id: sessionId,
+    action_title: action.title,
+    action_description: action.description,
+  });
 }
 
 export async function sendMessage(sessionId: string, text: string): Promise<string> {

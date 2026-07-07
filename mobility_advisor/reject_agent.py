@@ -1,11 +1,7 @@
-from datetime import date
-
 from google.adk.agents import LlmAgent
 from google.genai import types
 
-from .sub_agents import _USER_FIRST_NAME, _USER_NAME, build_model
-
-_TODAY = date.today().isoformat()
+from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
 
 reject_agent = LlmAgent(
     name="reject_agent",

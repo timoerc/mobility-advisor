@@ -21,6 +21,10 @@ _DATA = Path(__file__).parent / "data"
 
 USE_MOCK_DATA = True
 
+# Frozen so mock scenarios (calendar events starting 2026-06-12, travel history
+# ending ~mid-2025) stay reproducible regardless of the host machine's real date.
+MOCK_TODAY = date(2026, 6, 15)
+
 def load_user_preferences() -> dict:
     """Load the active user's mobility preferences derived from their persona profile.
 
@@ -303,7 +307,7 @@ def apply_subscription_change(
             mobility_catalog.json's options. Must resolve to exactly one catalog option —
             zero or multiple matches both return an error with no write.
         as_of: The date to treat as "today" when computing the new entry's started date
-            and next_renewal_date. Defaults to date.today() when omitted. Exists only for
+            and next_renewal_date. Defaults to MOCK_TODAY when omitted. Exists only for
             deterministic testing — leave unset in normal use.
 
     Returns a dict with: status ("applied" or "error"), action, removed (list of removed
@@ -313,7 +317,7 @@ def apply_subscription_change(
     ("current_subscriptions.json"), warnings (list[str], e.g. noting a same-product
     replace), and error (str message, or None on success).
     """
-    as_of = as_of or date.today()
+    as_of = as_of or MOCK_TODAY
     warnings: list[str] = []
 
     def _error(message: str, before_count: int = 0) -> dict:

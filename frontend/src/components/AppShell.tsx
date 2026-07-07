@@ -5,6 +5,7 @@ type AppShellProps = {
   personaTagline: string;
   avatarBg: string;
   onBack?: () => void;
+  onLogoClick?: () => void;
   onChatOpen: () => void;
   onEditPreferences: () => void;
   onEditProfile: () => void;
@@ -20,6 +21,7 @@ export function AppShell({
   personaTagline,
   avatarBg,
   onBack,
+  onLogoClick,
   onChatOpen,
   onEditPreferences,
   onEditProfile,
@@ -34,18 +36,33 @@ export function AppShell({
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           {onBack ? (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label="Back"
+                className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer flex-shrink-0 transition-colors"
+              >
+                <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
+              </button>
+              <span className="font-bold text-sm">Mobility Advisor</span>
+            </>
+          ) : onLogoClick ? (
             <button
               type="button"
-              onClick={onBack}
-              aria-label="Back"
-              className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer flex-shrink-0 transition-colors"
+              onClick={onLogoClick}
+              aria-label="Home"
+              className="flex items-center gap-3 border-0 bg-transparent cursor-pointer p-0"
             >
-              <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
+              <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block flex-shrink-0" alt="" />
+              <span className="font-bold text-sm">Mobility Advisor</span>
             </button>
           ) : (
-            <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block flex-shrink-0" alt="" />
+            <>
+              <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block flex-shrink-0" alt="" />
+              <span className="font-bold text-sm">Mobility Advisor</span>
+            </>
           )}
-          <span className="font-bold text-sm">Mobility Advisor</span>
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
