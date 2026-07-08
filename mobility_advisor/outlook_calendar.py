@@ -5,7 +5,7 @@ import msal
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -38,12 +38,19 @@ def _convert_event(event: dict) -> dict:
     location = event.get("location", {}).get("displayName", "") or None
 
     if is_all_day:
-        date = start_raw[:10] if start_raw else ""
+        start_date = start_raw[:10] if start_raw else ""
+        # Microsoft sets end to the day *after* the last day for all-day events
+        if end_raw:
+            end_dt = datetime.strptime(end_raw[:10], "%Y-%m-%d") - timedelta(days=1)
+            end_date = end_dt.strftime("%Y-%m-%d")
+        else:
+            end_date = start_date
         time_start = None
         time_end = None
         meeting_type = "all_day"
     else:
-        date = datetime.strptime(start_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%d") if start_raw else ""
+        start_date = datetime.strptime(start_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%d") if start_raw else ""
+        end_date = datetime.strptime(end_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%d") if end_raw else start_date
         time_start = start_raw[11:16] if start_raw else None
         time_end = end_raw[11:16] if end_raw else None
 
@@ -62,7 +69,8 @@ def _convert_event(event: dict) -> dict:
             meeting_type = "in_person"
 
     return {
-        "date": date,
+        "start_date": start_date,
+        "end_date": end_date,
         "time_start": time_start,
         "time_end": time_end,
         "type": meeting_type,

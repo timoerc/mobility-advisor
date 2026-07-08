@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class UserPreferences(BaseModel):
@@ -72,13 +72,22 @@ class TravelHistory(BaseModel):
 
 
 class CalendarEvent(BaseModel):
-    date: str
+    start_date: str = ""
+    end_date: str = ""
     time_start: str | None = None
     time_end: str | None = None
     type: str
     description: str
     location: str | None = None
     signals: list[str] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_date(cls, values: dict) -> dict:
+        if "date" in values and not values.get("start_date"):
+            values["start_date"] = values.pop("date")
+            values.setdefault("end_date", values["start_date"])
+        return values
 
 
 class CalendarEvents(BaseModel):
