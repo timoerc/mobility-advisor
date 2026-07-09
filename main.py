@@ -141,7 +141,7 @@ def _atomic_write(path: Path, data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, ensure_ascii=False)
             f.write("\n")
         os.replace(tmp, path)
     except Exception:
@@ -257,6 +257,13 @@ async def activate_persona(req: ActivateRequest):
             detail=f"No scenario directory for persona '{req.persona_id}'.",
         )
     return {"ok": True}
+
+
+@app.get("/api/catalog")
+async def get_catalog():
+    """Return the mobility catalog for frontend dropdown population."""
+    catalog = _load_catalog_lookup()
+    return {"options": list(catalog.values())}
 
 
 # ── JSON extraction ───────────────────────────────────────────────────────────

@@ -192,6 +192,7 @@ export default function App() {
         <MobilityStackPage
           subscriptions={preferences.subscriptions}
           onChange={(subscriptions) => setPreferences((c) => ({ ...c, subscriptions }))}
+          userAge={preferences.personal.age}
         />
       );
       case 7: return (

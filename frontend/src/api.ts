@@ -55,6 +55,21 @@ export async function runAnnualReport(sessionId: string): Promise<Blob> {
   return res.blob();
 }
 
+export type CatalogOption = {
+  id: string;
+  provider: string;
+  product: string;
+  mode: string;
+  eligibility: { min_age: number | null; max_age: number | null } | null;
+};
+
+export async function fetchCatalog(): Promise<CatalogOption[]> {
+  const res = await fetch(`${BASE}/catalog`);
+  if (!res.ok) throw new Error(`GET /api/catalog ${res.status}`);
+  const data = await res.json() as { options: CatalogOption[] };
+  return data.options;
+}
+
 export async function fetchPersonas(): Promise<Persona[]> {
   const res = await fetch(`${BASE}/personas`);
   if (!res.ok) throw new Error(`GET /api/personas ${res.status}`);

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SubscriptionCard } from "../components/SubscriptionCard";
+import { fetchCatalog } from "../api";
+import type { CatalogOption } from "../api";
 import type {
   MobilityMode,
   SubscriptionEntry,
@@ -8,6 +10,7 @@ import type {
 type MobilityStackPageProps = {
   subscriptions: SubscriptionEntry[];
   onChange: (subscriptions: SubscriptionEntry[]) => void;
+  userAge: number | null;
 };
 
 const SECTIONS: { mode: MobilityMode; label: string }[] = [
@@ -25,6 +28,7 @@ type FormState = Partial<SubscriptionEntry> & {
 function emptyForm(mode: MobilityMode): FormState {
   return {
     mode,
+    id: "",
     provider: "",
     product: "",
     next_renewal_date: "",
@@ -37,44 +41,112 @@ const inputClass =
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-xs text-gray-600";
 
+function isEligible(opt: CatalogOption, age: number | null): boolean {
+  const elig = opt.eligibility;
+  if (!elig) return true;
+  if (age === null) return true;
+  if (elig.min_age !== null && age < elig.min_age) return false;
+  if (elig.max_age !== null && age > elig.max_age) return false;
+  return true;
+}
+
 function SubscriptionForm({
   form,
   onFormChange,
   onSave,
   onCancel,
   saveLabel = "Add",
+  catalogOptions,
+  userAge,
 }: {
   form: FormState;
   onFormChange: (f: FormState) => void;
   onSave: () => void;
   onCancel: () => void;
   saveLabel?: string;
+  catalogOptions: CatalogOption[];
+  userAge: number | null;
 }) {
   const set = (patch: Partial<FormState>) =>
     onFormChange({ ...form, ...patch });
+
+  const modeOptions = useMemo(
+    () => catalogOptions.filter((o) => o.mode === form.mode && isEligible(o, userAge)),
+    [catalogOptions, form.mode, userAge],
+  );
+
+  const providers = useMemo(
+    () => [...new Set(modeOptions.map((o) => o.provider))],
+    [modeOptions],
+  );
+
+  const products = useMemo(
+    () => modeOptions.filter((o) => o.provider === form.provider),
+    [modeOptions, form.provider],
+  );
+
+  const handleProviderChange = (provider: string) => {
+    const matching = modeOptions.filter((o) => o.provider === provider);
+    if (matching.length === 1) {
+      set({ provider, product: matching[0].product, id: matching[0].id });
+    } else {
+      set({ provider, product: "", id: "" });
+    }
+  };
+
+  const handleProductChange = (product: string) => {
+    const match = modeOptions.find((o) => o.provider === form.provider && o.product === product);
+    set({ product, id: match?.id ?? "" });
+  };
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         <label className={labelClass}>
           <span className={labelTextClass}>Provider</span>
-          <input
-            type="text"
-            value={form.provider ?? ""}
-            onChange={(e) => set({ provider: e.target.value })}
-            placeholder="e.g. Deutsche Bahn"
-            className={inputClass}
-          />
+          {providers.length > 0 ? (
+            <select
+              value={form.provider ?? ""}
+              onChange={(e) => handleProviderChange(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— select —</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.provider ?? ""}
+              onChange={(e) => set({ provider: e.target.value })}
+              placeholder="e.g. Deutsche Bahn"
+              className={inputClass}
+            />
+          )}
         </label>
         <label className={labelClass}>
           <span className={labelTextClass}>Product</span>
-          <input
-            type="text"
-            value={form.product ?? ""}
-            onChange={(e) => set({ product: e.target.value })}
-            placeholder="e.g. BahnCard 50"
-            className={inputClass}
-          />
+          {form.provider && products.length > 0 ? (
+            <select
+              value={form.product ?? ""}
+              onChange={(e) => handleProductChange(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— select —</option>
+              {products.map((o) => (
+                <option key={o.id} value={o.product}>{o.product}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.product ?? ""}
+              onChange={(e) => set({ product: e.target.value })}
+              placeholder="e.g. BahnCard 50"
+              className={inputClass}
+            />
+          )}
         </label>
       </div>
 
@@ -129,6 +201,8 @@ function SectionAccordion({
   onEdit,
   editingEntry,
   onEditDone,
+  catalogOptions,
+  userAge,
 }: {
   mode: MobilityMode;
   label: string;
@@ -138,6 +212,8 @@ function SectionAccordion({
   onEdit: (entry: SubscriptionEntry) => void;
   editingEntry: SubscriptionEntry | null;
   onEditDone: (entryToRestore: SubscriptionEntry | null) => void;
+  catalogOptions: CatalogOption[];
+  userAge: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [addingForm, setAddingForm] = useState<FormState | null>(null);
@@ -155,7 +231,7 @@ function SectionAccordion({
   const handleSave = () => {
     if (!addingForm) return;
     const entry: SubscriptionEntry = {
-      id: editingId.current ?? crypto.randomUUID(),
+      id: addingForm.id || editingId.current || crypto.randomUUID(),
       mode,
       provider: addingForm.provider ?? "",
       product: addingForm.product ?? "",
@@ -218,6 +294,8 @@ function SectionAccordion({
               onSave={handleSave}
               onCancel={handleCancel}
               saveLabel={editingId.current ? "Save" : "Add"}
+              catalogOptions={catalogOptions}
+              userAge={userAge}
             />
           ) : (
             <button
@@ -237,10 +315,16 @@ function SectionAccordion({
 export function MobilityStackPage({
   subscriptions,
   onChange,
+  userAge,
 }: MobilityStackPageProps) {
   const [loading, setLoading] = useState(false);
   const [editingEntry, setEditingEntry] = useState<SubscriptionEntry | null>(null);
+  const [catalogOptions, setCatalogOptions] = useState<CatalogOption[]>([]);
   const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    fetchCatalog().then(setCatalogOptions).catch(console.warn);
+  }, []);
 
   useEffect(() => {
     if (subscriptions.length > 0 || fetchedRef.current) return;
@@ -298,6 +382,8 @@ export function MobilityStackPage({
               if (entryToRestore) onChange([...subscriptions, entryToRestore]);
               setEditingEntry(null);
             }}
+            catalogOptions={catalogOptions}
+            userAge={userAge}
           />
         ))}
       </div>
