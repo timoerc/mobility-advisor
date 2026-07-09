@@ -189,8 +189,94 @@ def _driving_distance_km(origin: str, destination: str) -> tuple[float, float] |
     return distance_km, duration_min
 
 
+def _load_subscriptions() -> list[dict]:
+    subs_path = _DATA / "current_subscriptions.json"
+    if not subs_path.exists():
+        return []
+    return json.loads(subs_path.read_text(encoding="utf-8")).get("subscriptions", [])
+
+
+def _provider_matches(trip_provider: str, sub_provider: str) -> bool:
+    tp = trip_provider.lower()
+    sp = sub_provider.lower()
+    return tp in sp or sp in tp
+
+
+def _date_in_range(trip_date: str, started: str | None, next_renewal: str | None) -> bool:
+    if not started:
+        return True
+    if trip_date < started:
+        return False
+    if next_renewal and trip_date > next_renewal:
+        return False
+    return True
+
+
+def _enrich_booked_under(trips: list[dict]) -> int:
+    subs = _load_subscriptions()
+    if not subs:
+        return 0
+
+    updated = 0
+    for trip in trips:
+        trip_mode = trip.get("mode", "")
+        trip_provider = trip.get("provider", "")
+        trip_date = trip.get("date", "")
+        trip_type = trip.get("type", "")
+
+        matched_id = None
+
+        if trip_mode == "rail" and _provider_matches(trip_provider, "Deutsche Bahn"):
+            rail_subs = [s for s in subs if s.get("mode") == "rail"
+                         and _provider_matches(trip_provider, s.get("provider", ""))
+                         and _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date"))]
+
+            bc100 = next((s for s in rail_subs if s["id"].startswith("db_bc100")), None)
+            bahncard = next((s for s in rail_subs if s["id"].startswith("db_bc") and not s["id"].startswith("db_bc100")), None)
+            dt = next((s for s in rail_subs if s["id"] == "db_deutschlandticket"), None)
+
+            if bc100:
+                matched_id = bc100["id"]
+            elif trip_type == "Intercity":
+                if bahncard:
+                    matched_id = bahncard["id"]
+            elif trip_type == "Regional":
+                if dt:
+                    matched_id = dt["id"]
+                elif bahncard:
+                    matched_id = bahncard["id"]
+
+        elif trip_mode == "flight":
+            for s in subs:
+                if s.get("mode") != "flight":
+                    continue
+                if not _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date")):
+                    continue
+                affiliated = s.get("affiliated_airlines", [])
+                if any(_provider_matches(trip_provider, airline) for airline in affiliated):
+                    matched_id = s["id"]
+                    break
+
+        else:
+            for s in subs:
+                if s.get("mode") != trip_mode:
+                    continue
+                if not _provider_matches(trip_provider, s.get("provider", "")):
+                    continue
+                if not _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date")):
+                    continue
+                matched_id = s["id"]
+                break
+
+        if matched_id and trip.get("booked_under") != matched_id:
+            trip["booked_under"] = matched_id
+            updated += 1
+
+    return updated
+
+
 def enrich() -> None:
-    """Fill distance_km and co2_emission_kg for all trips missing those values."""
+    """Fill distance_km, co2_emission_kg, and booked_under for all trips."""
     lookup = _load_co2_lookup()
     raw = json.loads(_RAW_OUTPUT.read_text(encoding="utf-8"))
     trips = raw["trips"]
@@ -265,11 +351,14 @@ def enrich() -> None:
             trip["real_travel_duration_min"] = trip.get("duration_min")
             duration_updated += 1
 
+    # Pass 5 — assign booked_under based on current subscriptions
+    booked_updated = _enrich_booked_under(trips)
+
     raw["trips"] = trips
     _RAW_OUTPUT.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
     print(
-        f"\nDone — {dist_updated} distance(s), {duration_updated} real travel duration(s) "
-        f"and {co2_updated} CO₂ emission(s) filled."
+        f"\nDone — {dist_updated} distance(s), {duration_updated} real travel duration(s), "
+        f"{co2_updated} CO₂ emission(s), and {booked_updated} booked_under assignment(s) filled."
     )
 
 
