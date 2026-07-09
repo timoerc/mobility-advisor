@@ -1,0 +1,498 @@
+{
+  "options": [
+    {
+      "id": "db_bc25_2nd_annual_standard",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 9.25,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 27, "max_age": 64 },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise. 111 €/Jahr."
+    },
+    {
+      "id": "db_bc25_2nd_annual_young",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 Young (2. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 5.83,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 19, "max_age": 26 },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise. 69,90 €/Jahr."
+    },
+    {
+      "id": "db_bc25_2nd_annual_senior",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 Senior (2. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 9.25,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 65, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise."
+    },
+    {
+      "id": "db_bc25_2nd_probe",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 Probe (2. Klasse, 3 Monate)",
+      "mode": "rail",
+      "monthly_cost_eur": 9.97,
+      "billing_cycle": "one-time",
+      "minimum_months": 3,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
+    },
+    {
+      "id": "db_bc25_1st_annual_standard",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 (1. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 18.33,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 27, "max_age": 64 },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise 1. Klasse, 25% auf Sparpreise 1. Klasse. 220 €/Jahr."
+    },
+    {
+      "id": "db_bc50_2nd_annual_standard",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 27, "max_age": 64 },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
+    },
+    {
+      "id": "db_bc50_2nd_annual_young",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 Young (2. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 10.17,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 19, "max_age": 26 },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 122 €/Jahr."
+    },
+    {
+      "id": "db_bc50_2nd_annual_senior",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 Senior (2. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 65, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise."
+    },
+    {
+      "id": "db_bc50_2nd_probe",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 Probe (2. Klasse, 3 Monate)",
+      "mode": "rail",
+      "monthly_cost_eur": 23.30,
+      "billing_cycle": "one-time",
+      "minimum_months": 3,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
+    },
+    {
+      "id": "db_bc50_1st_annual_standard",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (1. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 41.00,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": 27, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise 1. Klasse, 25% auf Sparpreise 1. Klasse. 492 €/Jahr."
+    },
+    {
+      "id": "db_bc100_2nd_annual",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 100 (2. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 412.00,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
+        "unlimited_long_distance": true,
+        "unlimited_regional": true
+      },
+      "qualifying_threshold": null,
+      "notes": "Unbegrenzte Fahrten im gesamten DB-Netz (Fern- und Nahverkehr), 2. Klasse. 4.944 €/Jahr."
+    },
+    {
+      "id": "db_bc100_1st_annual",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 100 (1. Klasse, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 687.00,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
+        "unlimited_long_distance": true,
+        "unlimited_regional": true
+      },
+      "qualifying_threshold": null,
+      "notes": "Unbegrenzte Fahrten im gesamten DB-Netz, 1. Klasse. 8.244 €/Jahr."
+    },
+    {
+      "id": "db_deutschlandticket",
+      "provider": "Deutschlandticket",
+      "product": "Deutschland-Ticket",
+      "mode": "regional",
+      "monthly_cost_eur": 63.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
+        "unlimited_long_distance": false,
+        "unlimited_regional": true
+      },
+      "qualifying_threshold": null,
+      "notes": "Unbegrenzte Nutzung aller Nahverkehrsmittel (S-Bahn, U-Bahn, Bus, RegionalBahn) deutschlandweit. Monatlich kündbar."
+    },
+    {
+      "id": "miles_basis",
+      "provider": "MILES Mobility",
+      "product": "MILES Basis (Pay-per-use)",
+      "mode": "car_share",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": 18, "max_age": null },
+      "benefits": {
+        "monthly_credit_eur": 0.00,
+        "discount_km_pct": 0,
+        "discount_time_pct": 0,
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 3.90
+      },
+      "qualifying_threshold": null,
+      "notes": "Kein Mitgliedsbeitrag. Standard km-Tarif."
+    },
+    {
+      "id": "miles_silber",
+      "provider": "MILES Mobility",
+      "product": "MILES Silber Pass",
+      "mode": "car_share",
+      "monthly_cost_eur": 9.99,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": { "min_age": 18, "max_age": null },
+      "benefits": {
+        "monthly_credit_eur": 10.00,
+        "discount_km_pct": 10,
+        "discount_time_pct": 5,
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 3.90
+      },
+      "qualifying_threshold": null,
+      "notes": "10 € Guthaben/Monat. 10% auf km-Tarif, 5% auf Zeitarife."
+    },
+    {
+      "id": "miles_gold",
+      "provider": "MILES Mobility",
+      "product": "MILES Gold Pass",
+      "mode": "car_share",
+      "monthly_cost_eur": 49.99,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": { "min_age": 18, "max_age": null },
+      "benefits": {
+        "monthly_credit_eur": 50.00,
+        "discount_km_pct": 15,
+        "discount_time_pct": 10,
+        "unlock_fee_eur_per_trip": 1.00,
+        "protection_plus_eur_per_trip": 0.00
+      },
+      "qualifying_threshold": null,
+      "notes": "50 € Guthaben/Monat. 15% auf km-Tarif, 10% auf Zeitarife. Protection Plus inklusive."
+    },
+    {
+      "id": "miles_platin",
+      "provider": "MILES Mobility",
+      "product": "MILES Platin Pass",
+      "mode": "car_share",
+      "monthly_cost_eur": 59.99,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": { "min_age": 18, "max_age": null },
+      "benefits": {
+        "monthly_credit_eur": 50.00,
+        "discount_km_pct": 15,
+        "discount_time_pct": 10,
+        "unlock_fee_eur_per_trip": 0.00,
+        "protection_plus_eur_per_trip": 0.00
+      },
+      "qualifying_threshold": null,
+      "notes": "50 € Guthaben/Monat. 15% auf km-Tarif, 10% auf Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
+    },
+    {
+      "id": "miles_black",
+      "provider": "MILES Mobility",
+      "product": "MILES Black Pass",
+      "mode": "car_share",
+      "monthly_cost_eur": 250.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": { "min_age": 18, "max_age": null },
+      "benefits": {
+        "monthly_credit_eur": 250.00,
+        "discount_km_pct": 15,
+        "discount_time_pct": 15,
+        "unlock_fee_eur_per_trip": 0.00,
+        "protection_plus_eur_per_trip": 0.00
+      },
+      "qualifying_threshold": null,
+      "notes": "250 € Guthaben/Monat. 15% auf km- und Zeitarife. Keine Unlock Fee. Protection Plus inklusive."
+    },
+    {
+      "id": "enterprise_plus",
+      "provider": "Enterprise",
+      "product": "Enterprise Plus (Basis)",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": 21, "max_age": null },
+      "benefits": {
+        "bonus_points_pct": 0,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 0,
+        "rental_days_per_year": null
+      },
+      "notes": "Kostenloses Basisprogramm. 0–5 Anmietungen/Jahr."
+    },
+    {
+      "id": "enterprise_silver",
+      "provider": "Enterprise",
+      "product": "Enterprise Silver",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": 21, "max_age": null },
+      "benefits": {
+        "bonus_points_pct": 10,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 6,
+        "rental_days_per_year": null
+      },
+      "notes": "Erreicht ab 6–11 Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
+    },
+    {
+      "id": "enterprise_gold",
+      "provider": "Enterprise",
+      "product": "Enterprise Gold",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": 21, "max_age": null },
+      "benefits": {
+        "bonus_points_pct": 15,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 12,
+        "rental_days_per_year": 40
+      },
+      "notes": "Erreicht ab 12 Anmietungen ODER 40 Miettagen/Jahr. 15% Bonuspunkte."
+    },
+    {
+      "id": "enterprise_platinum",
+      "provider": "Enterprise",
+      "product": "Enterprise Platinum",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": 21, "max_age": null },
+      "benefits": {
+        "bonus_points_pct": 20,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 24,
+        "rental_days_per_year": 85
+      },
+      "notes": "Erreicht ab 24 Anmietungen ODER 85 Miettagen/Jahr. 20% Bonuspunkte."
+    },
+    {
+      "id": "lh_miles_member",
+      "provider": "Lufthansa Group",
+      "product": "Miles & More Member",
+      "mode": "flight",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "bonus_miles_pct": 0,
+        "mile_value_eur": 0.012
+      },
+      "qualifying_threshold": {
+        "status_miles_per_year": 0,
+        "flights_per_year": null
+      },
+      "notes": "Kostenloses Basisprogramm. Prämienmeilen auf Lufthansa-Group-Flügen und Partnergesellschaften."
+    },
+    {
+      "id": "lh_miles_frequent_traveller",
+      "provider": "Lufthansa Group",
+      "product": "Miles & More Frequent Traveller",
+      "mode": "flight",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "bonus_miles_pct": 25,
+        "mile_value_eur": 0.012
+      },
+      "qualifying_threshold": {
+        "status_miles_per_year": 35000,
+        "flights_per_year": null
+      },
+      "notes": "Ab 35.000 Statusmeilen/Jahr. 25% Statusbonus auf Prämienmeilen."
+    },
+    {
+      "id": "lh_miles_senator",
+      "provider": "Lufthansa Group",
+      "product": "Miles & More Senator",
+      "mode": "flight",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "bonus_miles_pct": 50,
+        "mile_value_eur": 0.012
+      },
+      "qualifying_threshold": {
+        "status_miles_per_year": 100000,
+        "flights_per_year": null
+      },
+      "notes": "Ab 100.000 Statusmeilen/Jahr. 50% Statusbonus."
+    },
+    {
+      "id": "lh_miles_hon_circle",
+      "provider": "Lufthansa Group",
+      "product": "Miles & More HON Circle",
+      "mode": "flight",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {
+        "bonus_miles_pct": 100,
+        "mile_value_eur": 0.012
+      },
+      "qualifying_threshold": {
+        "status_miles_per_year": 600000,
+        "flights_per_year": null
+      },
+      "notes": "Ab 600.000 HON Circle Meilen in 2 Kalenderjahren. 100% Bonus auf Prämienmeilen."
+    },
+    {
+      "id": "flixbus_payperuse",
+      "provider": "FlixBus",
+      "product": "FlixBus (Pay-per-use)",
+      "mode": "bus",
+      "monthly_cost_eur": 0.00,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": { "min_age": null, "max_age": null },
+      "benefits": {},
+      "qualifying_threshold": null,
+      "notes": "Kein Abonnement oder Treueprogramm. Tickets einzeln buchbar."
+    }
+  ]
+}
