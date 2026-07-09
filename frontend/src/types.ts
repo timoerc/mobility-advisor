@@ -8,6 +8,7 @@ export type WeekDay = "mon" | "tue" | "wed" | "thu" | "fri";
 
 export type PersonalProfile = {
   full_name: string;
+  age: number | null;
   employment_status: "employed" | "self-employed" | "student" | "other";
   profession: string;
   household_context: "single" | "partner" | "family" | "";
@@ -20,48 +21,27 @@ export type CommutePattern = {
 
 export type CarProfile = {
   owns_car: boolean;
-  fuel_type: "Petrol" | "Diesel" | "Hybrid" | "Plug-in Hybrid" | "Electric" | null;
-  car_size: "Small car" | "Medium car" | "Large car" | null;
-  efficiency: number | null;
-  efficiency_unit: "L/100km" | "kWh/100km" | null;
+  mode: "car_private";
+  type: "Petrol" | "Diesel" | "Hybrid" | "Plug-in Hybrid" | "Electric" | null;
+  size: "Small car" | "Medium car" | "Large car" | null;
   monthly_km_estimate: number | null;
 };
 
-export type CostStructure =
-  | "fixed_recurring"
-  | "fixed_annual_discount"
-  | "usage_membership"
-  | "pay_per_use";
-
-export type SubscriptionCategory =
-  | "rail_subscription"
-  | "carsharing"
-  | "micromobility_ridehailing";
+export type MobilityMode =
+  | "rail"
+  | "car_share"
+  | "car_rental"
+  | "flight"
+  | "bus";
 
 export type SubscriptionEntry = {
   id: string;
   detected?: boolean;
-  category: SubscriptionCategory;
-  cost_structure: CostStructure;
+  mode: MobilityMode;
   provider: string;
   product: string;
-  monthly_cost_eur: number;
-  billing_cycle: string;
   next_renewal_date: string;
   started: string;
-  coverage_scope: string;
-  notes: string;
-  // fixed_annual_discount
-  annual_price?: number;
-  discount_rate?: number;
-  travel_class?: string;
-  // usage_membership
-  registration_fee?: number;
-  monthly_fee?: number;
-  per_minute_rate?: number;
-  per_km_rate?: number;
-  // pay_per_use
-  usage_frequency?: "rarely" | "monthly" | "weekly";
 };
 
 export type Integrations = {

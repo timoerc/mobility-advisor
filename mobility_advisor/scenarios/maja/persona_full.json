@@ -7,7 +7,7 @@
   "profileData": {
     "personal": {
       "full_name": "Maja Hoffmann",
-      "age": 32,
+      "age": 33,
       "employment_status": "employed",
       "profession": "Consultant",
       "household_context": "single"
@@ -24,6 +24,18 @@
       "size": null,
       "monthly_km_estimate": null
     },
+    "subscriptions": [
+      {
+        "id": "db_bc50_2nd_annual_standard",
+        "next_renewal_date": "2025-12-31",
+        "started": "2024-01-01"
+      },
+      {
+        "id": "enterprise_silver",
+        "next_renewal_date": null,
+        "started": null
+      }
+    ],
     "priorities": { "cost": 0.54, "time": 0.16, "sustainability": 0.3 },
     "integrations": {
       "outlook_connected": true,

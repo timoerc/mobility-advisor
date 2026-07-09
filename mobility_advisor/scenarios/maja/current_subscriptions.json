@@ -1,47 +1,51 @@
 {
   "subscriptions": [
     {
-      "id": "1",
-      "category": "rail_subscription",
-      "cost_structure": "fixed_annual_discount",
+      "id": "db_bc50_2nd_annual_standard",
+      "next_renewal_date": "2025-12-31",
+      "started": "2024-01-01",
       "provider": "Deutsche Bahn",
-      "product": "BahnCard 50 (2. Klasse)",
+      "product": "BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
       "monthly_cost_eur": 20.33,
       "billing_cycle": "annual",
-      "next_renewal_date": "2027-01-15",
-      "started": "2023-01-15",
-      "coverage_scope": "Germany nationwide",
-      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares.",
-      "annual_price": 244,
-      "discount_rate": 50,
-      "travel_class": "2nd"
+      "minimum_months": 12,
+      "eligibility": {
+        "min_age": 27,
+        "max_age": 64
+      },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
     },
     {
-      "id": "2",
-      "category": "rail_subscription",
-      "cost_structure": "fixed_recurring",
-      "provider": "Deutschlandticket",
-      "product": "Deutschland-Ticket",
-      "monthly_cost_eur": 58.00,
+      "id": "enterprise_silver",
+      "next_renewal_date": null,
+      "started": null,
+      "provider": "Enterprise",
+      "product": "Enterprise Silver",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.0,
       "billing_cycle": "monthly",
-      "next_renewal_date": "2026-07-01",
-      "started": "2023-05-01",
-      "coverage_scope": "Germany nationwide",
-      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
-    },
-    {
-      "id": "3",
-      "category": "carsharing",
-      "cost_structure": "usage_membership",
-      "provider": "MILES Mobility",
-      "product": "MILES+ Abo",
-      "monthly_cost_eur": 4.90,
-      "monthly_fee": 4.90,
-      "billing_cycle": "monthly",
-      "next_renewal_date": "2026-07-01",
-      "started": "2022-03-10",
-      "coverage_scope": "",
-      "notes": "Car-sharing membership tier. Provides 5% cashback on MILES trip costs and slightly reduced per-minute rate."
+      "minimum_months": 0,
+      "eligibility": {
+        "min_age": 21,
+        "max_age": null
+      },
+      "benefits": {
+        "bonus_points_pct": 10,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 6,
+        "rental_days_per_year": null
+      },
+      "notes": "Erreicht ab 6–11 Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
     }
   ]
 }

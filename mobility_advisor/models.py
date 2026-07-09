@@ -12,21 +12,21 @@ class UserPreferences(BaseModel):
 
 
 class Subscription(BaseModel):
+    model_config = {"extra": "allow"}
+    id: str
     provider: str
     product: str
-    monthly_cost_eur: float
-    billing_cycle: str
-    next_renewal_date: str
-    started: str
-    notes: str
-    id: str | None = None
-    category: str | None = None
-    cost_structure: str | None = None
-    coverage_scope: str | None = None
-    annual_price: float | None = None
-    discount_rate: float | None = None
-    monthly_fee: float | None = None
-    travel_class: str | None = None
+    mode: str
+    monthly_cost_eur: float = 0.0
+    billing_cycle: str = "monthly"
+    minimum_months: int = 0
+    eligibility: dict | None = None
+    benefits: dict | None = None
+    qualifying_threshold: dict | None = None
+    affiliated_airlines: list[str] | None = None
+    next_renewal_date: str = ""
+    started: str = ""
+    notes: str = ""
 
 
 class CurrentSubscriptions(BaseModel):
@@ -34,13 +34,19 @@ class CurrentSubscriptions(BaseModel):
 
 
 class CatalogOption(BaseModel):
+    model_config = {"extra": "allow"}
+    id: str
     provider: str
     product: str
     mode: str
     monthly_cost_eur: float
     billing_cycle: str = "monthly"
-    discount_rule: str | None = None
-    co2_g_per_km: int
+    minimum_months: int = 0
+    eligibility: dict | None = None
+    benefits: dict | None = None
+    qualifying_threshold: dict | None = None
+    affiliated_airlines: list[str] | None = None
+    notes: str = ""
 
 
 class MobilityCatalog(BaseModel):

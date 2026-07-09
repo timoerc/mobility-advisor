@@ -12,19 +12,10 @@
       "profession": "Student",
       "household_context": "single"
     },
-    "location": {
-      "home_city": "Hamburg"
-    },
+    "location": { "home_city": "Hamburg" },
     "commute": {
-      "office_days": [
-        "mon",
-        "tue",
-        "wed",
-        "thu"
-      ],
-      "wfh_days": [
-        "fri"
-      ]
+      "office_days": ["mon", "tue", "wed", "thu"],
+      "wfh_days": ["fri"]
     },
     "car": {
       "owns_car": false,
@@ -33,11 +24,19 @@
       "size": null,
       "monthly_km_estimate": null
     },
-    "priorities": {
-      "cost": 0.5,
-      "time": 0.2,
-      "sustainability": 0.3
-    },
+    "subscriptions": [
+      {
+        "id": "db_bc50_2nd_annual_young",
+        "next_renewal_date": "2027-01-15",
+        "started": "2023-01-15"
+      },
+      {
+        "id": "db_deutschlandticket",
+        "next_renewal_date": "2026-08-01",
+        "started": "2023-05-01"
+      }
+    ],
+    "priorities": { "cost": 0.5, "time": 0.2, "sustainability": 0.3 },
     "integrations": {
       "outlook_connected": false,
       "gmail_connected": true,
@@ -45,10 +44,7 @@
       "db_connected": true,
       "miles_connected": false,
       "deutschlandticket_connected": true,
-      "additional_connections": [
-        "HVV",
-        "Nextbike"
-      ]
+      "additional_connections": ["HVV", "Nextbike"]
     },
     "notes": "Commute to university by U-Bahn and S-Bahn."
   }

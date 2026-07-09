@@ -58,17 +58,17 @@ def load_current_subscriptions() -> dict:
 
 
 def load_mobility_catalog() -> dict:
-    """Load the market-side mobility products catalog including pricing and CO2 data.
+    """Load the market-side mobility products catalog including pricing and benefits data.
 
     Returns a dict with key 'options', a list of available products each containing:
-    provider (str), product (str), mode (str: rail/regional/car_share/e_scooter),
-    monthly_cost_eur (float), discount_rule (str or null), co2_g_per_km (int).
+    id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/flight/bus),
+    monthly_cost_eur (float), benefits (dict), eligibility (dict), qualifying_threshold (dict or null).
     """
-    raw = json.loads((_DATA / "mobility_catalog.json").read_text())
+    raw = json.loads((_DATA / "mobility_catalog_new.json").read_text())
     return MobilityCatalog.model_validate(raw).model_dump()
 
 
-_KNOWN_MODES = {"rail", "regional", "car_share", "e_scooter", "bus", "local_transit"}
+_KNOWN_MODES = {"rail", "car_share", "car_rental", "flight", "bus"}
 
 
 def load_travel_history() -> dict:
@@ -339,8 +339,7 @@ def apply_subscription_change(
     if action in ("add", "replace") and not new_product:
         return _error(f"new_product is required for action={action!r}")
 
-    # Load raw dicts to preserve all fields (e.g. id, category) that the Pydantic
-    # model doesn't know about — model_dump() would strip them on write-back.
+    # Load raw dicts to preserve all fields beyond the Pydantic model.
     raw_file = json.loads((_DATA / "current_subscriptions.json").read_text())
     subs_list = raw_file["subscriptions"]
     before_count = len(subs_list)
@@ -369,14 +368,9 @@ def apply_subscription_change(
         except ValueError as exc:
             return _error(str(exc), before_count)
         new_sub = {
-            "provider": catalog_match["provider"],
-            "product": catalog_match["product"],
-            "monthly_cost_eur": catalog_match["monthly_cost_eur"],
-            "billing_cycle": catalog_match["billing_cycle"],
+            **catalog_match,
             "next_renewal_date": next_renewal_date,
             "started": as_of.isoformat(),
-            "notes": catalog_match.get("discount_rule")
-            or f"Added via mobility advisor on {as_of.isoformat()}.",
         }
         try:
             Subscription.model_validate(new_sub)

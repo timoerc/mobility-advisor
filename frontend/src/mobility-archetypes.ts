@@ -126,13 +126,13 @@ export function classifyArchetype(prefs: OnboardingPreferences): ArchetypeId {
   const wfhCount = prefs.commute.wfh_days.length;
   const officeCount = prefs.commute.office_days.length;
   const km = prefs.car.monthly_km_estimate ?? 0;
-  const hasRailSub = prefs.subscriptions.some((s) => s.category === "rail_subscription");
+  const hasRailSub = prefs.subscriptions.some((s) => s.mode === "rail");
   const hasBahnCard = prefs.subscriptions.some((s) =>
     s.product.toLowerCase().includes("bahncard")
   );
-  const hasCarShare = prefs.subscriptions.some((s) => s.category === "carsharing");
-  const hasMicro = prefs.subscriptions.some((s) => s.category === "micromobility_ridehailing");
-  const categoryCount = new Set(prefs.subscriptions.map((s) => s.category)).size;
+  const hasCarShare = prefs.subscriptions.some((s) => s.mode === "car_share");
+  const hasFlight = prefs.subscriptions.some((s) => s.mode === "flight");
+  const modeCount = new Set(prefs.subscriptions.map((s) => s.mode)).size;
 
   // Remote native
   if (wfhCount >= 4) scores.remote_native += 4;
@@ -162,9 +162,9 @@ export function classifyArchetype(prefs: OnboardingPreferences): ArchetypeId {
   // Multimodal
   if (prefs.subscriptions.length >= 3) scores.multimodal += 3;
   else if (prefs.subscriptions.length >= 2) scores.multimodal += 1;
-  if (categoryCount >= 2) scores.multimodal += 2;
+  if (modeCount >= 2) scores.multimodal += 2;
   if (hasCarShare && hasRailSub) scores.multimodal += 2;
-  if (hasMicro) scores.multimodal += 1;
+  if (hasFlight) scores.multimodal += 1;
 
   // Eco pioneer
   if (prefs.priorities.sustainability > 0.4) scores.eco_pioneer += 4;

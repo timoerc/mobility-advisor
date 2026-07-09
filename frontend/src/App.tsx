@@ -60,10 +60,10 @@ function loadPersonas(): Persona[] {
 // ── Empty profile for "new" persona ─────────────────────────────────────────
 
 const EMPTY_PROFILE: OnboardingPreferences = {
-  personal: { full_name: "", employment_status: "employed", profession: "", household_context: "" },
+  personal: { full_name: "", age: null, employment_status: "employed", profession: "", household_context: "" },
   location: { home_city: "" },
   commute: { wfh_days: ["mon", "fri"], office_days: ["tue", "wed", "thu"] },
-  car: { owns_car: false, fuel_type: null, car_size: null, efficiency: null, efficiency_unit: null, monthly_km_estimate: null },
+  car: { owns_car: false, mode: "car_private", type: null, size: null, monthly_km_estimate: null },
   subscriptions: [],
   priorities: { cost: 1 / 3, time: 1 / 3, sustainability: 1 / 3 },
   integrations: { outlook_connected: false, gmail_connected: false, calendar_connected: false, db_connected: false, miles_connected: false, deutschlandticket_connected: false, additional_connections: [] },

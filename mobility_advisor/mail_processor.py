@@ -39,7 +39,7 @@ Return a JSON object with exactly these fields:
       "duration_min": integer or null,
       "cost_eur": float or null,
       "provider": "provider name — for flights, use EXACTLY one of these names: Aegean Airlines, Air Astana, Air Canada, Air China, Air Dolomiti, Air India, Air New Zealand, All Nippon Airways, Asiana Airlines, Austrian Airlines, Avianca, Brussels Airlines, Cathay Pacific Airways, Copa Airlines, Croatia Airlines, Discover Airlines, EGYPTAIR, Ethiopian Airlines, Eurowings, EVA Air, ITA Airways, LATAM, LOT Polish Airlines, Lufthansa, Lufthansa City Airlines, Luxair, Olympic Airlines, Shenzhen Airline, Singapore Airlines, South African Airways, SWISS International Air Lines, TAP Portugal, Thai Airways, Turkish Airlines, United. If the airline is not in this list, use its name as-is.",
-      "ticket_type": "ticket type or null (rail examples: Sparpreis, Flexpreis, Super Sparpreis, Super Sparpreis Young, Deutschlandticket, BahnCard 50 — use exact wording from the email if it matches one of these, otherwise use the exact wording from the email as-is; flight: Economy / Business; bus: Standard; car: daily rate / one-way)",
+      "ticket_type": "ticket type INCLUDING travel class or null (rail examples: 'Super Sparpreis Young, 2. Klasse', 'Flexpreis, 1. Klasse', 'Deutschlandticket', 'BahnCard 50' — always append ', 1. Klasse' or ', 2. Klasse' when the class is mentioned in the email; flight: Economy / Business; bus: Standard; car: daily rate / one-way)",
       "type": "mode-specific — see rules below; use null (JSON null, not the string Null) when not determinable",
       "size": "mode-specific — see rules below; use null when not applicable or not determinable",
       "distance_km": null,
@@ -60,7 +60,7 @@ Rules:
 - For Enterprise/Sixt/Hertz: mode = "car_rental"
 - For life events (Mietvertrag etc.): return {{"trips": []}}
 - Set arrival_time if mentioned in the email (HH:MM), otherwise null
-- Calculate duration_min from departure_time and arrival_time if both are available, otherwise null
+- For duration_min: if the email states an explicit duration (e.g. "Dauer: 2h 45m"), use that value in minutes. Otherwise calculate from departure_time and arrival_time. IMPORTANT: for flights, departure and arrival times are in local time zones, so always prefer the stated duration over calculating from times.
 - Always set real_travel_duration_min to null (post-processing fills this)
 
 --- TYPE AND SIZE RULES (fill these fields for every trip) ---
