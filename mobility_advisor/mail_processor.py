@@ -38,7 +38,7 @@ Return a JSON object with exactly these fields:
       "arrival_time": "HH:MM or null",
       "duration_min": integer or null,
       "cost_eur": float or null,
-      "provider": "provider name",
+      "provider": "provider name — for flights, use EXACTLY one of these names: Aegean Airlines, Air Astana, Air Canada, Air China, Air Dolomiti, Air India, Air New Zealand, All Nippon Airways, Asiana Airlines, Austrian Airlines, Avianca, Brussels Airlines, Cathay Pacific Airways, Copa Airlines, Croatia Airlines, Discover Airlines, EGYPTAIR, Ethiopian Airlines, Eurowings, EVA Air, ITA Airways, LATAM, LOT Polish Airlines, Lufthansa, Lufthansa City Airlines, Luxair, Olympic Airlines, Shenzhen Airline, Singapore Airlines, South African Airways, SWISS International Air Lines, TAP Portugal, Thai Airways, Turkish Airlines, United. If the airline is not in this list, use its name as-is.",
       "ticket_type": "ticket type or null (rail examples: Sparpreis, Flexpreis, Super Sparpreis, Super Sparpreis Young, Deutschlandticket, BahnCard 50 — use exact wording from the email if it matches one of these, otherwise use the exact wording from the email as-is; flight: Economy / Business; bus: Standard; car: daily rate / one-way)",
       "type": "mode-specific — see rules below; use null (JSON null, not the string Null) when not determinable",
       "size": "mode-specific — see rules below; use null when not applicable or not determinable",
