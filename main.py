@@ -66,6 +66,7 @@ def _chat_service(session_id: str) -> InMemorySessionService:
 
 class _Personal(BaseModel):
     full_name: str = ""
+    age: int | None = None
     employment_status: str = ""
     profession: str = ""
     household_context: str = ""
@@ -78,22 +79,20 @@ class _Commute(BaseModel):
 
 class _Car(BaseModel):
     owns_car: bool = False
-    fuel_type: str | None = None
-    car_size: str | None = None
-    efficiency: float | None = None
-    efficiency_unit: str | None = None
+    mode: str = "car_private"
+    type: str | None = None
+    size: str | None = None
     monthly_km_estimate: float | None = None
 
 
 class _Subscription(BaseModel):
     model_config = {"extra": "ignore"}
-    provider: str
-    product: str
-    monthly_cost_eur: float
-    billing_cycle: str = "monthly"
+    id: str
+    mode: str = ""
+    provider: str = ""
+    product: str = ""
     next_renewal_date: str = ""
     started: str = ""
-    notes: str = ""
 
 
 class _Priorities(BaseModel):
@@ -151,21 +150,29 @@ def _atomic_write(path: Path, data: dict) -> None:
         raise
 
 
+def _load_catalog_lookup() -> dict[str, dict]:
+    catalog_path = _DATA / "mobility_catalog_new.json"
+    if not catalog_path.exists():
+        return {}
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    return {opt["id"]: opt for opt in catalog.get("options", [])}
+
+
 def _subs_from_payload(payload: ProfilePayload) -> dict:
-    return {
-        "subscriptions": [
-            {
-                "provider": s.provider,
-                "product": s.product,
-                "monthly_cost_eur": s.monthly_cost_eur,
-                "billing_cycle": s.billing_cycle,
-                "next_renewal_date": s.next_renewal_date,
-                "started": s.started,
-                "notes": s.notes,
-            }
-            for s in payload.subscriptions
-        ]
-    }
+    catalog = _load_catalog_lookup()
+    subscriptions = []
+    for s in payload.subscriptions:
+        entry: dict = {
+            "id": s.id,
+            "next_renewal_date": s.next_renewal_date,
+            "started": s.started,
+        }
+        if s.id in catalog:
+            entry.update(catalog[s.id])
+        else:
+            entry.update({"mode": s.mode, "provider": s.provider, "product": s.product})
+        subscriptions.append(entry)
+    return {"subscriptions": subscriptions}
 
 
 def _persona_from_payload(payload: ProfilePayload) -> dict:

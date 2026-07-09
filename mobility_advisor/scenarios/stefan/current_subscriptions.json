@@ -1,47 +1,74 @@
 {
   "subscriptions": [
     {
-      "id": "1",
-      "category": "rail_subscription",
-      "cost_structure": "fixed_annual_discount",
-      "provider": "Deutsche Bahn",
-      "product": "BahnCard 50 (2. Klasse)",
-      "monthly_cost_eur": 20.33,
-      "billing_cycle": "annual",
+      "id": "db_bc50_2nd_annual_standard",
       "next_renewal_date": "2027-01-15",
       "started": "2024-01-15",
-      "coverage_scope": "Germany nationwide",
-      "notes": "Annual card at €244/yr, auto-renews January. 50% discount on all DB long-distance fares.",
-      "annual_price": 244,
-      "discount_rate": 50,
-      "travel_class": "2nd"
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 20.33,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": {
+        "min_age": 27,
+        "max_age": 64
+      },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 50,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
     },
     {
-      "id": "2",
-      "category": "rail_subscription",
-      "cost_structure": "fixed_recurring",
-      "provider": "Deutschlandticket",
-      "product": "Deutschland-Ticket",
-      "monthly_cost_eur": 58.00,
-      "billing_cycle": "monthly",
+      "id": "db_deutschlandticket",
       "next_renewal_date": "2026-07-01",
       "started": "2023-05-01",
-      "coverage_scope": "Germany nationwide",
-      "notes": "Unlimited travel on all local and regional public transport across Germany. Monthly, cancellable."
+      "provider": "Deutsche Bahn",
+      "product": "Deutschland-Ticket",
+      "mode": "rail",
+      "monthly_cost_eur": 63.0,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": {
+        "min_age": null,
+        "max_age": null
+      },
+      "benefits": {
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
+        "unlimited_long_distance": false,
+        "unlimited_regional": true
+      },
+      "qualifying_threshold": null,
+      "notes": "Unbegrenzte Nutzung aller Nahverkehrsmittel (S-Bahn, U-Bahn, Bus, RegionalBahn) deutschlandweit. Monatlich kündbar."
     },
     {
-      "id": "3",
-      "category": "carsharing",
-      "cost_structure": "usage_membership",
-      "provider": "MILES Mobility",
-      "product": "MILES+ Abo",
-      "monthly_cost_eur": 4.90,
-      "monthly_fee": 4.90,
-      "billing_cycle": "monthly",
+      "id": "miles_silber",
       "next_renewal_date": "2026-07-01",
       "started": "2022-06-15",
-      "coverage_scope": "",
-      "notes": "Car-sharing membership tier. Provides 5% cashback on MILES trip costs and slightly reduced per-minute rate."
+      "provider": "MILES Mobility",
+      "product": "MILES Silber Pass",
+      "mode": "car_share",
+      "monthly_cost_eur": 9.99,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": {
+        "min_age": 18,
+        "max_age": null
+      },
+      "benefits": {
+        "monthly_credit_eur": 10.0,
+        "discount_km_pct": 10,
+        "discount_time_pct": 5,
+        "unlock_fee_eur_per_trip": 1.0,
+        "protection_plus_eur_per_trip": 3.9
+      },
+      "qualifying_threshold": null,
+      "notes": "10 € Guthaben/Monat. 10% auf km-Tarif, 5% auf Zeitarife."
     }
   ]
 }

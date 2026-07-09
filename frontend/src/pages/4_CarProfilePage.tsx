@@ -18,10 +18,9 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
     if (!owns) {
       onChange({
         owns_car: false,
-        fuel_type: null,
-        car_size: null,
-        efficiency: null,
-        efficiency_unit: null,
+        mode: "car_private",
+        type: null,
+        size: null,
         monthly_km_estimate: null,
       });
     } else {
@@ -66,11 +65,11 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
           <label className={labelClass}>
             <span className={labelTextClass}>Fuel type</span>
             <select
-              value={car.fuel_type ?? ""}
+              value={car.type ?? ""}
               onChange={(e) =>
                 set(
-                  "fuel_type",
-                  (e.target.value || null) as CarProfile["fuel_type"]
+                  "type",
+                  (e.target.value || null) as CarProfile["type"]
                 )
               }
               className={inputClass}
@@ -87,11 +86,11 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
           <label className={labelClass}>
             <span className={labelTextClass}>Car size</span>
             <select
-              value={car.car_size ?? ""}
+              value={car.size ?? ""}
               onChange={(e) =>
                 set(
-                  "car_size",
-                  (e.target.value || null) as CarProfile["car_size"]
+                  "size",
+                  (e.target.value || null) as CarProfile["size"]
                 )
               }
               className={inputClass}
@@ -102,43 +101,6 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
               <option value="Large car">Large car</option>
             </select>
           </label>
-
-          <div className="flex gap-3">
-            <label className={`${labelClass} flex-1`}>
-              <span className={labelTextClass}>Efficiency</span>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={car.efficiency ?? ""}
-                onChange={(e) =>
-                  set(
-                    "efficiency",
-                    e.target.value ? Number(e.target.value) : null
-                  )
-                }
-                placeholder="e.g. 6.5"
-                className={inputClass}
-              />
-            </label>
-            <label className={`${labelClass} w-36`}>
-              <span className={labelTextClass}>Unit</span>
-              <select
-                value={car.efficiency_unit ?? ""}
-                onChange={(e) =>
-                  set(
-                    "efficiency_unit",
-                    (e.target.value || null) as CarProfile["efficiency_unit"]
-                  )
-                }
-                className={inputClass}
-              >
-                <option value="">—</option>
-                <option value="L/100km">L/100km</option>
-                <option value="kWh/100km">kWh/100km</option>
-              </select>
-            </label>
-          </div>
 
           <label className={labelClass}>
             <span className={labelTextClass}>Estimated monthly km</span>

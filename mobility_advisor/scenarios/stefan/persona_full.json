@@ -12,17 +12,9 @@
       "profession": "Engineer",
       "household_context": "partner"
     },
-    "location": {
-      "home_city": "München"
-    },
+    "location": { "home_city": "München" },
     "commute": {
-      "office_days": [
-        "mon",
-        "tue",
-        "wed",
-        "thu",
-        "fri"
-      ],
+      "office_days": ["mon", "tue", "wed", "thu", "fri"],
       "wfh_days": []
     },
     "car": {
@@ -32,11 +24,24 @@
       "size": "Medium car",
       "monthly_km_estimate": 600
     },
-    "priorities": {
-      "cost": 0.3,
-      "time": 0.5,
-      "sustainability": 0.2
-    },
+    "subscriptions": [
+      {
+        "id": "db_bc50_2nd_annual_standard",
+        "next_renewal_date": "2027-01-15",
+        "started": "2024-01-15"
+      },
+      {
+        "id": "db_deutschlandticket",
+        "next_renewal_date": "2026-07-01",
+        "started": "2023-05-01"
+      },
+      {
+        "id": "miles_silber",
+        "next_renewal_date": "2026-07-01",
+        "started": "2022-06-15"
+      }
+    ],
+    "priorities": { "cost": 0.3, "time": 0.5, "sustainability": 0.2 },
     "integrations": {
       "outlook_connected": false,
       "gmail_connected": true,
@@ -44,10 +49,7 @@
       "db_connected": true,
       "miles_connected": true,
       "deutschlandticket_connected": true,
-      "additional_connections": [
-        "MVV",
-        "Bolt"
-      ]
+      "additional_connections": ["MVV", "Bolt"]
     },
     "notes": "Drive to work daily within Munich. Regular business trips to Frankfurt by train (company HQ is in Frankfurt-Sachsenhausen)."
   }

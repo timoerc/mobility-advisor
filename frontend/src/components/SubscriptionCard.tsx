@@ -6,10 +6,12 @@ type SubscriptionCardProps = {
   onEdit?: (entry: SubscriptionEntry) => void;
 };
 
-const CATEGORY_LABELS: Record<SubscriptionEntry["category"], string> = {
-  rail_subscription: "Rail",
-  carsharing: "Carsharing",
-  micromobility_ridehailing: "Micromobility",
+const MODE_LABELS: Record<SubscriptionEntry["mode"], string> = {
+  rail: "Rail",
+  car_share: "Carsharing",
+  car_rental: "Car Rental",
+  flight: "Flight",
+  bus: "Bus",
 };
 
 export function SubscriptionCard({ entry, onRemove, onEdit }: SubscriptionCardProps) {
@@ -27,8 +29,7 @@ export function SubscriptionCard({ entry, onRemove, onEdit }: SubscriptionCardPr
           )}
         </div>
         <p className="text-xs text-gray-400 m-0">
-          {CATEGORY_LABELS[entry.category]} ·{" "}
-          {entry.monthly_cost_eur.toFixed(2)} €/mo
+          {MODE_LABELS[entry.mode]}
         </p>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SubscriptionCard } from "../components/SubscriptionCard";
 import type {
-  CostStructure,
-  SubscriptionCategory,
+  MobilityMode,
   SubscriptionEntry,
 } from "../types";
 
@@ -11,47 +10,26 @@ type MobilityStackPageProps = {
   onChange: (subscriptions: SubscriptionEntry[]) => void;
 };
 
-const SECTIONS: { category: SubscriptionCategory; label: string }[] = [
-  { category: "rail_subscription", label: "Rail" },
-  { category: "carsharing", label: "Carsharing" },
-  { category: "micromobility_ridehailing", label: "Micromobility / Ride-hailing" },
+const SECTIONS: { mode: MobilityMode; label: string }[] = [
+  { mode: "rail", label: "Rail" },
+  { mode: "car_share", label: "Carsharing" },
+  { mode: "car_rental", label: "Car Rental" },
+  { mode: "flight", label: "Flight" },
+  { mode: "bus", label: "Bus" },
 ];
 
-const COST_STRUCTURE_LABELS: Record<CostStructure, string> = {
-  fixed_recurring: "Fixed recurring (monthly / yearly flat fee)",
-  fixed_annual_discount: "Annual discount card (e.g. BahnCard)",
-  usage_membership: "Usage membership (e.g. carsharing)",
-  pay_per_use: "Pay per use (occasional)",
-};
-
 type FormState = Partial<SubscriptionEntry> & {
-  cost_structure: CostStructure;
-  category: SubscriptionCategory;
+  mode: MobilityMode;
 };
 
-function emptyForm(category: SubscriptionCategory): FormState {
+function emptyForm(mode: MobilityMode): FormState {
   return {
-    category,
-    cost_structure: "fixed_recurring",
+    mode,
     provider: "",
     product: "",
-    monthly_cost_eur: 0,
-    billing_cycle: "monthly",
     next_renewal_date: "",
     started: "",
-    coverage_scope: "",
-    notes: "",
   };
-}
-
-function computeMonthlyCost(form: FormState): number {
-  if (form.cost_structure === "fixed_annual_discount") {
-    return form.annual_price ? form.annual_price / 12 : 0;
-  }
-  if (form.cost_structure === "usage_membership") {
-    return form.monthly_fee ?? 0;
-  }
-  return form.monthly_cost_eur ?? 0;
 }
 
 const inputClass =
@@ -77,23 +55,6 @@ function SubscriptionForm({
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col gap-4">
-      <label className={labelClass}>
-        <span className={labelTextClass}>Cost structure</span>
-        <select
-          value={form.cost_structure}
-          onChange={(e) =>
-            set({ cost_structure: e.target.value as CostStructure })
-          }
-          className={inputClass}
-        >
-          {(Object.keys(COST_STRUCTURE_LABELS) as CostStructure[]).map((k) => (
-            <option key={k} value={k}>
-              {COST_STRUCTURE_LABELS[k]}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="grid grid-cols-2 gap-3">
         <label className={labelClass}>
           <span className={labelTextClass}>Provider</span>
@@ -117,236 +78,26 @@ function SubscriptionForm({
         </label>
       </div>
 
-      {/* fixed_recurring fields */}
-      {form.cost_structure === "fixed_recurring" && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Monthly cost (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.monthly_cost_eur ?? ""}
-                onChange={(e) =>
-                  set({ monthly_cost_eur: Number(e.target.value) })
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Billing cycle</span>
-              <select
-                value={form.billing_cycle ?? "monthly"}
-                onChange={(e) => set({ billing_cycle: e.target.value })}
-                className={inputClass}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="annual">Annual</option>
-              </select>
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Next renewal</span>
-              <input
-                type="date"
-                value={form.next_renewal_date ?? ""}
-                onChange={(e) => set({ next_renewal_date: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Coverage scope</span>
-              <input
-                type="text"
-                value={form.coverage_scope ?? ""}
-                onChange={(e) => set({ coverage_scope: e.target.value })}
-                placeholder="e.g. Frankfurt VRN"
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </>
-      )}
-
-      {/* fixed_annual_discount fields */}
-      {form.cost_structure === "fixed_annual_discount" && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Annual price (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.annual_price ?? ""}
-                onChange={(e) =>
-                  set({ annual_price: Number(e.target.value) })
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Discount rate (%)</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={form.discount_rate ?? ""}
-                onChange={(e) =>
-                  set({ discount_rate: Number(e.target.value) })
-                }
-                placeholder="e.g. 50"
-                className={inputClass}
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Valid from</span>
-              <input
-                type="date"
-                value={form.started ?? ""}
-                onChange={(e) => set({ started: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Valid until</span>
-              <input
-                type="date"
-                value={form.next_renewal_date ?? ""}
-                onChange={(e) => set({ next_renewal_date: e.target.value })}
-                className={inputClass}
-              />
-            </label>
-          </div>
-          <label className={labelClass}>
-            <span className={labelTextClass}>Travel class</span>
-            <select
-              value={form.travel_class ?? ""}
-              onChange={(e) => set({ travel_class: e.target.value })}
-              className={inputClass}
-            >
-              <option value="">— select —</option>
-              <option value="1st">1st class</option>
-              <option value="2nd">2nd class</option>
-            </select>
-          </label>
-          {form.annual_price ? (
-            <p className="text-xs text-gray-500 m-0">
-              ≈ {(form.annual_price / 12).toFixed(2)} €/month
-            </p>
-          ) : null}
-        </>
-      )}
-
-      {/* usage_membership fields */}
-      {form.cost_structure === "usage_membership" && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Monthly fee (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.monthly_fee ?? ""}
-                onChange={(e) =>
-                  set({ monthly_fee: Number(e.target.value) })
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Registration fee (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.registration_fee ?? ""}
-                onChange={(e) =>
-                  set({ registration_fee: Number(e.target.value) })
-                }
-                className={inputClass}
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={labelClass}>
-              <span className={labelTextClass}>Per-minute rate (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.001"
-                value={form.per_minute_rate ?? ""}
-                onChange={(e) =>
-                  set({ per_minute_rate: Number(e.target.value) })
-                }
-                placeholder="e.g. 0.19"
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Per-km rate (€)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.001"
-                value={form.per_km_rate ?? ""}
-                onChange={(e) =>
-                  set({ per_km_rate: Number(e.target.value) })
-                }
-                placeholder="e.g. 0.25"
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </>
-      )}
-
-      {/* pay_per_use fields */}
-      {form.cost_structure === "pay_per_use" && (
-        <>
-          <label className={labelClass}>
-            <span className={labelTextClass}>Usage frequency</span>
-            <select
-              value={form.usage_frequency ?? ""}
-              onChange={(e) =>
-                set({
-                  usage_frequency: e.target.value as
-                    | "rarely"
-                    | "monthly"
-                    | "weekly",
-                })
-              }
-              className={inputClass}
-            >
-              <option value="">— select —</option>
-              <option value="rarely">Rarely (a few times a year)</option>
-              <option value="monthly">Monthly</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            <span className={labelTextClass}>
-              Estimated monthly cost (€)
-            </span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.monthly_cost_eur ?? ""}
-              onChange={(e) =>
-                set({ monthly_cost_eur: Number(e.target.value) })
-              }
-              placeholder="Your estimate"
-              className={inputClass}
-            />
-          </label>
-        </>
-      )}
+      <div className="grid grid-cols-2 gap-3">
+        <label className={labelClass}>
+          <span className={labelTextClass}>Valid from</span>
+          <input
+            type="date"
+            value={form.started ?? ""}
+            onChange={(e) => set({ started: e.target.value })}
+            className={inputClass}
+          />
+        </label>
+        <label className={labelClass}>
+          <span className={labelTextClass}>Next renewal / expiry</span>
+          <input
+            type="date"
+            value={form.next_renewal_date ?? ""}
+            onChange={(e) => set({ next_renewal_date: e.target.value })}
+            className={inputClass}
+          />
+        </label>
+      </div>
 
       <div className="flex gap-2 justify-end">
         <button
@@ -370,7 +121,7 @@ function SubscriptionForm({
 }
 
 function SectionAccordion({
-  category,
+  mode,
   label,
   subscriptions,
   onAdd,
@@ -379,7 +130,7 @@ function SectionAccordion({
   editingEntry,
   onEditDone,
 }: {
-  category: SubscriptionCategory;
+  mode: MobilityMode;
   label: string;
   subscriptions: SubscriptionEntry[];
   onAdd: (entry: SubscriptionEntry) => void;
@@ -399,36 +150,17 @@ function SectionAccordion({
     setAddingForm({ ...editingEntry });
   }, [editingEntry]);
 
-  const sectionEntries = subscriptions.filter((s) => s.category === category);
+  const sectionEntries = subscriptions.filter((s) => s.mode === mode);
 
   const handleSave = () => {
     if (!addingForm) return;
     const entry: SubscriptionEntry = {
       id: editingId.current ?? crypto.randomUUID(),
-      category,
-      cost_structure: addingForm.cost_structure,
+      mode,
       provider: addingForm.provider ?? "",
       product: addingForm.product ?? "",
-      monthly_cost_eur: computeMonthlyCost(addingForm),
-      billing_cycle: addingForm.billing_cycle ?? "monthly",
       next_renewal_date: addingForm.next_renewal_date ?? "",
       started: addingForm.started ?? "",
-      coverage_scope: addingForm.coverage_scope ?? "",
-      notes: addingForm.notes ?? "",
-      ...(addingForm.cost_structure === "fixed_annual_discount" && {
-        annual_price: addingForm.annual_price,
-        discount_rate: addingForm.discount_rate,
-        travel_class: addingForm.travel_class,
-      }),
-      ...(addingForm.cost_structure === "usage_membership" && {
-        registration_fee: addingForm.registration_fee,
-        monthly_fee: addingForm.monthly_fee,
-        per_minute_rate: addingForm.per_minute_rate,
-        per_km_rate: addingForm.per_km_rate,
-      }),
-      ...(addingForm.cost_structure === "pay_per_use" && {
-        usage_frequency: addingForm.usage_frequency,
-      }),
     };
     onAdd(entry);
     setAddingForm(null);
@@ -490,7 +222,7 @@ function SectionAccordion({
           ) : (
             <button
               type="button"
-              onClick={() => setAddingForm(emptyForm(category))}
+              onClick={() => setAddingForm(emptyForm(mode))}
               className="flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-brand-red hover:text-brand-red cursor-pointer bg-transparent w-full transition-colors"
             >
               <span className="text-lg leading-none">+</span> Add service
@@ -552,16 +284,16 @@ export function MobilityStackPage({
       </div>
 
       <div className="flex flex-col gap-3">
-        {SECTIONS.map(({ category, label }) => (
+        {SECTIONS.map(({ mode, label }) => (
           <SectionAccordion
-            key={category}
-            category={category}
+            key={mode}
+            mode={mode}
             label={label}
             subscriptions={subscriptions}
             onAdd={add}
             onRemove={remove}
             onEdit={handleEdit}
-            editingEntry={editingEntry?.category === category ? editingEntry : null}
+            editingEntry={editingEntry?.mode === mode ? editingEntry : null}
             onEditDone={(entryToRestore) => {
               if (entryToRestore) onChange([...subscriptions, entryToRestore]);
               setEditingEntry(null);
