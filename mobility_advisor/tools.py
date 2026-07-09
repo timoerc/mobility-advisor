@@ -24,6 +24,7 @@ USE_MOCK_DATA = True
 # Frozen so mock scenarios (calendar events starting 2026-06-12, travel history
 # ending ~mid-2025) stay reproducible regardless of the host machine's real date.
 MOCK_TODAY = date(2026, 6, 15)
+REVIEW_YEAR = MOCK_TODAY.year - 1  # annual report always covers the last full calendar year
 
 def load_user_preferences() -> dict:
     """Load the active user's mobility preferences derived from their persona profile.
@@ -71,6 +72,24 @@ def load_mobility_catalog() -> dict:
 _KNOWN_MODES = {"rail", "car_share", "car_rental", "flight", "bus"}
 
 
+def _travel_history_result(trips: list) -> dict:
+    """Build the load_travel_history return shape (trips + data_quality_warnings) for a given trip list."""
+    warnings = []
+    for trip in trips:
+        label = f"{trip.date} {trip.origin}→{trip.destination}"
+        if trip.cost_eur is None:
+            warnings.append(f"{label}: cost_eur is null — excluded from spend totals")
+        if not trip.mode:
+            warnings.append(f"{label}: mode is empty — excluded from CO₂ and mode aggregations")
+        elif trip.mode not in _KNOWN_MODES:
+            warnings.append(f"{label}: unknown mode '{trip.mode}' — excluded from CO₂ and mode aggregations")
+
+    result = {"trips": [t.model_dump() for t in trips]}
+    if warnings:
+        result["data_quality_warnings"] = warnings
+    return result
+
+
 def load_travel_history() -> dict:
     """Load Maja's 12-month travel history from the mock data store.
 
@@ -82,22 +101,21 @@ def load_travel_history() -> dict:
     """
     raw = json.loads((_DATA / "travel_history.json").read_text())
     history = TravelHistory.model_validate(raw)
-    result = history.model_dump()
+    return _travel_history_result(history.trips)
 
-    warnings = []
-    for trip in history.trips:
-        label = f"{trip.date} {trip.origin}→{trip.destination}"
-        if trip.cost_eur is None:
-            warnings.append(f"{label}: cost_eur is null — excluded from spend totals")
-        if not trip.mode:
-            warnings.append(f"{label}: mode is empty — excluded from CO₂ and mode aggregations")
-        elif trip.mode not in _KNOWN_MODES:
-            warnings.append(f"{label}: unknown mode '{trip.mode}' — excluded from CO₂ and mode aggregations")
 
-    if warnings:
-        result["data_quality_warnings"] = warnings
+def load_annual_travel_history() -> dict:
+    """Load travel history for the annual report, scoped to REVIEW_YEAR only.
 
-    return result
+    Same shape as load_travel_history, but trips outside REVIEW_YEAR (the last full
+    calendar year) are excluded before any downstream agent sees them — the annual
+    report's stated period must only ever reflect data actually filtered to that year,
+    not the full unfiltered history.
+    """
+    raw = json.loads((_DATA / "travel_history.json").read_text())
+    history = TravelHistory.model_validate(raw)
+    year_trips = [t for t in history.trips if t.date.startswith(str(REVIEW_YEAR))]
+    return _travel_history_result(year_trips)
 
 
 def load_calendar_events() -> dict:

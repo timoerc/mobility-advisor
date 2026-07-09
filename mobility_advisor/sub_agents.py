@@ -14,6 +14,8 @@ from google.genai import types
 
 from .tools import (
     MOCK_TODAY,
+    REVIEW_YEAR,
+    load_annual_travel_history,
     load_calendar_events,
     load_current_subscriptions,
     load_mobility_catalog,
@@ -50,6 +52,7 @@ def build_content_config(max_output_tokens: int) -> types.GenerateContentConfig:
 
 
 _TODAY = MOCK_TODAY.isoformat()
+_REVIEW_YEAR = REVIEW_YEAR
 _DATA_DIR = Path(__file__).parent / "data"
 _prefs = json.loads((_DATA_DIR / "persona.json").read_text())
 _USER_NAME = _prefs.get("name", "the user")
@@ -218,15 +221,36 @@ Keep the tone direct and professional. Do not invent numbers not present in the 
 )
 
 # Annual report pipeline instances — ADK forbids sharing agent instances across SequentialAgents,
-# so these are separate objects with distinct names but identical instructions and output_keys.
+# so these are separate objects with distinct names. Forecaster's instruction is reused verbatim
+# (forward-looking, not year-scoped); analyst and optimizer instructions are derived from their
+# non-annual counterparts via targeted replacement so both the tool call and the wording are
+# scoped to REVIEW_YEAR — without this, the report's stated period and its actual figures could
+# silently diverge (the analyst would report on the full unfiltered history again).
 annual_analyst_agent = LlmAgent(
     name="annual_analyst",
     model=_MODEL,
     description=analyst_agent.description,
-    instruction=analyst_agent.instruction,
-    tools=[load_travel_history, load_current_subscriptions],
+    instruction=(
+        analyst_agent.instruction
+        .replace(
+            f"Today's date: {_TODAY}.",
+            f"Today's date: {_TODAY}. This report covers only calendar year {_REVIEW_YEAR} "
+            f"— every figure must be scoped to {_REVIEW_YEAR} only.",
+        )
+        .replace("load_travel_history", "load_annual_travel_history")
+        .replace("in the past 12 months", f"in {_REVIEW_YEAR}")
+        + f"""
+
+Step 3 — after the subscription summary, output a "Trips considered ({_REVIEW_YEAR})" table listing
+EVERY trip returned by load_annual_travel_history(), one row per trip, verbatim — do not omit,
+summarize, or round any trip. Columns: date | mode | origin → destination | distance_km | cost_eur | provider.
+This table exists so the report's figures can be manually cross-checked against the raw data — completeness
+matters more than brevity here.
+"""
+    ),
+    tools=[load_annual_travel_history, load_current_subscriptions],
     output_key="analysis",
-    generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
+    generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
 )
 
 annual_forecaster_agent = LlmAgent(
@@ -243,7 +267,9 @@ annual_optimizer_agent = LlmAgent(
     name="annual_optimizer",
     model=_MODEL,
     description=optimizer_agent.description,
-    instruction=optimizer_agent.instruction,
+    instruction=optimizer_agent.instruction.replace(
+        "over the past 12 months", f"in {_REVIEW_YEAR}"
+    ),
     tools=[load_user_preferences, load_mobility_catalog],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
@@ -274,7 +300,7 @@ Structure your output EXACTLY as follows. Use all figures verbatim from the upst
 ---
 # Your Annual Mobility Review
 
-**Period covered:** 1 January – 31 December [derive year from the oldest trip date in {{analysis}}]
+**Period covered:** 1 January – 31 December {_REVIEW_YEAR}
 
 ---
 
@@ -287,6 +313,10 @@ Structure your output EXACTLY as follows. Use all figures verbatim from the upst
 | CO₂ avoided vs. car-share baseline | X kg |
 | Dominant transport mode | [mode with highest trip count] |
 | Total trips logged | X |
+
+IMPORTANT: output ONLY that 5-row table for this section, nothing else. Each "Value" cell must be a
+single computed number/label you derived — never paste, quote, or reproduce raw text, bullet points,
+or the trips table from {{analysis}} here. The full trip-by-trip data belongs only in Section 7 below.
 
 ---
 
@@ -337,8 +367,17 @@ Summarise {{forecast}} in 2–3 sentences: what demand signals suggest about the
 ## 6. Assumptions & Data Quality
 
 - State which data is mock/synthetic.
+- State that all figures in this report are limited to trips dated in {_REVIEW_YEAR} — trips outside this year are excluded.
 - List any data quality warnings from {{analysis}} (null costs, unknown modes, etc.).
 - State that all rail trip costs are assumed to reflect the BC50 50% discount, so full price = cost × 2.
+
+---
+
+## 7. Trips Considered (Verification)
+
+Reproduce the "Trips considered ({_REVIEW_YEAR})" table from the Analyst's report in {{analysis}} verbatim,
+unchanged — same rows, same columns, same values. Do not summarize, truncate, or omit any row. This section
+exists purely so the numbers above can be manually checked against the raw travel history.
 
 ---
 ⚠️ **This report is informational. No changes have been made to your subscriptions.**
