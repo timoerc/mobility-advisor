@@ -41,6 +41,21 @@ export function PersonalProfilePage({
         </label>
 
         <label className={labelClass}>
+          <span className={labelTextClass}>Age</span>
+          <input
+            type="number"
+            min="0"
+            max="120"
+            value={profile.age ?? ""}
+            onChange={(e) =>
+              set("age", e.target.value ? Number(e.target.value) : null)
+            }
+            placeholder="e.g. 32"
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
           <span className={labelTextClass}>Employment status</span>
           <select
             value={profile.employment_status}
