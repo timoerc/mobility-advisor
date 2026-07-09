@@ -218,9 +218,9 @@
     },
     {
       "id": "db_deutschlandticket",
-      "provider": "Deutschlandticket",
+      "provider": "Deutsche Bahn",
       "product": "Deutschland-Ticket",
-      "mode": "regional",
+      "mode": "rail",
       "monthly_cost_eur": 63.00,
       "billing_cycle": "monthly",
       "minimum_months": 1,
@@ -418,6 +418,7 @@
         "bonus_miles_pct": 0,
         "mile_value_eur": 0.012
       },
+      "affiliated_airlines": ["Aegean Airlines", "Air Astana", "Air Canada", "Air China", "Air Dolomiti", "Air India", "Air New Zealand", "All Nippon Airways", "Asiana Airlines", "Austrian Airlines", "Avianca", "Brussels Airlines", "Cathay Pacific Airways", "Copa Airlines", "Croatia Airlines", "Discover Airlines", "EGYPTAIR", "Ethiopian Airlines", "Eurowings", "EVA Air", "ITA Airways", "LATAM", "LOT Polish Airlines", "Lufthansa", "Lufthansa City Airlines", "Luxair", "Olympic Airlines", "Shenzhen Airline", "Singapore Airlines", "South African Airways", "SWISS International Air Lines", "TAP Portugal", "Thai Airways", "Turkish Airlines", "United"],
       "qualifying_threshold": {
         "status_miles_per_year": 0,
         "flights_per_year": null
@@ -437,6 +438,7 @@
         "bonus_miles_pct": 25,
         "mile_value_eur": 0.012
       },
+      "affiliated_airlines": ["Aegean Airlines", "Air Astana", "Air Canada", "Air China", "Air Dolomiti", "Air India", "Air New Zealand", "All Nippon Airways", "Asiana Airlines", "Austrian Airlines", "Avianca", "Brussels Airlines", "Cathay Pacific Airways", "Copa Airlines", "Croatia Airlines", "Discover Airlines", "EGYPTAIR", "Ethiopian Airlines", "Eurowings", "EVA Air", "ITA Airways", "LATAM", "LOT Polish Airlines", "Lufthansa", "Lufthansa City Airlines", "Luxair", "Olympic Airlines", "Shenzhen Airline", "Singapore Airlines", "South African Airways", "SWISS International Air Lines", "TAP Portugal", "Thai Airways", "Turkish Airlines", "United"],
       "qualifying_threshold": {
         "status_miles_per_year": 35000,
         "flights_per_year": null
@@ -456,6 +458,7 @@
         "bonus_miles_pct": 50,
         "mile_value_eur": 0.012
       },
+      "affiliated_airlines": ["Aegean Airlines", "Air Astana", "Air Canada", "Air China", "Air Dolomiti", "Air India", "Air New Zealand", "All Nippon Airways", "Asiana Airlines", "Austrian Airlines", "Avianca", "Brussels Airlines", "Cathay Pacific Airways", "Copa Airlines", "Croatia Airlines", "Discover Airlines", "EGYPTAIR", "Ethiopian Airlines", "Eurowings", "EVA Air", "ITA Airways", "LATAM", "LOT Polish Airlines", "Lufthansa", "Lufthansa City Airlines", "Luxair", "Olympic Airlines", "Shenzhen Airline", "Singapore Airlines", "South African Airways", "SWISS International Air Lines", "TAP Portugal", "Thai Airways", "Turkish Airlines", "United"],
       "qualifying_threshold": {
         "status_miles_per_year": 100000,
         "flights_per_year": null
@@ -475,6 +478,7 @@
         "bonus_miles_pct": 100,
         "mile_value_eur": 0.012
       },
+      "affiliated_airlines": ["Aegean Airlines", "Air Astana", "Air Canada", "Air China", "Air Dolomiti", "Air India", "Air New Zealand", "All Nippon Airways", "Asiana Airlines", "Austrian Airlines", "Avianca", "Brussels Airlines", "Cathay Pacific Airways", "Copa Airlines", "Croatia Airlines", "Discover Airlines", "EGYPTAIR", "Ethiopian Airlines", "Eurowings", "EVA Air", "ITA Airways", "LATAM", "LOT Polish Airlines", "Lufthansa", "Lufthansa City Airlines", "Luxair", "Olympic Airlines", "Shenzhen Airline", "Singapore Airlines", "South African Airways", "SWISS International Air Lines", "TAP Portugal", "Thai Airways", "Turkish Airlines", "United"],
       "qualifying_threshold": {
         "status_miles_per_year": 600000,
         "flights_per_year": null
