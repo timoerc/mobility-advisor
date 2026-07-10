@@ -19,37 +19,39 @@ def failure_recovery(monkeypatch):
 
 def test_total_trip_count(happy_path):
     result = tools.compute_travel_stats()
-    assert result["trip_count"] == 5
+    assert result["trip_count"] == 10
 
 
 def test_filter_by_mode(happy_path):
     result = tools.compute_travel_stats(mode="rail")
-    assert result["trip_count"] == 3
-    assert result["total_spend_eur"] == pytest.approx(36.00)
-    assert result["total_distance_km"] == pytest.approx(240.0)
+    assert result["trip_count"] == 6
+    assert result["total_spend_eur"] == pytest.approx(111.70)
+    assert result["total_distance_km"] == pytest.approx(2703.2)
 
 
 def test_filter_by_subscription(happy_path):
-    result = tools.compute_travel_stats(subscription_or_provider="BahnCard 50")
-    assert result["trip_count"] == 3
-    assert result["total_spend_eur"] == pytest.approx(36.00)
+    # Maja's raw trips don't carry a booked_under tag, so a provider match against
+    # "Deutsche Bahn" is what exercises the subscription_renewal lookup meaningfully.
+    result = tools.compute_travel_stats(subscription_or_provider="Deutsche Bahn")
+    assert result["trip_count"] == 5
+    assert result["total_spend_eur"] == pytest.approx(111.70)
     assert result["subscription_renewal"] == {
-        "next_renewal_date": "2027-01-15",
+        "next_renewal_date": "2026-12-31",
         "billing_cycle": "annual",
     }
 
 
 def test_filter_by_provider(happy_path):
     result = tools.compute_travel_stats(subscription_or_provider="MILES")
-    assert result["trip_count"] == 2
-    assert result["total_spend_eur"] == pytest.approx(23.30)
+    assert result["trip_count"] == 1
+    assert result["total_spend_eur"] == pytest.approx(23.92)
 
 
 def test_filter_by_date_range(happy_path):
-    result = tools.compute_travel_stats(date_from="2025-04-01", date_to="2025-12-31")
-    assert result["trip_count"] == 3
-    assert result["total_spend_eur"] == pytest.approx(37.80)
-    assert result["total_distance_km"] == pytest.approx(165.2)
+    result = tools.compute_travel_stats(date_from="2026-04-01", date_to="2026-06-30")
+    assert result["trip_count"] == 5
+    assert result["total_spend_eur"] == pytest.approx(276.13)
+    assert result["total_distance_km"] == pytest.approx(1606.3)
 
 
 def test_no_match_returns_null_renewal(happy_path):
@@ -60,21 +62,27 @@ def test_no_match_returns_null_renewal(happy_path):
 
 def test_filter_by_origin(happy_path):
     result = tools.compute_travel_stats(origin_filter="Frankfurt")
-    assert result["trip_count"] == 4
+    assert result["trip_count"] == 2
+    assert result["total_spend_eur"] == pytest.approx(213.91)
+    assert result["total_distance_km"] == pytest.approx(403.3)
 
 
 def test_filter_by_destination(happy_path):
     result = tools.compute_travel_stats(destination_filter="Frankfurt")
-    assert result["trip_count"] == 3
+    assert result["trip_count"] == 1
+    assert result["total_spend_eur"] == pytest.approx(23.92)
+    assert result["total_distance_km"] == pytest.approx(6.2)
 
 
 def test_filter_by_subscription_and_origin(happy_path):
-    # Acceptance case: of 3 BahnCard 50 trips, 2 originate in Frankfurt
-    # (2025-05-14 and 2025-02-10); the third (2025-05-16) originates in Mannheim.
+    # Acceptance case: of Maja's 5 Deutsche Bahn trips, 3 originate in Köln
+    # (2026-04-22 Köln->Ulm, 2026-05-07 Köln Messe->Freiburg, 2026-06-03 Köln->Karlsruhe).
     result = tools.compute_travel_stats(
-        subscription_or_provider="BahnCard 50", origin_filter="Frankfurt"
+        subscription_or_provider="Deutsche Bahn", origin_filter="Köln"
     )
-    assert result["trip_count"] == 2
+    assert result["trip_count"] == 3
+    assert result["total_spend_eur"] == pytest.approx(62.22)
+    assert result["total_distance_km"] == pytest.approx(1181.4)
 
 
 def test_data_quality_warnings_passthrough(failure_recovery):

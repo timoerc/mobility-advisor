@@ -18,12 +18,25 @@ from .models import (
 )
 
 _DATA = Path(__file__).parent / "data"
+_STATIC = Path(__file__).parent / "static"
 
 USE_MOCK_DATA = True
 
-# Frozen so mock scenarios (calendar events starting 2026-06-12, travel history
-# ending ~mid-2025) stay reproducible regardless of the host machine's real date.
-MOCK_TODAY = date(2026, 6, 15)
+# Frozen so mock scenarios stay reproducible regardless of the host machine's real date.
+# Sourced from persona.json's "reference_date" (single source of truth, swapped in whenever
+# a scenario is activated) so the fixtures and the app's notion of "today" can't drift apart.
+_DEFAULT_REFERENCE_DATE = date(2026, 6, 15)
+
+
+def _load_reference_date() -> date:
+    try:
+        raw = json.loads((_DATA / "persona.json").read_text())
+        return date.fromisoformat(raw["reference_date"])
+    except (FileNotFoundError, KeyError, ValueError):
+        return _DEFAULT_REFERENCE_DATE
+
+
+MOCK_TODAY = _load_reference_date()
 REVIEW_YEAR = MOCK_TODAY.year - 1  # annual report always covers the last full calendar year
 
 def load_user_preferences() -> dict:
@@ -65,8 +78,64 @@ def load_mobility_catalog() -> dict:
     id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/flight/bus),
     monthly_cost_eur (float), benefits (dict), eligibility (dict), qualifying_threshold (dict or null).
     """
-    raw = json.loads((_DATA / "mobility_catalog_new.json").read_text())
+    raw = json.loads((_STATIC / "mobility_catalog.json").read_text())
     return MobilityCatalog.model_validate(raw).model_dump()
+
+
+def load_relevant_mobility_catalog() -> dict:
+    """Load the market catalog narrowed to options relevant to the active user.
+
+    Same shape as load_mobility_catalog() (key 'options'), but filtered by two
+    deterministic signals computed from the user's own data — not an embedding
+    or relevance ranking:
+      1. Mode relevance: drop a whole mode category (rail/car_share/car_rental/
+         flight/bus) only if the user has never held a subscription in it nor
+         taken a trip in it.
+      2. Age eligibility: drop an option the user could not actually sign up
+         for, per persona.json's age and the option's eligibility range.
+    Each kept option also has its 'notes' field dropped — that field is
+    free-text prose that duplicates numbers already present in 'benefits'/
+    'monthly_cost_eur' on the same option.
+
+    If applying the filter would remove every option (e.g. a brand-new profile
+    with no subscriptions or trips yet), returns the full unfiltered catalog
+    instead — with no usage signal, no filter criterion is trustworthy, and an
+    empty catalog is worse than an oversized one.
+
+    Use this (not load_mobility_catalog) when proposing or comparing contract
+    options for the current user. load_mobility_catalog stays the source of
+    truth for arbitrary lookups about any product regardless of relevance.
+    """
+    catalog = load_mobility_catalog()["options"]
+
+    subs = load_current_subscriptions()["subscriptions"]
+    trips = load_travel_history()["trips"]
+    touched_modes = {s["mode"] for s in subs if s.get("mode")} | {
+        t["mode"] for t in trips if t.get("mode")
+    }
+
+    persona = json.loads((_DATA / "persona.json").read_text())
+    age = persona.get("profileData", {}).get("personal", {}).get("age")
+
+    def eligible(option: dict) -> bool:
+        if option["mode"] not in touched_modes:
+            return False
+        if age is None:
+            return True
+        elig = option.get("eligibility") or {}
+        min_age, max_age = elig.get("min_age"), elig.get("max_age")
+        if min_age is not None and age < min_age:
+            return False
+        if max_age is not None and age > max_age:
+            return False
+        return True
+
+    filtered = [
+        {k: v for k, v in option.items() if k != "notes"}
+        for option in catalog
+        if eligible(option)
+    ]
+    return {"options": filtered or catalog}
 
 
 _KNOWN_MODES = {"rail", "car_share", "car_rental", "flight", "bus"}
@@ -99,7 +168,7 @@ def load_travel_history() -> dict:
     If any trips have data quality issues, a 'data_quality_warnings' key is included
     listing each problem so downstream agents can surface them to the user.
     """
-    raw = json.loads((_DATA / "travel_history.json").read_text())
+    raw = json.loads((_DATA / "travel_history_raw.json").read_text())
     history = TravelHistory.model_validate(raw)
     return _travel_history_result(history.trips)
 
@@ -112,7 +181,7 @@ def load_annual_travel_history() -> dict:
     report's stated period must only ever reflect data actually filtered to that year,
     not the full unfiltered history.
     """
-    raw = json.loads((_DATA / "travel_history.json").read_text())
+    raw = json.loads((_DATA / "travel_history_raw.json").read_text())
     history = TravelHistory.model_validate(raw)
     year_trips = [t for t in history.trips if t.date.startswith(str(REVIEW_YEAR))]
     return _travel_history_result(year_trips)
@@ -126,7 +195,7 @@ def load_calendar_events() -> dict:
     location (str or null), signals (list[str] — demand or life-change indicators).
     """
     if USE_MOCK_DATA:
-        raw = json.loads((_DATA / "calendar_events.json").read_text())
+        raw = json.loads((_DATA / "calendar_events_live.json").read_text())
     else:
         from .outlook_calendar import fetch_calendar_events
         raw = fetch_calendar_events()

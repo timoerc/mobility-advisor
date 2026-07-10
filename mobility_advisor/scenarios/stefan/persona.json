@@ -4,6 +4,7 @@
   "tagline": "Car owner · Occasional train traveller",
   "avatar": "SK",
   "avatarBg": "#1f6feb",
+  "reference_date": "2026-06-15",
   "profileData": {
     "personal": {
       "full_name": "Stefan Kurz",
@@ -24,13 +25,6 @@
         "fri"
       ],
       "wfh_days": []
-    },
-    "car": {
-      "owns_car": true,
-      "mode": "car_private",
-      "type": "Petrol",
-      "size": "Medium car",
-      "monthly_km_estimate": 600
     },
     "priorities": {
       "cost": 0.3,

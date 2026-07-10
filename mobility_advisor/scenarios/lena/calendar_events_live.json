@@ -1,0 +1,148 @@
+{
+  "events": [
+    {
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-01",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Weekly Frankfurt office day",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-07",
+      "end_date": "2026-07-07",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "University seminar — Goethe-Universität Frankfurt, Wirtschaftswissenschaften",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-09",
+      "end_date": "2026-07-09",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Library study session — UB Johann Christian Senckenberg, exam preparation",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-14",
+      "end_date": "2026-07-14",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Internship interview — financial district, Deutsche Börse Group",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-18",
+      "end_date": "2026-07-18",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Weekend trip to Hamburg — visiting family, long-distance rail (BahnCard 50 applicable)",
+      "location": "Hamburg",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-07-20",
+      "end_date": "2026-07-20",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Return from Hamburg to Frankfurt",
+      "location": "Frankfurt",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-07-28",
+      "end_date": "2026-07-28",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Group project meeting — campus café, Goethe-Universität",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-08-05",
+      "end_date": "2026-08-05",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Student conference — Humboldt-Universität Berlin, collaborative sustainability lecture series",
+      "location": "Berlin",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-08-07",
+      "end_date": "2026-08-07",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Return from Berlin conference",
+      "location": "Frankfurt",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-08-15",
+      "end_date": "2026-08-15",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Short leisure trip to Heidelberg — reachable by D-Ticket",
+      "location": "Heidelberg",
+      "signals": [
+        "leisure"
+      ]
+    },
+    {
+      "start_date": "2026-09-01",
+      "end_date": "2026-09-01",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Winter semester orientation day — Goethe-Universität Frankfurt",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-09-10",
+      "end_date": "2026-09-10",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "First seminar of winter semester — lecture hall campus Westend",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    }
+  ]
+}

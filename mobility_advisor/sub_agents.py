@@ -18,7 +18,7 @@ from .tools import (
     load_annual_travel_history,
     load_calendar_events,
     load_current_subscriptions,
-    load_mobility_catalog,
+    load_relevant_mobility_catalog,
     load_travel_history,
     load_user_preferences,
 )
@@ -112,6 +112,7 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
     tools=[load_calendar_events],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
+    include_contents="none",
 )
 
 optimizer_agent = LlmAgent(
@@ -129,7 +130,7 @@ Context from upstream agents:
 Your job: propose exactly ONE concrete contract change that maximizes value for the user.
 Address the user directly as "you"/"your" throughout your output — not by name.
 
-Step 1 — call load_user_preferences() and load_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the single highest-impact change.
 
@@ -146,9 +147,20 @@ For each candidate BahnCard tier, compute:
 Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
 Include the net_saving figures for both tiers in your output.
 
+NAMING — always use the exact, full product name as it appears in load_relevant_mobility_catalog's
+"product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)") or in the Analyst
+finding's subscription names — never a short form like "BahnCard 25" alone. The catalog has
+several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
+name cannot distinguish, and this name is what gets executed later — an underspecified name
+cannot be applied. This applies everywhere you name a specific product: the proposed change,
+cost breakdown, and "what stays" section.
+
 Step 3 — output your recommendation in this exact structure:
 
-**Proposed change:** [what to add / cancel / swap]
+**Proposed change:** [what to add / cancel / swap — if this is a swap/replace, explicitly
+name BOTH the exact current subscription being removed AND the exact new product being
+added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a BahnCard 25
+(2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
 
 **Current monthly cost:** €X.XX/mo (list all active subscriptions and their costs)
 **Proposed monthly cost:** €Y.YY/mo (list the new stack)
@@ -170,9 +182,10 @@ Compute only over trips whose mode is "rail". Write: "By choosing rail over car,
 
 Show real numbers from the data. Do not propose more than one change.
 """,
-    tools=[load_user_preferences, load_mobility_catalog],
+    tools=[load_user_preferences, load_relevant_mobility_catalog],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
+    include_contents="none",
 )
 
 communicator_agent = LlmAgent(
@@ -214,10 +227,11 @@ Structure your output exactly as follows:
 ⚠️ **No change has been made to your subscriptions. This recommendation awaits your approval.**
 ---
 
-Keep the tone direct and professional. Do not invent numbers not present in the recommendation. Do not claim any action was taken.
+Keep the tone direct and professional. Do not invent numbers not present in the recommendation. Do not claim any action was taken. Do not shorten or paraphrase a product name — copy it exactly as given in the recommendation above (e.g. keep "BahnCard 25 (2. Klasse, Standard, Jahresabo)" intact, never just "BahnCard 25"). If the recommendation is a swap/replace, "What's changing" must name both the exact subscription being removed and the exact product being added — this wording is what gets executed later if the user approves, so an underspecified name breaks execution.
 """,
     tools=[],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
+    include_contents="none",
 )
 
 # Annual report pipeline instances — ADK forbids sharing agent instances across SequentialAgents,
@@ -261,6 +275,7 @@ annual_forecaster_agent = LlmAgent(
     tools=[load_calendar_events],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
+    include_contents="none",
 )
 
 annual_optimizer_agent = LlmAgent(
@@ -270,9 +285,10 @@ annual_optimizer_agent = LlmAgent(
     instruction=optimizer_agent.instruction.replace(
         "over the past 12 months", f"in {_REVIEW_YEAR}"
     ),
-    tools=[load_user_preferences, load_mobility_catalog],
+    tools=[load_user_preferences, load_relevant_mobility_catalog],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
+    include_contents="none",
 )
 
 annual_communicator_agent = LlmAgent(
@@ -375,9 +391,9 @@ Summarise {{forecast}} in 2–3 sentences: what demand signals suggest about the
 
 ## 7. Trips Considered (Verification)
 
-Reproduce the "Trips considered ({_REVIEW_YEAR})" table from the Analyst's report in {{analysis}} verbatim,
-unchanged — same rows, same columns, same values. Do not summarize, truncate, or omit any row. This section
-exists purely so the numbers above can be manually checked against the raw travel history.
+Output exactly this line for this section, verbatim, and nothing else — do not reproduce, summarize,
+or add any trip data yourself here; the real trip table is inserted automatically afterward:
+<!-- TRIPS_TABLE_PLACEHOLDER -->
 
 ---
 ⚠️ **This report is informational. No changes have been made to your subscriptions.**
@@ -385,4 +401,5 @@ exists purely so the numbers above can be manually checked against the raw trave
 """,
     tools=[],
     generate_content_config=build_content_config(_LONG_REPORT_TOKENS),
+    include_contents="none",
 )

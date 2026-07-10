@@ -24,18 +24,21 @@ from pydantic import BaseModel
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
+from mobility_advisor.models import CarUsage
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
+_STATIC = Path(__file__).parent / "mobility_advisor" / "static"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
 _KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena"})
 _SCENARIO_FILES = [
     "persona.json",
     "current_subscriptions.json",
-    "travel_history.json",
-    "calendar_events.json",
-    "mobility_catalog.json",
+    "travel_history_raw.json",
+    "mail_raw.json",
+    "calendar_events_live.json",
+    "car_usage.json",
 ]
 _MODEL_ID = "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw"
 
@@ -77,14 +80,6 @@ class _Commute(BaseModel):
     office_days: list[str] = []
 
 
-class _Car(BaseModel):
-    owns_car: bool = False
-    mode: str = "car_private"
-    type: str | None = None
-    size: str | None = None
-    monthly_km_estimate: float | None = None
-
-
 class _Subscription(BaseModel):
     model_config = {"extra": "ignore"}
     id: str
@@ -108,7 +103,7 @@ class ProfilePayload(BaseModel):
     personal: _Personal = _Personal()
     location: dict = {}
     commute: _Commute = _Commute()
-    car: _Car = _Car()
+    car: CarUsage = CarUsage()
     subscriptions: list[_Subscription] = []
     priorities: _Priorities = _Priorities()
     integrations: dict = {}
@@ -132,6 +127,7 @@ class ExecuteRequest(BaseModel):
     session_id: str
     action_title: str
     action_description: str
+    action_consequence: str = ""
 
 
 # ── Profile helpers ───────────────────────────────────────────────────────────
@@ -151,7 +147,7 @@ def _atomic_write(path: Path, data: dict) -> None:
 
 
 def _load_catalog_lookup() -> dict[str, dict]:
-    catalog_path = _DATA / "mobility_catalog_new.json"
+    catalog_path = _STATIC / "mobility_catalog.json"
     if not catalog_path.exists():
         return {}
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -188,7 +184,6 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
             "personal": payload.personal.model_dump(),
             "location": payload.location,
             "commute": payload.commute.model_dump(),
-            "car": payload.car.model_dump(),
             "priorities": payload.priorities.model_dump(),
             "integrations": payload.integrations,
             "notes": payload.notes,
@@ -197,7 +192,7 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
 
 
 def _activate_from_scenario(persona_id: str) -> bool:
-    """Copy all 5 pipeline JSON files from scenarios/{persona_id}/ into data/."""
+    """Copy all 6 pipeline JSON files from scenarios/{persona_id}/ into data/."""
     scenario_dir = _SCENARIOS / persona_id
     if not scenario_dir.is_dir():
         return False
@@ -215,18 +210,19 @@ async def save_profile(payload: ProfilePayload):
     """Save a persona's full profile and make it the active data set."""
     _atomic_write(_DATA / "persona.json", _persona_from_payload(payload))
     _atomic_write(_DATA / "current_subscriptions.json", _subs_from_payload(payload))
+    _atomic_write(_DATA / "car_usage.json", payload.car.model_dump())
     if payload.persona_id not in _KNOWN_PERSONAS:
         # Custom/new profile, not one of the pre-built scenario personas: there is no
         # real travel or calendar history for them, so clear out whatever scenario data
         # happened to be active last instead of silently analysing it as if it were theirs.
-        _atomic_write(_DATA / "travel_history.json", {"trips": []})
-        _atomic_write(_DATA / "calendar_events.json", {"events": []})
+        _atomic_write(_DATA / "travel_history_raw.json", {"trips": []})
+        _atomic_write(_DATA / "calendar_events_live.json", {"events": []})
     return {"ok": True}
 
 
 @app.get("/api/personas")
 async def list_personas():
-    """Assemble each persona from persona.json + current_subscriptions.json."""
+    """Assemble each persona from persona.json + current_subscriptions.json + car_usage.json."""
     result = []
     for folder in sorted(_SCENARIOS.iterdir()):
         if not folder.is_dir():
@@ -238,6 +234,10 @@ async def list_personas():
         sf = folder / "current_subscriptions.json"
         subscriptions = json.loads(sf.read_text()).get("subscriptions", []) if sf.exists() else []
         persona["profileData"]["subscriptions"] = subscriptions
+        cf = folder / "car_usage.json"
+        persona["profileData"]["car"] = (
+            json.loads(cf.read_text()) if cf.exists() else CarUsage().model_dump()
+        )
         result.append(persona)
     return result
 
@@ -298,9 +298,9 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
     }
   ],
   "proposedAction": {
-    "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 renewal'>",
+    "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)'>",
     "description": "<1-2 sentences with action details and deadline>",
-    "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 will be cancelled and BahnCard 25 will start in its place.' Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
+    "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.' If this is a swap/replace, this field is what tells the execution step which current subscription to remove — it must always name that exact subscription, not just the new product. Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
   }
 }
 
@@ -310,6 +310,7 @@ Rules:
 - for 'Keep current setup': annualCostEur = current monthly cost x 12, savingsVsCurrentEur = 0
 - for the recommended action: annualCostEur = proposed monthly cost x 12, savingsVsCurrentEur = monthly saving x 12
 - all numbers must come verbatim from the report below — never invent figures
+- product/subscription names (in title, description, consequence, and alternatives[].name) must be copied verbatim and in full from the report below, e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like "BahnCard 25"; this name is executed literally if the user approves, so an underspecified name breaks execution
 - if a field value cannot be determined from the report below, use a sensible default (e.g. 'Neutral' for co2Impact, [] for assumptions)
 """.strip()
 
@@ -333,46 +334,94 @@ async def _extract_recommendation_json(report_text: str) -> dict:
     return json.loads(text)
 
 
+# ── Pipeline retry helper ─────────────────────────────────────────────────────
+
+_MAX_PIPELINE_ATTEMPTS = 2
+
+
+async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATTEMPTS):
+    """Retry attempt_fn() up to max_attempts times when it raises KeyError.
+
+    attempt_fn should run one full pipeline invocation (its own fresh session)
+    and raise KeyError if a stage produced an empty response — either because a
+    downstream stage's {analysis}/{forecast}/{recommendation} template referenced
+    session state an earlier stage never wrote, or because the final stage's own
+    output came back empty. Confirmed via direct testing against this backend
+    (KIConnect / GPT-OSS-120B): this happens intermittently even for prompts well
+    within a sane context budget, so it is NOT a reliable sign of an oversized
+    prompt — it's flaky-upstream-call behavior, which a retry is the standard fix
+    for. Every attempt must use its own fresh session so a failed run's partial
+    state is never reused by the next attempt.
+    """
+    last_error: KeyError | None = None
+    for _ in range(max_attempts):
+        try:
+            return await attempt_fn()
+        except KeyError as exc:
+            last_error = exc
+    raise HTTPException(
+        status_code=500,
+        detail=(
+            f"The pipeline did not produce a result after {max_attempts} attempts "
+            f"(last issue: missing input {last_error}). This can happen when a stage's "
+            "response comes back empty — either an oversized prompt or an intermittent "
+            "backend hiccup. Please try again."
+        ),
+    ) from last_error
+
+
 # ── Analyse endpoint ──────────────────────────────────────────────────────────
 
 @app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest):
     runner = InMemoryRunner(agent=optimization_pipeline, app_name="mobility_advisor_analyze")
-    sid = f"analysis_{uuid4().hex[:12]}"
 
-    await runner.session_service.create_session(
-        app_name="mobility_advisor_analyze",
-        user_id="user",
-        session_id=sid,
-    )
+    async def attempt() -> str:
+        sid = f"analysis_{uuid4().hex[:12]}"
+        await runner.session_service.create_session(
+            app_name="mobility_advisor_analyze",
+            user_id="user",
+            session_id=sid,
+        )
 
-    last_text = ""
-    fallback_text = ""
-    async for event in runner.run_async(
-        user_id="user",
-        session_id=sid,
-        new_message=gtypes.Content(
-            role="user",
-            parts=[gtypes.Part(text="Analyse my current mobility setup and subscriptions.")],
-        ),
-    ):
-        if event.is_final_response():
-            t = _collect_text(event)
-            if t.strip():
-                last_text = t
-        else:
-            t = _collect_text(event)
-            if t.strip() and not _has_function_call(event):
-                fallback_text = t
+        last_text = ""
+        fallback_text = ""
+        async for event in runner.run_async(
+            user_id="user",
+            session_id=sid,
+            new_message=gtypes.Content(
+                role="user",
+                parts=[gtypes.Part(text="Analyse my current mobility setup and subscriptions.")],
+            ),
+        ):
+            if event.is_final_response():
+                t = _collect_text(event)
+                if t.strip():
+                    last_text = t
+            else:
+                t = _collect_text(event)
+                if t.strip() and not _has_function_call(event):
+                    fallback_text = t
 
-    # communicator_agent (the pipeline's last stage) has no output_key, so its actual
-    # final report is only available from the event stream above — NOT from
-    # session.state["recommendation"], which is optimizer_agent's pre-Communicator
-    # draft (see its output_key in sub_agents.py) and is not what adk web/chat show.
-    report_text = last_text or fallback_text
+        # communicator_agent (the pipeline's last stage) has no output_key, so its
+        # actual final report is only available from the event stream above — NOT
+        # from session.state["recommendation"], which is optimizer_agent's
+        # pre-Communicator draft (see its output_key in sub_agents.py) and is not
+        # what adk web/chat show.
+        report_text = last_text or fallback_text
+        if not report_text:
+            raise KeyError("communicator produced an empty response")
+        return report_text
 
-    if not report_text:
-        raise HTTPException(status_code=500, detail="Pipeline produced no recommendation")
+    try:
+        report_text = await _with_pipeline_retry(attempt)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"The recommendation pipeline failed before producing a report: {exc}",
+        ) from exc
 
     try:
         return await _extract_recommendation_json(report_text)
@@ -391,28 +440,49 @@ async def annual_report(req: AnalyzeRequest):
     application/pdf. Unlike /api/analyze, this pipeline's final agent has no
     output_key, so its report only exists on the last event, not in session state."""
     runner = InMemoryRunner(agent=annual_report_pipeline, app_name="mobility_advisor_annual")
-    sid = f"annual_{uuid4().hex[:12]}"
 
-    await runner.session_service.create_session(
-        app_name="mobility_advisor_annual",
-        user_id="user",
-        session_id=sid,
-    )
+    async def attempt() -> tuple[str, str]:
+        sid = f"annual_{uuid4().hex[:12]}"
+        await runner.session_service.create_session(
+            app_name="mobility_advisor_annual",
+            user_id="user",
+            session_id=sid,
+        )
 
-    report_text = ""
-    async for event in runner.run_async(
-        user_id="user",
-        session_id=sid,
-        new_message=gtypes.Content(
-            role="user",
-            parts=[gtypes.Part(text="Generate my full annual mobility report.")],
-        ),
-    ):
-        if event.is_final_response():
-            report_text = _collect_text(event)
+        report_text = ""
+        async for event in runner.run_async(
+            user_id="user",
+            session_id=sid,
+            new_message=gtypes.Content(
+                role="user",
+                parts=[gtypes.Part(text="Generate my full annual mobility report.")],
+            ),
+        ):
+            if event.is_final_response():
+                report_text = _collect_text(event)
 
-    if not report_text:
-        raise HTTPException(status_code=500, detail="Pipeline produced no annual report")
+        if not report_text:
+            raise KeyError("annual_communicator produced an empty response")
+        return report_text, sid
+
+    try:
+        report_text, sid = await _with_pipeline_retry(attempt)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"The annual report pipeline failed before producing a report: {exc}",
+        ) from exc
+
+    if "<!-- TRIPS_TABLE_PLACEHOLDER -->" in report_text:
+        session = await runner.session_service.get_session(
+            app_name="mobility_advisor_annual", user_id="user", session_id=sid
+        )
+        analysis_text = (session.state.get("analysis") or "") if session else ""
+        report_text = report_text.replace(
+            "<!-- TRIPS_TABLE_PLACEHOLDER -->", _extract_trips_table(analysis_text)
+        )
 
     try:
         pdf_bytes = render_annual_report_pdf(report_text)
@@ -439,7 +509,13 @@ async def execute(req: ExecuteRequest):
         session_id=sid,
     )
 
+    # consequence is where the recommendation states plainly what's being removed and what
+    # replaces it (e.g. "Your BahnCard 50 will be cancelled and BahnCard 25 will start in
+    # its place") — without it, a replace/swap action can reach the execution agent naming
+    # only the new product, with nothing saying which current subscription it replaces.
     instruction = f"{req.action_title}\n\n{req.action_description}"
+    if req.action_consequence:
+        instruction += f"\n\n{req.action_consequence}"
 
     last_text = ""
     fallback_text = ""
@@ -473,6 +549,21 @@ async def execute(req: ExecuteRequest):
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────
+
+def _extract_trips_table(analysis_text: str) -> str:
+    """Slice out the analyst's 'Trips considered (...)' section, verbatim.
+
+    annual_analyst_agent's instruction always emits this table as the last thing
+    in its report, after the subscription summary, so once the heading is found
+    everything after it IS the table. Degrades to a plain note (not a crash) if
+    the heading is missing, e.g. because the analyst stage's own output was
+    truncated or failed.
+    """
+    idx = analysis_text.lower().find("trips considered")
+    if idx == -1:
+        return "_(Trip-level detail unavailable for this run.)_"
+    return analysis_text[idx:]
+
 
 def _collect_text(event) -> str:
     if not event.content:

@@ -37,7 +37,7 @@
       "source_mail_id": "mail_016"
     },
     {
-      "date": "2026-05-07",
+      "date": "2025-05-07",
       "mode": "rail",
       "origin": "Köln Messe/Deutz Gl.11-12",
       "destination": "Freiburg(Breisgau) Hbf",
@@ -55,7 +55,7 @@
       "source_mail_id": "mail_017"
     },
     {
-      "date": "2026-05-09",
+      "date": "2025-05-09",
       "mode": "rail",
       "origin": "Freiburg(Breisgau) Hbf",
       "destination": "Köln Hbf",
@@ -73,7 +73,7 @@
       "source_mail_id": "mail_018"
     },
     {
-      "date": "2026-09-11",
+      "date": "2025-09-11",
       "mode": "flight",
       "origin": "Athens (ATH)",
       "destination": "Zurich (ZRH)",
@@ -91,7 +91,7 @@
       "source_mail_id": "mail_019"
     },
     {
-      "date": "2026-04-03",
+      "date": "2025-04-03",
       "mode": "flight",
       "origin": "Basel EuroAirport",
       "destination": "Athens Eleftherios Venizelos",
@@ -109,7 +109,7 @@
       "source_mail_id": "mail_020"
     },
     {
-      "date": "2024-05-19",
+      "date": "2025-05-19",
       "mode": "rail",
       "origin": "Berlin Hauptbahnhof (FlixTrain)",
       "destination": "Stuttgart Hauptbahnhof (FlixTrain)",

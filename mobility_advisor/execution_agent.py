@@ -2,7 +2,7 @@ from google.adk.agents import LlmAgent
 from google.genai import types
 
 from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
-from .tools import apply_subscription_change
+from .tools import apply_subscription_change, load_mobility_catalog
 
 execution_agent = LlmAgent(
     name="execution_agent",
@@ -37,7 +37,25 @@ RULES:
 3. If target_subscription or new_product is ambiguous or missing (the user said "cancel my
    card" without saying which one, or "switch me to the cheaper option" without naming it),
    do NOT call the tool and do NOT guess. Ask the user to name the exact subscription or
-   catalog product. Resolving ambiguity is the user's job, not yours.
+   catalog product. Resolving ambiguity is the user's job, not yours — except for the
+   catalog-tier resolution in rule 3a below, which IS yours to do.
+
+3a. Resolving product names before calling the tool (add/replace only): the catalog has
+   multiple variants of the same named product that share a short name — different fare
+   class, age-eligibility tier, or trial vs. annual billing (e.g. "BahnCard 25" alone
+   matches 5 catalog entries: Standard, Young, Senior, Probe, and 1st class). Passing a
+   short name straight to apply_subscription_change will make it fail as ambiguous, even
+   though a human would obviously mean one specific option. Before every add/replace call:
+   call load_mobility_catalog and resolve the user's phrasing to one exact entry yourself:
+   - If the user's wording already names a specific tier (Young, Senior, Probe, 1st/first
+     class), use that exact matching entry.
+   - Otherwise default to the Standard tier, 2nd class, annual billing — that is what a
+     plain name like "BahnCard 25" or "BahnCard 50" means with no further qualification.
+   - Pass the catalog's exact product string as new_product — never the user's shorthand,
+     and never a name you construct yourself instead of quoting the catalog verbatim.
+   Only fall back to asking the user (rule 3) if the catalog genuinely has no sensible
+   default to resolve to, or the user's own wording conflicts with picking one (e.g. they
+   asked for "the cheaper option" without naming any product family at all).
 
 4. Never fabricate a field. Every price, date, provider name, or product name you state
    must come verbatim from the tool result you got this turn. If apply_subscription_change
@@ -68,7 +86,7 @@ A "-" for a list item is fine; anything else is not.
 
 Keep your output short and factual — this is a receipt, not a sales pitch.
 """,
-    tools=[apply_subscription_change],
+    tools=[apply_subscription_change, load_mobility_catalog],
     generate_content_config=types.GenerateContentConfig(
         temperature=0.0, max_output_tokens=2048
     ),

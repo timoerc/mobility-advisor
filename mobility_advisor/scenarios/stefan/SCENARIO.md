@@ -2,7 +2,15 @@
 
 ## Summary
 
-Maja's mobility data contains no dominant pattern. Rail usage is erratic (feast-or-famine across months), BC50 is borderline break-even, carsharing is similarly irregular, the calendar suggests a possible relocation to Hamburg, and her stated preferences set flexibility, sustainability, and budget on a collision course. The expected agent outcome is a **hedged, conditional recommendation** — not a single confident action.
+Stefan Kurz owns a car and drives to work in München five days a week — yet he also
+holds a full rail-and-carsharing stack (BahnCard 50, Deutschland-Ticket, MILES Silber
+Pass) for his regular business trips to the Frankfurt HQ. Rail usage is irregular
+(feast-or-famine across months), BC50 sits right at breakeven, MILES usage is similarly
+clustered rather than steady, and the calendar suggests a possible relocation to Hamburg
+that would upend his whole commute pattern. His own stated priorities put time (0.5) well
+ahead of cost (0.3) and sustainability (0.2) — yet he's paying for three transit products
+he uses inconsistently while also running a car. The expected agent outcome is a
+**hedged, conditional recommendation** — not a single confident action.
 
 ---
 
@@ -10,22 +18,24 @@ Maja's mobility data contains no dominant pattern. Rail usage is erratic (feast-
 
 | Signal | Value | Interpretation |
 |---|---|---|
-| BC50 actual savings (12 months) | €239 | Almost exactly equal to card cost €244 — within €5 |
-| BC50 break-even threshold | €244 annual savings = €488 full-price DB spend | Borderline: break-even not conclusively met or missed |
-| Rail usage distribution | Months 1,3,4,5,7,8,10,11,12 = 0 trips; months 2,6,9 = 4–5 trips | Highly erratic, no stable pattern |
-| MILES usage distribution | 3 heavy months, 6 empty months | Erratic; standard Abo hard to justify |
-| Relocation signal | Apartment viewing in Hamburg + job offer decision in Aug 2026 | If Hamburg: D-Ticket value changes (Hamburg zone vs. Frankfurt zone); BC50 usage may spike or collapse |
-| International trip | Amsterdam — neither D-Ticket nor BahnCard valid | Adds opaque cost not captured in BC50 analysis |
-| User preferences | Budget €90/mo + high flexibility + sustainability_weight 0.8 + values_time_over_money: true | Three goals in direct tension at current spend level |
+| BC50 actual savings (11 DB trips) | €239 | Almost exactly equal to card cost €244 — within €5 |
+| BC50 break-even threshold | €244 annual cost ÷ 0.50 = €488 full-price DB spend required | Borderline: break-even not conclusively met or missed |
+| Rail usage distribution | Trips cluster in Aug, Oct, Dec, and a few in Mar/May; several months with zero rail activity | Irregular, no stable monthly pattern |
+| MILES usage distribution | Car-share trips cluster in Aug and Nov, quiet the rest of the year | Irregular; a standard Abo is hard to justify on usage alone |
+| Car ownership | Owns a petrol medium car, ~600 km/month, commutes by car 5 days/week (no WFH days) | Already paying for door-to-door mobility independent of any subscription |
+| Relocation signal | Apartment viewing in Hamburg (2026-07-18) + job offer decision (2026-08-15) + potential Hamburg start (2026-09-01) | If Hamburg: daily car commute in München disappears, D-Ticket zone relevance changes, rail demand pattern resets entirely |
+| International trip | Amsterdam business trip (2026-08-02) — neither D-Ticket nor BahnCard valid | Adds opaque cost not captured in the BC50 analysis |
+| User priorities | cost 0.3 / **time 0.5 (dominant)** / sustainability 0.2 — `values_time_over_money: true` | Time-first preferences sit awkwardly next to three underused, cost-bearing rail products |
 
 ---
 
 ## Numeric Rationale
 
-- **BC50 savings:** €239 over 12 months vs. card cost €244/year → net loss: **−€5** (breakeven effectively tied)
-- **If relocation to Hamburg:** biweekly Frankfurt↔Hamburg rail trips would push annual DB spend to ~€1,100+ → BC50 clearly worth keeping (or upgrading)
-- **If no relocation:** current erratic pattern continues → BC50 marginally not worth it
-- **Budget constraint:** Current monthly spend ≈ €83.23 (€20.33 + €58 + €4.90) — just under €90 cap, but leaves no buffer for ad-hoc trips
+- **BC50 savings:** €239 over the observed history vs. card cost €244/year → net loss: **−€5** (breakeven effectively tied)
+- **Combined rail/carsharing subscription spend:** BC50 €244/yr + D-Ticket €756/yr (€63 × 12) + MILES Silber ≈ €120/yr (€9.99 × 12) ≈ **€1,120/year** — on top of running a car
+- **If relocation to Hamburg:** commute pattern resets entirely; biweekly on-site travel could make BC50/D-Ticket clearly worth keeping (or clearly redundant, depending on the new base) — not resolvable before the 2026-08-15 decision
+- **If no relocation:** current irregular pattern continues → BC50 marginally not worth it, and the case for holding all three rail products alongside a daily-driven car weakens further
+- **Data quality note:** no cost figure exists for car ownership (fuel/insurance/maintenance) in the mock data — the agent should flag this as an unquantified cost rather than inventing one, not silently ignore it
 
 ---
 
@@ -33,8 +43,8 @@ Maja's mobility data contains no dominant pattern. Rail usage is erratic (feast-
 
 | Agent | Expected Action |
 |---|---|
-| **Analyst** | Flags three contradictions: (1) borderline BC50 break-even with no trend; (2) possible_relocation signal with material impact on all subscriptions; (3) user preferences internally conflicting (flexibility + CO2 + budget). Must **not** resolve these — surface all three. |
-| **Forecaster** | Produces two demand branches: (a) Hamburg relocation confirmed → high Frankfurt↔Hamburg rail demand; (b) no relocation → demand continues erratic. Must explicitly label both branches and note the decision date (Aug 2026). |
+| **Analyst** | Flags three contradictions: (1) borderline BC50 break-even with no trend; (2) possible_relocation signal with material impact on all three subscriptions at once; (3) a car owner with a full rail/carsharing stack he uses irregularly, despite time being his top stated priority. Must **not** resolve these — surface all three. |
+| **Forecaster** | Produces two demand branches: (a) Hamburg relocation confirmed → commute pattern resets, high uncertainty on rail demand; (b) no relocation → demand continues irregular around the München–Frankfurt route. Must explicitly label both branches and note the decision date (2026-08-15). |
 | **Optimizer** | Outputs conditional recommendations for each branch, not a single action. |
 | **Communicator** | Drafts conditional output: "If relocation proceeds: [action X]. If not: [action Y]. Recommend revisiting after Aug 15 decision date." |
 
@@ -46,19 +56,21 @@ Maja's mobility data contains no dominant pattern. Rail usage is erratic (feast-
 RECOMMENDATION (CONDITIONAL — HIGH UNCERTAINTY)
 
 If relocation to Hamburg is confirmed (decision by 2026-08-15):
-  → Keep BahnCard 50: Frankfurt↔Hamburg trips (~490 km) justify the card within 2 months
+  → Hold all three subscriptions pending the move: the new commute pattern will determine
+    whether BC50/D-Ticket become clearly worth keeping or clearly redundant
   → Re-evaluate Deutschland-Ticket: Hamburg zone coverage needs verification
-  → Estimated annual saving vs. status quo: −€0 (card becomes clearly worth keeping)
+  → Estimated annual saving vs. status quo: not determinable before the decision date
 
-If no relocation (Frankfurt base continues):
-  → Cancel BahnCard 50: savings (€239) nearly equal card cost (€244); erratic pattern makes
+If no relocation (München base + car commute continues):
+  → Cancel BahnCard 50: savings (€239) nearly equal card cost (€244); irregular usage makes
     forecasting unreliable; net expected loss €5–€50/year depending on future usage
   → Action by: 15 January 2027 to avoid auto-renewal (next_renewal_date from subscription data)
-  → Retain Deutschland-Ticket and MILES+ Abo
-  → Estimated annual saving: ~€244
+  → Re-examine whether D-Ticket and MILES Silber are still worth holding alongside daily car use
+  → Estimated annual saving: up to ~€244 from BC50 alone, more if D-Ticket/MILES are also trimmed
 
 Data quality note: Amsterdam trip cost not captured in BC50 analysis (card not applicable).
-Recommendation should be revisited after 2026-08-15 job offer decision.
+No cost figure exists for car ownership in the mock data — flagged as unquantified, not assumed zero.
+Recommendation should be revisited after the 2026-08-15 job offer decision.
 ```
 
 ---
@@ -66,16 +78,18 @@ Recommendation should be revisited after 2026-08-15 job offer decision.
 ## What a Failing Output Looks Like
 
 - A single confident recommendation ("cancel BC50") without surfacing the relocation signal
-- A recommendation that ignores the budget vs. flexibility vs. CO2 tension
-- Treating the erratic history as a trend (e.g., "usage is declining")
+- A recommendation that ignores the tension between owning a car, holding three transit
+  subscriptions, and stating time as the top priority
+- Treating the irregular history as a trend (e.g., "usage is declining")
 - No mention of the Aug 15 decision date as a key information trigger
+- Inventing a car-ownership cost figure that isn't present in the mock data
 
 ---
 
 ## Signals by File
 
-- **travel_history.json** — 19 trips; erratic monthly distribution; DB spend borderline break-even
-- **calendar_events.json** — relocation signals in July–September 2026; international trip with no subscription coverage; recurring Frankfurt office days
-- **user_preferences.json** — three conflicting goals at `monthly_budget_eur: 90`
-- **current_subscriptions.json** — standard stack. Each entry carries `billing_cycle` and `next_renewal_date` (BC50: `2027-01-15` annual; D-Ticket and MILES+: `2026-07-01` monthly).
-- **mobility_catalog.json** — full catalog; each option carries `billing_cycle`.
+- **travel_history_raw.json** — irregular monthly distribution; DB spend borderline break-even; no long-haul flights, all trips centered on the München/Frankfurt business-travel pattern
+- **calendar_events_live.json** — relocation signals in July–September 2026; international trip with no subscription coverage; recurring Frankfurt office days
+- **persona.json** — car owner with time-dominant priorities (cost 0.3 / time 0.5 / sustainability 0.2), commutes by car 5 days/week. (Car-usage data lives separately in `car_usage.json`.)
+- **current_subscriptions.json** — full rail/carsharing stack (BC50 + D-Ticket + MILES Silber) despite car ownership. Each entry carries `billing_cycle` and `next_renewal_date`.
+- **mobility_advisor/static/mobility_catalog.json** — full catalog (shared across all personas); each option carries `billing_cycle`.

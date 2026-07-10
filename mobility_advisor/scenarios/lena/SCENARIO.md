@@ -23,11 +23,11 @@ The `travel_history.json` fixture contains intentionally malformed entries — v
 
 ## Data Properties
 
-- **travel_history.json** — 20 trips: 14 clean (12 rail + 2 car-share), 6 malformed as listed above. File passes `python -m json.tool`.
-- **current_subscriptions.json** — Valid, simplified: BC50 + D-Ticket only (no MILES). Both entries carry `billing_cycle` and `next_renewal_date` (BC50: `2027-01-15` annual; D-Ticket: `2026-07-01` monthly).
-- **calendar_events.json** — Valid, sparse: 2 upcoming events, no strong demand signals.
-- **mobility_catalog.json** — Valid, full catalog; each option carries `billing_cycle`.
-- **user_preferences.json** — Valid, same as default profile.
+- **travel_history_raw.json** — 20 trips: 14 clean (12 rail + 2 car-share), 6 malformed as listed above. File passes `python -m json.tool`.
+- **current_subscriptions.json** — Valid, simplified stack. Entries carry `billing_cycle` and `next_renewal_date`.
+- **calendar_events_live.json** — Valid, sparse upcoming events, no strong demand signals.
+- **mobility_advisor/static/mobility_catalog.json** — Valid, full catalog (shared across all personas); each option carries `billing_cycle`.
+- **persona.json** — Valid, same as default profile. (Car-usage data lives separately in `car_usage.json`.)
 
 ---
 
@@ -84,8 +84,8 @@ may be higher. Data quality fix recommended before the 2027-01-15 renewal deadli
 
 ## JSON Validity Check
 
-All files in this scenario pass `python -m json.tool`. The breakage in `travel_history.json` is semantic (wrong values), not syntactic (malformed JSON). Verify with:
+All files in this scenario pass `python -m json.tool`. The breakage in `travel_history_raw.json` is semantic (wrong values), not syntactic (malformed JSON). Verify with:
 
 ```bash
-python -m json.tool travel_history.json > /dev/null && echo "valid"
+python -m json.tool travel_history_raw.json > /dev/null && echo "valid"
 ```

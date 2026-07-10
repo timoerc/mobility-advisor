@@ -28,6 +28,17 @@ class Subscription(BaseModel):
     started: str = ""
     notes: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def _null_dates_to_empty(cls, values: dict) -> dict:
+        # Threshold/status-based benefits (e.g. a car-rental loyalty tier reached by
+        # usage volume, not signed up on a date) legitimately have no start/renewal
+        # date and are stored as null in the mock data.
+        for key in ("next_renewal_date", "started"):
+            if values.get(key) is None:
+                values[key] = ""
+        return values
+
 
 class CurrentSubscriptions(BaseModel):
     subscriptions: list[Subscription]
@@ -98,3 +109,11 @@ class CalendarEvent(BaseModel):
 
 class CalendarEvents(BaseModel):
     events: list[CalendarEvent]
+
+
+class CarUsage(BaseModel):
+    owns_car: bool = False
+    mode: str = "car_private"
+    type: str | None = None
+    size: str | None = None
+    monthly_km_estimate: float | None = None

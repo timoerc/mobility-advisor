@@ -1,7 +1,7 @@
 {
   "trips": [
     {
-      "date": "2024-08-05",
+      "date": "2025-08-05",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
       "destination": "Köln Hbf",
@@ -19,7 +19,7 @@
       "source_mail_id": "mail_001"
     },
     {
-      "date": "2024-08-06",
+      "date": "2025-08-06",
       "mode": "rail",
       "origin": "Köln Hbf",
       "destination": "Frankfurt (Main) Hbf",
@@ -37,7 +37,7 @@
       "source_mail_id": "mail_002"
     },
     {
-      "date": "2024-08-19",
+      "date": "2025-08-19",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
       "destination": "Stuttgart Hbf",
@@ -55,7 +55,7 @@
       "source_mail_id": "mail_003"
     },
     {
-      "date": "2024-08-21",
+      "date": "2025-08-21",
       "mode": "rail",
       "origin": "Stuttgart Hbf",
       "destination": "Frankfurt (Main) Hbf",
@@ -73,7 +73,7 @@
       "source_mail_id": "mail_004"
     },
     {
-      "date": "2024-08-10",
+      "date": "2025-08-10",
       "mode": "car_share",
       "origin": "Frankfurt Sachsenhausen",
       "destination": "Frankfurt Airport Terminal 1",
@@ -91,7 +91,7 @@
       "source_mail_id": "mail_012"
     },
     {
-      "date": "2024-08-22",
+      "date": "2025-08-22",
       "mode": "car_share",
       "origin": "Frankfurt Innenstadt",
       "destination": "Frankfurt Westend",
@@ -109,7 +109,7 @@
       "source_mail_id": "mail_013"
     },
     {
-      "date": "2024-08-28",
+      "date": "2025-08-28",
       "mode": "car_share",
       "origin": "Frankfurt Bornheim",
       "destination": "Frankfurt Nordend",
@@ -127,7 +127,7 @@
       "source_mail_id": "mail_014"
     },
     {
-      "date": "2024-10-07",
+      "date": "2025-10-07",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
       "destination": "Mannheim Hbf",
@@ -145,7 +145,7 @@
       "source_mail_id": "mail_005"
     },
     {
-      "date": "2024-10-08",
+      "date": "2025-10-08",
       "mode": "rail",
       "origin": "Mannheim Hbf",
       "destination": "Frankfurt (Main) Hbf",
@@ -163,7 +163,7 @@
       "source_mail_id": "mail_006"
     },
     {
-      "date": "2024-11-04",
+      "date": "2025-11-04",
       "mode": "car_share",
       "origin": "Frankfurt Westend",
       "destination": "Frankfurt Airport Terminal 1",
@@ -181,7 +181,7 @@
       "source_mail_id": "mail_015"
     },
     {
-      "date": "2024-11-12",
+      "date": "2025-11-12",
       "mode": "car_share",
       "origin": "Frankfurt Sachsenhausen",
       "destination": "Frankfurt Messe",
@@ -199,7 +199,7 @@
       "source_mail_id": "mail_016"
     },
     {
-      "date": "2024-11-19",
+      "date": "2025-11-19",
       "mode": "car_share",
       "origin": "Frankfurt Innenstadt",
       "destination": "Frankfurt Sachsenhausen",
@@ -217,7 +217,7 @@
       "source_mail_id": "mail_017"
     },
     {
-      "date": "2024-11-25",
+      "date": "2025-11-25",
       "mode": "car_share",
       "origin": "Frankfurt Bornheim",
       "destination": "Frankfurt Nordend",
@@ -235,7 +235,7 @@
       "source_mail_id": "mail_018"
     },
     {
-      "date": "2024-12-02",
+      "date": "2025-12-02",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
       "destination": "München Hbf",
@@ -253,7 +253,7 @@
       "source_mail_id": "mail_007"
     },
     {
-      "date": "2024-12-04",
+      "date": "2025-12-04",
       "mode": "rail",
       "origin": "München Hbf",
       "destination": "Frankfurt (Main) Hbf",
@@ -271,7 +271,7 @@
       "source_mail_id": "mail_008"
     },
     {
-      "date": "2024-12-16",
+      "date": "2025-12-16",
       "mode": "rail",
       "origin": "Frankfurt (Main) Hbf",
       "destination": "Wiesbaden Hbf",

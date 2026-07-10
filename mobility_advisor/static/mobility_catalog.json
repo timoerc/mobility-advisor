@@ -55,24 +55,6 @@
       "notes": "25% auf Flexpreise, 25% auf Sparpreise."
     },
     {
-      "id": "db_bc25_2nd_probe",
-      "provider": "Deutsche Bahn",
-      "product": "BahnCard 25 Probe (2. Klasse, 3 Monate)",
-      "mode": "rail",
-      "monthly_cost_eur": 9.97,
-      "billing_cycle": "one-time",
-      "minimum_months": 3,
-      "eligibility": { "min_age": null, "max_age": null },
-      "benefits": {
-        "discount_sparpreis_pct": 25,
-        "discount_flexpreis_pct": 25,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false
-      },
-      "qualifying_threshold": null,
-      "notes": "25% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
-    },
-    {
       "id": "db_bc25_1st_annual_standard",
       "provider": "Deutsche Bahn",
       "product": "BahnCard 25 (1. Klasse, Standard, Jahresabo)",
@@ -143,24 +125,6 @@
       },
       "qualifying_threshold": null,
       "notes": "50% auf Flexpreise, 25% auf Sparpreise."
-    },
-    {
-      "id": "db_bc50_2nd_probe",
-      "provider": "Deutsche Bahn",
-      "product": "BahnCard 50 Probe (2. Klasse, 3 Monate)",
-      "mode": "rail",
-      "monthly_cost_eur": 23.30,
-      "billing_cycle": "one-time",
-      "minimum_months": 3,
-      "eligibility": { "min_age": null, "max_age": null },
-      "benefits": {
-        "discount_sparpreis_pct": 25,
-        "discount_flexpreis_pct": 50,
-        "unlimited_long_distance": false,
-        "unlimited_regional": false
-      },
-      "qualifying_threshold": null,
-      "notes": "50% auf Flexpreise, 25% auf Sparpreise. Keine automatische Verlängerung."
     },
     {
       "id": "db_bc50_1st_annual_standard",

@@ -34,6 +34,7 @@ export async function executeAction(sessionId: string, action: ProposedAction): 
     session_id: sessionId,
     action_title: action.title,
     action_description: action.description,
+    action_consequence: action.consequence,
   });
 }
 

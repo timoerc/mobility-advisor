@@ -4,27 +4,34 @@
   "tagline": "Frequent business traveller · BahnCard 50",
   "avatar": "MH",
   "avatarBg": "#ec0016",
+  "reference_date": "2026-06-15",
   "profileData": {
     "personal": {
       "full_name": "Maja Hoffmann",
-      "age": 32,
+      "age": 33,
       "employment_status": "employed",
       "profession": "Consultant",
       "household_context": "single"
     },
-    "location": { "home_city": "Köln" },
+    "location": {
+      "home_city": "Köln"
+    },
     "commute": {
-      "office_days": ["mon", "tue", "wed", "thu"],
-      "wfh_days": ["fri"]
+      "office_days": [
+        "mon",
+        "tue",
+        "wed",
+        "thu"
+      ],
+      "wfh_days": [
+        "fri"
+      ]
     },
-    "car": {
-      "owns_car": false,
-      "mode": "car_private",
-      "type": null,
-      "size": null,
-      "monthly_km_estimate": null
+    "priorities": {
+      "cost": 0.54,
+      "time": 0.16,
+      "sustainability": 0.3
     },
-    "priorities": { "cost": 0.54, "time": 0.16, "sustainability": 0.3 },
     "integrations": {
       "outlook_connected": true,
       "gmail_connected": false,
@@ -32,7 +39,11 @@
       "db_connected": true,
       "miles_connected": true,
       "deutschlandticket_connected": true,
-      "additional_connections": ["KVB", "RMV", "FreeNow"]
+      "additional_connections": [
+        "KVB",
+        "RMV",
+        "FreeNow"
+      ]
     },
     "notes": "Mostly travel Cologne–Frankfurt, sometimes Hamburg."
   }

@@ -2,7 +2,7 @@
   "subscriptions": [
     {
       "id": "db_bc50_2nd_annual_standard",
-      "next_renewal_date": "2025-12-31",
+      "next_renewal_date": "2026-12-31",
       "started": "2024-01-01",
       "provider": "Deutsche Bahn",
       "product": "BahnCard 50 (2. Klasse, Standard, Jahresabo)",
@@ -22,6 +22,30 @@
       },
       "qualifying_threshold": null,
       "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
+    },
+    {
+      "id": "enterprise_silver",
+      "next_renewal_date": null,
+      "started": null,
+      "provider": "Enterprise",
+      "product": "Enterprise Silver",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.0,
+      "billing_cycle": "monthly",
+      "minimum_months": 0,
+      "eligibility": {
+        "min_age": 21,
+        "max_age": null
+      },
+      "benefits": {
+        "bonus_points_pct": 10,
+        "point_value_eur": 0.046
+      },
+      "qualifying_threshold": {
+        "rentals_per_year": 6,
+        "rental_days_per_year": null
+      },
+      "notes": "Erreicht ab 6–11 Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
     }
   ]
 }

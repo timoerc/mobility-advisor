@@ -4,6 +4,7 @@
   "tagline": "Student · Deutschlandticket",
   "avatar": "LB",
   "avatarBg": "#1a7f37",
+  "reference_date": "2026-06-15",
   "profileData": {
     "personal": {
       "full_name": "Lena Brandt",
@@ -25,13 +26,6 @@
       "wfh_days": [
         "fri"
       ]
-    },
-    "car": {
-      "owns_car": false,
-      "mode": "car_private",
-      "type": null,
-      "size": null,
-      "monthly_km_estimate": null
     },
     "priorities": {
       "cost": 0.5,

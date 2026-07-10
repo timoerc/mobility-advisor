@@ -120,19 +120,22 @@ mobility_advisor/
 ├── __init__.py          # ADK package entry point
 ├── agent.py             # root_agent + annual_report_agent (SequentialAgents)
 ├── sub_agents.py        # analyst, forecaster, optimizer, communicator, annual_communicator
-├── tools.py             # 5 loader functions (mock data)
+├── tools.py             # loader functions (mock data)
 ├── models.py            # Pydantic models for all fixtures
+├── static/              # shared, persona-independent fixtures
+│   └── mobility_catalog.json
 ├── data/                # active data files (replaced by scenario activation)
-│   ├── user_preferences.json
+│   ├── persona.json
+│   ├── car_usage.json
 │   ├── current_subscriptions.json
-│   ├── mobility_catalog.json
-│   ├── travel_history.json
-│   └── calendar_events.json
+│   ├── travel_history_raw.json
+│   ├── calendar_events_live.json
+│   └── mail_raw.json
 └── scenarios/           # self-contained fixture sets for testing
     ├── activate_scenario.sh
-    ├── 01_happy_path/
-    ├── 02_edge_case/
-    └── 03_failure_recovery/
+    ├── maja/
+    ├── stefan/
+    └── lena/
 ```
 
 ---
@@ -142,7 +145,7 @@ mobility_advisor/
 Three pre-built scenarios let you exercise different pipeline behaviours without modifying `data/` by hand. Run the activation script from the `mobility_advisor/` directory:
 
 ```bash
-./scenarios/activate_scenario.sh 01_happy_path
+./scenarios/activate_scenario.sh maja
 ```
 
 The script backs up the current `data/` with a timestamp before overwriting, so switching is non-destructive.
@@ -151,9 +154,9 @@ Both pipelines work with all three scenarios.
 
 | Scenario | Signal | Single-run outcome | Annual report outcome |
 |---|---|---|---|
-| `01_happy_path` | BC50 savings far below card cost; no upcoming long-distance travel | Unambiguous recommendation to cancel BC50 | Clean report; strong CO₂ saving from rail; BC50 clearly did not break even |
-| `02_edge_case` | Erratic usage; BC50 borderline break-even; possible relocation | Hedged conditional recommendation | Borderline BC50 verdict; hedged forward outlook; relocation flagged |
-| `03_failure_recovery` | 6 of 20 travel history entries malformed (null costs, empty/unknown mode) | Pipeline completes with partial result and data quality warnings | Data quality warnings populated in Section 6; totals marked as partial |
+| `maja` | BC50 savings far below card cost; no upcoming long-distance travel | Unambiguous recommendation to cancel BC50 | Clean report; strong CO₂ saving from rail; BC50 clearly did not break even |
+| `stefan` | Car owner who also holds a full rail/carsharing stack he uses irregularly; BC50 borderline break-even; possible relocation | Hedged conditional recommendation | Borderline BC50 verdict; hedged forward outlook; relocation flagged |
+| `lena` | 6 of 20 travel history entries malformed (null costs, empty/unknown mode) | Pipeline completes with partial result and data quality warnings | Data quality warnings populated in Section 6; totals marked as partial |
 
 To restore the original `data/` after testing:
 
