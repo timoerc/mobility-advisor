@@ -289,7 +289,7 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
   "alternatives": [
     {
       "id": "<short slug, e.g. 'cancel' or 'keep'>",
-      "name": "<human-readable name>",
+      "name": "<human-readable name describing this OPTION, not just a product — see naming rules below>",
       "annualCostEur": <annual subscription cost for this option in EUR>,
       "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
       "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
@@ -307,8 +307,9 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
 Rules:
 - metrics must include at minimum: the annual or monthly saving (direction 'save') and CO2 impact (direction 'reduce' or 'neutral')
 - alternatives must include at minimum: the recommended action (isRecommended: true) and the status-quo 'Keep current setup' (isRecommended: false, savingsVsCurrentEur: 0)
-- for 'Keep current setup': annualCostEur = current monthly cost x 12, savingsVsCurrentEur = 0
+- for 'Keep current setup': annualCostEur = current monthly cost x 12, savingsVsCurrentEur = 0, and name must be the literal string "Keep current setup" — never the product name, even though the product being kept is the same one named elsewhere
 - for the recommended action: annualCostEur = proposed monthly cost x 12, savingsVsCurrentEur = monthly saving x 12
+- alternatives[].name must always describe the ACTION for that row, never a bare product name on its own — two rows must never end up with an identical name just because they both reference the same product. Prefix with the verb that matches what actually happens to that product in this option: "Cancel <product>" (pure cancellation, nothing added), "Switch to <product>" / "Downgrade to <product>" / "Upgrade to <product>" (swap/replace), "Add <product>" (new subscription, nothing removed). Example: if the recommended action cancels "BahnCard 50 (2. Klasse, Standard, Jahresabo)" with nothing replacing it, that row's name is "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)" — NOT "BahnCard 50 (2. Klasse, Standard, Jahresabo)" (which would be indistinguishable from the status-quo row keeping that same card)
 - all numbers must come verbatim from the report below — never invent figures
 - product/subscription names (in title, description, consequence, and alternatives[].name) must be copied verbatim and in full from the report below, e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like "BahnCard 25"; this name is executed literally if the user approves, so an underspecified name breaks execution
 - if a field value cannot be determined from the report below, use a sensible default (e.g. 'Neutral' for co2Impact, [] for assumptions)

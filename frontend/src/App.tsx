@@ -289,6 +289,11 @@ export default function App() {
   }, []);
   const handleProceedToApproval = () => setMainView("approval");
   const handleConfirm = () => setMainView("executing");
+  // Nothing was executed on this path (cancelled approval, or execution failed) — the
+  // existing recommendation is still valid, so just show it again instead of going home.
+  const handleCancelChange = () => setMainView("dashboard");
+  // Execution succeeded here, so the recommendation is now stale — go home rather than
+  // show a "What should I do?" dashboard proposing an action that's already been applied.
   const handleBackToDashboard = () => setMainView("home");
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
@@ -505,7 +510,7 @@ export default function App() {
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
-      onBack={mainView === "chat" || mainView === "annual" ? () => setMainView("home") : undefined}
+      onBack={mainView === "chat" || mainView === "annual" || mainView === "analysis" ? () => setMainView("home") : undefined}
       onLogoClick={() => setMainView("home")}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => startEditing([7], "Edit preferences")}
@@ -539,7 +544,7 @@ export default function App() {
         <ApprovalPage
           recommendation={liveRecommendation}
           onConfirm={handleConfirm}
-          onCancel={handleBackToDashboard}
+          onCancel={handleCancelChange}
         />
       )}
 
@@ -548,7 +553,7 @@ export default function App() {
           sessionId={sessionId}
           action={liveRecommendation.proposedAction}
           onComplete={handleExecutionComplete}
-          onCancel={handleBackToDashboard}
+          onCancel={handleCancelChange}
         />
       )}
 
