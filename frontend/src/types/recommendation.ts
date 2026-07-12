@@ -7,6 +7,12 @@ export type MetricDelta = {
   label: string;
 };
 
+export type ProposedAction = {
+  title: string;
+  description: string;
+  consequence: string;
+};
+
 export type Alternative = {
   id: string;
   name: string;
@@ -15,12 +21,9 @@ export type Alternative = {
   co2Impact?: string;
   tradeoff: string;
   isRecommended: boolean;
-};
-
-export type ProposedAction = {
-  title: string;
-  description: string;
-  consequence: string;
+  // null only for the always-present "Keep current setup" row; every other
+  // alternative carries the action that gets executed if the user selects it.
+  action: ProposedAction | null;
 };
 
 export type Recommendation = {
@@ -31,7 +34,6 @@ export type Recommendation = {
   reasoning: string[];
   assumptions: string[];
   alternatives: Alternative[];
-  proposedAction: ProposedAction;
 };
 
 export type ExecutionResult = {

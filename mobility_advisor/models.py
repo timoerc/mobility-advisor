@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, model_validator
 
 
@@ -117,3 +119,63 @@ class CarUsage(BaseModel):
     type: str | None = None
     size: str | None = None
     monthly_km_estimate: float | None = None
+
+
+# ── Pipeline output / API response schemas ──────────────────────────────────────
+# Field names are camelCase (unlike the snake_case data-loading schemas above)
+# because these models ARE the wire contract with frontend/src/types/recommendation.ts —
+# main.py serializes them directly as the /api/analyze response body.
+
+class MetricDelta(BaseModel):
+    value: float
+    unit: str
+    direction: Literal["save", "extra_cost", "reduce", "increase", "neutral"]
+    label: str
+
+
+class ProposedAction(BaseModel):
+    title: str
+    description: str
+    consequence: str
+
+
+class Alternative(BaseModel):
+    id: str
+    name: str
+    annualCostEur: float
+    savingsVsCurrentEur: float
+    co2Impact: str = "Neutral"
+    tradeoff: str
+    isRecommended: bool
+    # None only for the always-present "Keep current setup" row. Every other
+    # alternative must carry its own action so it can be executed if the user
+    # selects it — see /api/execute in main.py.
+    action: ProposedAction | None = None
+
+
+class Recommendation(BaseModel):
+    verdict: str
+    confidence: Literal["high", "medium", "low"]
+    summaryText: str
+    metrics: list[MetricDelta]
+    reasoning: list[str]
+    assumptions: list[str] = []
+    alternatives: list[Alternative]
+
+    @model_validator(mode="after")
+    def _validate_alternatives_shape(self) -> "Recommendation":
+        ids = [a.id for a in self.alternatives]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"alternatives ids must be unique, got {ids}")
+        recommended = [a for a in self.alternatives if a.isRecommended]
+        if len(recommended) != 1:
+            raise ValueError(
+                f"expected exactly one isRecommended alternative, got {len(recommended)}"
+            )
+        if recommended[0].action is None:
+            raise ValueError("the recommended alternative must have a non-null action")
+        if not any(a.action is None for a in self.alternatives):
+            raise ValueError(
+                "expected at least one 'Keep current setup' alternative (action: null)"
+            )
+        return self

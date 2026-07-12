@@ -1,14 +1,12 @@
-import type { Recommendation } from "../../types/recommendation";
+import type { ProposedAction } from "../../types/recommendation";
 
 type ApprovalPageProps = {
-  recommendation: Recommendation;
+  action: ProposedAction;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-export function ApprovalPage({ recommendation: rec, onConfirm, onCancel }: ApprovalPageProps) {
-  const { proposedAction: action } = rec;
-
+export function ApprovalPage({ action, onConfirm, onCancel }: ApprovalPageProps) {
   return (
     <div className="flex flex-col gap-6 py-4">
       <div>

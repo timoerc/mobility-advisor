@@ -115,11 +115,13 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
     include_contents="none",
 )
 
-optimizer_agent = LlmAgent(
-    name="optimizer",
-    model=_MODEL,
-    description="Proposes one concrete contract change based on analysis, forecast, preferences, and catalog.",
-    instruction=f"""\
+# Frozen verbatim copy of the pre-multi-candidate optimizer instruction/description,
+# used only to build annual_optimizer_agent below. annual_communicator_agent's Step 4
+# ("include the optimizer's proposed change as a single bullet") and the rest of the
+# annual report are written against this single-candidate shape and must not receive
+# optimizer_agent's multi-candidate output.
+_ANNUAL_OPTIMIZER_DESCRIPTION_BASE = "Proposes one concrete contract change based on analysis, forecast, preferences, and catalog."
+_ANNUAL_OPTIMIZER_INSTRUCTION_BASE = f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -181,6 +183,85 @@ Compute only over trips whose mode is "rail". Write: "By choosing rail over car,
 - [bullet-point rationale referencing the analysis, forecast, and user preferences]
 
 Show real numbers from the data. Do not propose more than one change.
+"""
+
+optimizer_agent = LlmAgent(
+    name="optimizer",
+    model=_MODEL,
+    description="Proposes one or (when genuinely comparable) up to two concrete contract-change candidates based on analysis, forecast, preferences, and catalog.",
+    instruction=f"""\
+You are the Optimizer agent for your Mobility Advisor.
+Today's date: {_TODAY}.
+
+Context from upstream agents:
+- Analyst finding: {{analysis}}
+- Forecaster outlook: {{forecast}}
+
+Your job: propose the highest-value action(s) for the user's contract portfolio. Default to
+exactly ONE recommended change. Only propose a second candidate action when it is genuinely
+comparable in value to the first AND materially different in kind — never as padding. See the
+CANDIDATE CAP rule in Step 3 for the exact bar a second candidate must clear.
+Address the user directly as "you"/"your" throughout your output — not by name.
+
+Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+
+Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the highest-impact change(s), applying the CANDIDATE CAP rule below to decide whether one or two candidates are warranted.
+
+CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
+All rail trips in history are priced at the BahnCard 50 discount (50% off).
+Therefore: full_price_per_trip = trip.cost_eur × 2
+
+For each candidate BahnCard tier, compute:
+  annual_trip_cost_at_tier = Σ(full_price_per_trip × (1 − tier_discount_rate))
+    BC25 discount = 0.25  →  multiply full_price by 0.75
+    BC50 discount = 0.50  →  multiply full_price by 0.50
+  net_saving_at_tier = (full_price_total − annual_trip_cost_at_tier) − (tier_monthly_cost × 12)
+
+Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
+Include the net_saving figures for both tiers in your output.
+
+NAMING — always use the exact, full product name as it appears in load_relevant_mobility_catalog's
+"product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)") or in the Analyst
+finding's subscription names — never a short form like "BahnCard 25" alone. The catalog has
+several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
+name cannot distinguish, and this name is what gets executed later — an underspecified name
+cannot be applied. This applies everywhere you name a specific product, in every candidate block.
+
+Step 3 — output your recommendation in this exact structure:
+
+**Current portfolio cost:** €X.XX/mo (list all active subscriptions and their costs)
+
+For EACH candidate action (see CANDIDATE CAP below), repeat this entire block — do not merge
+two candidates into one block, and do not omit any sub-field:
+
+## Candidate: [short name, e.g. "Cancel BahnCard 50" or "Downgrade to BahnCard 25"]
+**Recommended:** [YES for exactly one candidate — your single highest-value pick — NO for every other candidate]
+**Proposed change:** [what to add / cancel / swap — if this is a swap/replace, explicitly
+name BOTH the exact current subscription being removed AND the exact new product being
+added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a BahnCard 25
+(2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
+**Proposed monthly cost:** €Y.YY/mo (list the new stack)
+**Monthly saving:** €Z.ZZ/mo (vs. Current portfolio cost above)
+**CO₂ impact:** Use this exact formula — do NOT invent a number:
+  co2_rail_kg = Σ(trip.distance_km × 32) / 1000    (rail: 32 g/km from catalog)
+  co2_car_kg  = Σ(trip.distance_km × 118) / 1000   (car-share baseline: 118 g/km from catalog)
+  co2_saved_kg = co2_car_kg − co2_rail_kg
+Compute only over trips whose mode is "rail". Write: "By choosing rail over car, you avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
+**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
+**What stays and why:**
+- [subscription] — [one-line justification with the key metric]
+**Why this candidate:** [bullet-point rationale referencing the analysis, forecast, and user preferences — and, if there is more than one candidate, what specifically makes this one different in kind from the others, not just in degree]
+
+CANDIDATE CAP: propose at most 2 candidate blocks total. Default to exactly 1. Only add a
+second candidate when it is genuinely comparable in value to the first AND materially
+different in kind — e.g. a different discrete plan tier (BahnCard 25 vs. BahnCard 50), full
+cancellation vs. a partial downgrade of the same subscription, or a genuinely different mode
+(e.g. a car-share membership instead of a rail card) — never two candidates that differ only
+by a small numeric variation on the same underlying choice (e.g. rounding, or a €2/month gap
+between near-identical options). If you are unsure whether a second candidate clears this bar,
+do not include it — one strong recommendation beats a padded list.
+
+Show real numbers from the data.
 """,
     tools=[load_user_preferences, load_relevant_mobility_catalog],
     output_key="recommendation",
@@ -191,29 +272,42 @@ Show real numbers from the data. Do not propose more than one change.
 communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
-    description=f"Formats the optimizer's recommendation into a clear, scannable message for {_USER_FIRST_NAME}.",
+    description=f"Formats the optimizer's recommendation (one or, when warranted, up to two candidate actions) into a clear, scannable message for {_USER_FIRST_NAME}.",
     instruction=f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-The Optimizer has produced this recommendation:
+The Optimizer has produced this recommendation, containing one or two candidate actions:
 {{recommendation}}
 
 Your job: reformat it into a friendly, scannable message that speaks directly to
-the user as "you"/"your" throughout — not by name.
+the user as "you"/"your" throughout — not by name. If the Optimizer proposed more than one
+candidate, present all of them, clearly marking which one is the recommended pick — never
+invent a candidate that isn't in the Optimizer's output, and never drop one that is.
 
 Structure your output exactly as follows:
 
 ---
 **Your Mobility Advisor Report**
 
-**Recommendation:** [one-sentence headline]
+**Your current setup:** €X.XX/mo (copy the Optimizer's "Current portfolio cost" line and
+subscription list verbatim)
 
-**What's changing:**
-- [the proposed change, with the monthly saving in €]
-- Action by: **[next_renewal_date from the recommendation, formatted as DD Month YYYY]** to avoid auto-renewal
+**Recommendation:** [one-sentence headline for the candidate marked Recommended: YES]
 
-**CO₂ impact:** [one line]
+For EACH candidate action from the Optimizer, in the same order, repeat this block:
+
+**Option: [short candidate name]**[append " — Recommended" only on the candidate marked Recommended: YES]
+- Change: [the proposed change, one sentence]
+- Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo vs. your current setup) — copy these two numbers
+  verbatim from this candidate's own "Proposed monthly cost" / "Monthly saving" lines, never
+  the other candidate's numbers
+- Action by: **[next_renewal_date, formatted as DD Month YYYY]** to avoid auto-renewal
+- CO₂ impact: [one line]
+- Trade-off: [1–2 sentences on the downside or uncertainty specific to THIS candidate]
+
+(Output exactly one Option block per candidate the Optimizer actually gave you — never add a
+second Option block if the Optimizer proposed only one.)
 
 **What stays in your portfolio:**
 - [subscription] — [reason, with the key number that justifies it]
@@ -221,13 +315,17 @@ Structure your output exactly as follows:
 
 **Why now:** [1–2 sentences referencing your upcoming calendar or life events]
 
-**Trade-offs to consider:** [1–2 sentences on any downside or uncertainty]
-
 ---
 ⚠️ **No change has been made to your subscriptions. This recommendation awaits your approval.**
 ---
 
-Keep the tone direct and professional. Do not invent numbers not present in the recommendation. Do not claim any action was taken. Do not shorten or paraphrase a product name — copy it exactly as given in the recommendation above (e.g. keep "BahnCard 25 (2. Klasse, Standard, Jahresabo)" intact, never just "BahnCard 25"). If the recommendation is a swap/replace, "What's changing" must name both the exact subscription being removed and the exact product being added — this wording is what gets executed later if the user approves, so an underspecified name breaks execution.
+Keep the tone direct and professional. Do not invent numbers not present in the recommendation.
+Do not claim any action was taken. Do not shorten or paraphrase a product name — copy it exactly
+as given in the recommendation above (e.g. keep "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
+intact, never just "BahnCard 25"). Every Option block's "Change" line must name both the exact
+subscription being removed and the exact product being added for a swap/replace — this wording
+is what gets executed later if the user picks that option, so an underspecified name breaks
+execution for whichever option the user ends up choosing, not just the recommended one.
 """,
     tools=[],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
@@ -281,8 +379,8 @@ annual_forecaster_agent = LlmAgent(
 annual_optimizer_agent = LlmAgent(
     name="annual_optimizer",
     model=_MODEL,
-    description=optimizer_agent.description,
-    instruction=optimizer_agent.instruction.replace(
+    description=_ANNUAL_OPTIMIZER_DESCRIPTION_BASE,
+    instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE.replace(
         "over the past 12 months", f"in {_REVIEW_YEAR}"
     ),
     tools=[load_user_preferences, load_relevant_mobility_catalog],

@@ -5,7 +5,7 @@ import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
 import { saveProfile, activatePersona, fetchPersonas } from "./api";
-import type { ExecutionResult, Recommendation } from "./types/recommendation";
+import type { Alternative, ExecutionResult, Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -119,6 +119,8 @@ export default function App() {
   const [mainView, setMainView] = useState<MainView>("home");
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
   const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
+  const [selectedAlternative, setSelectedAlternative] = useState<Alternative | null>(null);
+  const [confirmationVariant, setConfirmationVariant] = useState<"executed" | "no-change">("executed");
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [sessionId] = useState(getOrCreateSessionId);
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
@@ -287,16 +289,31 @@ export default function App() {
     setExecutionResult(result);
     setMainView((current) => (current === "executing" ? "confirmation" : current));
   }, []);
-  const handleProceedToApproval = () => setMainView("approval");
+  const handleProceedToApproval = (alt: Alternative) => {
+    setSelectedAlternative(alt);
+    if (alt.action === null) {
+      // "Keep current setup" — nothing to execute, skip Approval/Executing entirely.
+      setConfirmationVariant("no-change");
+      setExecutionResult({
+        success: true,
+        message: "You chose to keep your current mobility setup. No changes have been made.",
+      });
+      setMainView("confirmation");
+      return;
+    }
+    setConfirmationVariant("executed");
+    setMainView("approval");
+  };
   const handleConfirm = () => setMainView("executing");
   // Nothing was executed on this path (cancelled approval, or execution failed) — the
   // existing recommendation is still valid, so just show it again instead of going home.
   const handleCancelChange = () => setMainView("dashboard");
-  // Execution succeeded here, so the recommendation is now stale — go home rather than
-  // show a "What should I do?" dashboard proposing an action that's already been applied.
-  const handleBackToDashboard = () => setMainView("home");
+  // Both the executed and no-change confirmations return Home — treat "confirmed" as
+  // the end of this review, whether or not anything was actually applied.
+  const handleBackFromConfirmation = () => setMainView("home");
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
+    setSelectedAlternative(null);
     setMainView("analysis");
   };
   const handleAnnualReport = () => {
@@ -540,18 +557,18 @@ export default function App() {
         />
       )}
 
-      {mainView === "approval" && liveRecommendation && (
+      {mainView === "approval" && selectedAlternative?.action && (
         <ApprovalPage
-          recommendation={liveRecommendation}
+          action={selectedAlternative.action}
           onConfirm={handleConfirm}
           onCancel={handleCancelChange}
         />
       )}
 
-      {mainView === "executing" && liveRecommendation && (
+      {mainView === "executing" && selectedAlternative?.action && (
         <ExecutingPage
           sessionId={sessionId}
-          action={liveRecommendation.proposedAction}
+          action={selectedAlternative.action}
           onComplete={handleExecutionComplete}
           onCancel={handleCancelChange}
         />
@@ -560,7 +577,8 @@ export default function App() {
       {mainView === "confirmation" && executionResult && (
         <ConfirmationPage
           resultMessage={executionResult.message}
-          onBackToDashboard={handleBackToDashboard}
+          variant={confirmationVariant}
+          onBackToDashboard={handleBackFromConfirmation}
         />
       )}
 

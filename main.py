@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
-from mobility_advisor.models import CarUsage
+from mobility_advisor.models import CarUsage, Recommendation
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
 
@@ -273,9 +273,9 @@ Convert the mobility advisor's recommendation report into this exact JSON struct
 Output ONLY valid JSON — no markdown fences, no surrounding text.
 
 {
-  "verdict": "<concise 8-10 word headline, e.g. 'Your BahnCard 50 did not pay off this year'>",
+  "verdict": "<concise 8-10 word headline for the RECOMMENDED option, e.g. 'Your BahnCard 50 did not pay off this year'>",
   "confidence": "<'high' if ROI is clear and unambiguous; 'medium' if borderline or uncertain; 'low' if highly uncertain>",
-  "summaryText": "<1-2 sentences summarising the key finding and saving>",
+  "summaryText": "<1-2 sentences summarising the key finding and saving for the RECOMMENDED option>",
   "metrics": [
     {
       "value": <number>,
@@ -294,29 +294,79 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
       "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
       "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
       "tradeoff": "<one sentence>",
-      "isRecommended": <true for the proposed action, false for all others>
+      "isRecommended": <true for exactly one alternative — the candidate the report marks Recommended — false for all others>,
+      "action": {
+        "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)'>",
+        "description": "<1-2 sentences with action details and deadline>",
+        "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.' If this is a swap/replace, this field is what tells the execution step which current subscription to remove — it must always name that exact subscription, not just the new product. Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
+      }
     }
-  ],
-  "proposedAction": {
-    "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)'>",
-    "description": "<1-2 sentences with action details and deadline>",
-    "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.' If this is a swap/replace, this field is what tells the execution step which current subscription to remove — it must always name that exact subscription, not just the new product. Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
-  }
+  ]
 }
 
 Rules:
-- metrics must include at minimum: the annual or monthly saving (direction 'save') and CO2 impact (direction 'reduce' or 'neutral')
-- alternatives must include at minimum: the recommended action (isRecommended: true) and the status-quo 'Keep current setup' (isRecommended: false, savingsVsCurrentEur: 0)
-- for 'Keep current setup': annualCostEur = current monthly cost x 12, savingsVsCurrentEur = 0, and name must be the literal string "Keep current setup" — never the product name, even though the product being kept is the same one named elsewhere
-- for the recommended action: annualCostEur = proposed monthly cost x 12, savingsVsCurrentEur = monthly saving x 12
-- alternatives[].name must always describe the ACTION for that row, never a bare product name on its own — two rows must never end up with an identical name just because they both reference the same product. Prefix with the verb that matches what actually happens to that product in this option: "Cancel <product>" (pure cancellation, nothing added), "Switch to <product>" / "Downgrade to <product>" / "Upgrade to <product>" (swap/replace), "Add <product>" (new subscription, nothing removed). Example: if the recommended action cancels "BahnCard 50 (2. Klasse, Standard, Jahresabo)" with nothing replacing it, that row's name is "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)" — NOT "BahnCard 50 (2. Klasse, Standard, Jahresabo)" (which would be indistinguishable from the status-quo row keeping that same card)
+- The report contains 1 or 2 candidate "Option:" blocks (each optionally suffixed " — Recommended").
+  Produce exactly one "alternatives" entry per Option block — with "action" set to that
+  option's title/description/consequence derived from its "Change"/"Action by" lines, and
+  isRecommended true only for the option suffixed " — Recommended" — PLUS always exactly one
+  additional entry for the status-quo baseline:
+    - id: a short slug like "keep"
+    - name: the literal string "Keep current setup" — never the product name, even though the
+      product being kept is the same one named elsewhere
+    - annualCostEur: the report's "Your current setup" monthly figure x 12
+    - savingsVsCurrentEur: 0
+    - isRecommended: false
+    - action: JSON null (not an object, not omitted)
+  Never produce more than 2 alternatives with a non-null "action". If the report somehow
+  contains more than 2 Option blocks, use only the first 2.
+- Exactly one alternative must have isRecommended: true, and its action must not be null.
+- metrics must include at minimum: the monthly or annual saving (direction 'save') for the
+  RECOMMENDED alternative, and CO2 impact (direction 'reduce' or 'neutral')
+- for each alternative with a non-null action: annualCostEur and savingsVsCurrentEur come from
+  THAT option's own "Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo ...)" line, x 12 — never copy one
+  option's numbers onto another
+- alternatives[].name must always describe the ACTION for that row, never a bare product name
+  on its own — two rows must never end up with an identical name just because they both
+  reference the same product. Prefix with the verb that matches what actually happens to that
+  product in this option: "Cancel <product>" (pure cancellation, nothing added), "Switch to
+  <product>" / "Downgrade to <product>" / "Upgrade to <product>" (swap/replace), "Add
+  <product>" (new subscription, nothing removed). Example: if an option cancels "BahnCard 50
+  (2. Klasse, Standard, Jahresabo)" with nothing replacing it, that row's name is "Cancel
+  BahnCard 50 (2. Klasse, Standard, Jahresabo)" — NOT "BahnCard 50 (2. Klasse, Standard,
+  Jahresabo)" (which would be indistinguishable from the status-quo row keeping that same card)
 - all numbers must come verbatim from the report below — never invent figures
-- product/subscription names (in title, description, consequence, and alternatives[].name) must be copied verbatim and in full from the report below, e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like "BahnCard 25"; this name is executed literally if the user approves, so an underspecified name breaks execution
-- if a field value cannot be determined from the report below, use a sensible default (e.g. 'Neutral' for co2Impact, [] for assumptions)
+- product/subscription names (in every alternative's action.title/description/consequence, and
+  in alternatives[].name) must be copied verbatim and in full from the report below, e.g.
+  "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like
+  "BahnCard 25"; this name is executed literally if the user picks that alternative, so an
+  underspecified name breaks execution for ANY alternative, not just the recommended one
+- if a field value cannot be determined from the report below, use a sensible default (e.g.
+  'Neutral' for co2Impact, [] for assumptions)
 """.strip()
 
 
-async def _extract_recommendation_json(report_text: str) -> dict:
+def _clamp_actionable_alternatives(
+    rec: Recommendation, max_actionable: int = 2
+) -> Recommendation:
+    """Defensively enforce the product cap of `max_actionable` actionable alternatives.
+
+    The prompt already asks for this cap, but nothing stops the LLM from overshooting —
+    this guarantees the API response can never violate it regardless of what the LLM
+    returns. Keeps the recommended alternative, then earlier non-recommended actionable
+    alternatives up to the cap (in original order), then all keep-current-setup row(s)
+    (action is None) unchanged.
+    """
+    actionable = [a for a in rec.alternatives if a.action is not None]
+    if len(actionable) <= max_actionable:
+        return rec
+    keep_rows = [a for a in rec.alternatives if a.action is None]
+    recommended = [a for a in actionable if a.isRecommended]
+    others = [a for a in actionable if not a.isRecommended]
+    rec.alternatives = (recommended + others)[:max_actionable] + keep_rows
+    return rec
+
+
+async def _extract_recommendation_json(report_text: str) -> Recommendation:
     response = await litellm.acompletion(
         model=_MODEL_ID,
         messages=[
@@ -332,7 +382,9 @@ async def _extract_recommendation_json(report_text: str) -> dict:
         text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:].lstrip("\n")
-    return json.loads(text)
+    parsed = json.loads(text)
+    recommendation = Recommendation.model_validate(parsed)
+    return _clamp_actionable_alternatives(recommendation)
 
 
 # ── Pipeline retry helper ─────────────────────────────────────────────────────
@@ -373,7 +425,7 @@ async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATT
 
 # ── Analyse endpoint ──────────────────────────────────────────────────────────
 
-@app.post("/api/analyze")
+@app.post("/api/analyze", response_model=Recommendation)
 async def analyze(req: AnalyzeRequest):
     runner = InMemoryRunner(agent=optimization_pipeline, app_name="mobility_advisor_analyze")
 
