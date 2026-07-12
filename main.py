@@ -293,6 +293,9 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
       "annualCostEur": <annual subscription cost for this option in EUR>,
       "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
       "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
+      "co2ImpactKg": <the signed kg/year number stated in this option's CO2 impact line;
+        positive = this option SAVES CO2 vs. current, negative = it emits MORE; 0 for
+        'Neutral' or the 'Keep current setup' row>,
       "tradeoff": "<one sentence>",
       "isRecommended": <true for exactly one alternative — the candidate the report marks Recommended — false for all others>,
       "action": {
@@ -315,6 +318,8 @@ Rules:
       product being kept is the same one named elsewhere
     - annualCostEur: the report's "Your current setup" monthly figure x 12
     - savingsVsCurrentEur: 0
+    - co2Impact: "Neutral"
+    - co2ImpactKg: 0
     - isRecommended: false
     - action: JSON null (not an object, not omitted)
   Never produce more than 2 alternatives with a non-null "action". If the report somehow
@@ -335,13 +340,16 @@ Rules:
   BahnCard 50 (2. Klasse, Standard, Jahresabo)" — NOT "BahnCard 50 (2. Klasse, Standard,
   Jahresabo)" (which would be indistinguishable from the status-quo row keeping that same card)
 - all numbers must come verbatim from the report below — never invent figures
+- co2ImpactKg's sign must match that option's own "CO₂ impact" line: positive for a stated
+  saving, negative for a stated increase, 0 for "Neutral" — never copy one option's CO2
+  figure onto another
 - product/subscription names (in every alternative's action.title/description/consequence, and
   in alternatives[].name) must be copied verbatim and in full from the report below, e.g.
   "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like
   "BahnCard 25"; this name is executed literally if the user picks that alternative, so an
   underspecified name breaks execution for ANY alternative, not just the recommended one
 - if a field value cannot be determined from the report below, use a sensible default (e.g.
-  'Neutral' for co2Impact, [] for assumptions)
+  'Neutral' for co2Impact, 0 for co2ImpactKg, [] for assumptions)
 """.strip()
 
 
@@ -366,6 +374,30 @@ def _clamp_actionable_alternatives(
     return rec
 
 
+_CO2_METHODOLOGY_ASSUMPTION = (
+    "CO2 impact is 0 for any change that only adjusts price or tier on a mode you already "
+    "use (e.g. BahnCard 50 → BahnCard 25) — it only changes when an action adds or removes "
+    "your only means of accessing a transport mode, such as a car-sharing membership."
+)
+
+
+def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
+    """Deterministically guarantee the status-quo 'Keep current setup' row (action is None)
+    never shows a nonzero cost/CO2 delta, regardless of what the LLM extraction step
+    produced for it — it is the baseline by definition, so any nonzero figure there would be
+    a contradiction, not a real number. Also records the CO2 methodology as an assumption so
+    it's visible to the user rather than silently applied.
+    """
+    for alt in rec.alternatives:
+        if alt.action is None:
+            alt.savingsVsCurrentEur = 0.0
+            alt.co2Impact = "Neutral"
+            alt.co2ImpactKg = 0.0
+    if _CO2_METHODOLOGY_ASSUMPTION not in rec.assumptions:
+        rec.assumptions.append(_CO2_METHODOLOGY_ASSUMPTION)
+    return rec
+
+
 async def _extract_recommendation_json(report_text: str) -> Recommendation:
     response = await litellm.acompletion(
         model=_MODEL_ID,
@@ -384,6 +416,7 @@ async def _extract_recommendation_json(report_text: str) -> Recommendation:
             text = text[4:].lstrip("\n")
     parsed = json.loads(text)
     recommendation = Recommendation.model_validate(parsed)
+    recommendation = _normalize_keep_current_setup(recommendation)
     return _clamp_actionable_alternatives(recommendation)
 
 

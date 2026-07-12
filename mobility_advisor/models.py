@@ -145,6 +145,9 @@ class Alternative(BaseModel):
     annualCostEur: float
     savingsVsCurrentEur: float
     co2Impact: str = "Neutral"
+    # Signed kg CO2/year, same convention as savingsVsCurrentEur: positive = this
+    # alternative saves CO2 vs. the current portfolio, negative = it emits more.
+    co2ImpactKg: float = 0.0
     tradeoff: str
     isRecommended: bool
     # None only for the always-present "Keep current setup" row. Every other

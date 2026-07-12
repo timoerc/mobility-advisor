@@ -1,4 +1,5 @@
 import calendar
+import csv
 import json
 import os
 import re
@@ -327,6 +328,188 @@ def _resolve_unique_match(
         names = ", ".join(c.get("product", "?") for c in matches)
         return None, f"ambiguous match for '{needle}': matched {len(matches)} entries ({names})"
     return matches[0], None
+
+
+# Only car-sharing (e.g. MILES) requires membership to use the mode at all — rail passes,
+# Deutschlandticket, and car-rental loyalty tiers are discount/rewards programs layered on
+# top of a mode you can already use without any subscription (full-price ticket, pay-as-you-go
+# rental), so losing them changes price, not which mode is usable.
+_MODE_ACCESS_GATED_MODES = {"car_share"}
+
+
+def _generic_car_co2_factor_kg_per_km() -> float:
+    """kg CO2e/km for driving a car with no specific type/size known — the fallback used when
+    a candidate removes the user's only access to car-sharing. Car_private/Car_Sharing/
+    Car_Rental all share the same 'Null,Null' average in co2_factors.csv, so it doesn't matter
+    which of the three the user would actually end up driving."""
+    with (_STATIC / "co2_factors.csv").open(encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["mode"] == "Car_Sharing" and row["type"] == "Null" and row["size"] == "Null":
+                return float(row["kg_co2e_per_km"])
+    raise RuntimeError("Car_Sharing,Null,Null row missing from co2_factors.csv")
+
+
+def compute_co2_impact_kg(
+    target_subscription: str | None = None,
+    new_product: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict:
+    """Compute the CO2 delta (kg/year) of one candidate portfolio change vs. the current portfolio.
+
+    Grounded in real per-trip co2_emission_kg data (already computed offline from
+    co2_factors.csv) — never invents or estimates a distance/emissions figure. Call this for
+    EVERY candidate action before writing its CO2 impact line; do not compute CO2 yourself.
+
+    Same add/remove/replace argument shape as apply_subscription_change: target_subscription
+    is the current subscription being removed (None for a pure add), new_product is the
+    catalog product being added (None for a pure cancel). Matched the same way
+    apply_subscription_change matches them (case-insensitive substring against
+    product/provider, falling back to token overlap) — must resolve to exactly one entry
+    each; zero or multiple matches return an error rather than guessing.
+
+    Most candidates are CO2-neutral by design: a subscription only changes emissions if
+    removing it takes away the user's *last* remaining way to use a given transport mode at
+    all. In the current catalog that is true only for car-sharing (membership-gated); rail
+    cards, Deutschlandticket, and car-rental loyalty tiers are discount/rewards programs on
+    top of a mode usable without any subscription, so changing/cancelling them is always
+    neutral (0 kg) — e.g. downgrading BahnCard 50 to BahnCard 25 never affects CO2, only price.
+
+    Args:
+        target_subscription: Substring/name of the current subscription being removed or
+            replaced, matched against current_subscriptions.json. None for a pure "add".
+        new_product: Substring/name of the catalog product being added, matched against
+            mobility_catalog.json. None for a pure "cancel".
+        date_from: Optional inclusive ISO date ("YYYY-MM-DD") — same filter semantics as
+            compute_travel_stats. Pass this (with date_to) when evaluating the ANNUAL report
+            so affected trips are scoped to REVIEW_YEAR only, not the full travel history.
+            Leave both None for the regular (non-annual) review, which uses all available trips.
+        date_to: Optional inclusive ISO date ("YYYY-MM-DD"); see date_from.
+
+    Returns a dict with: status ("ok" or "error"), mode_access_changed (bool, whether this
+    candidate actually removes the user's last access to a gated mode), delta_kg (float,
+    signed — positive means the candidate SAVES this many kg CO2/year vs. the current
+    portfolio, negative means it emits this many kg MORE; always 0.0 when
+    mode_access_changed is False), co2_before_kg / co2_after_kg (float, only meaningful when
+    mode_access_changed is True), trips_affected (int), explanation (str, a ready-to-quote
+    one-line sentence stating the signed number plainly — quote this verbatim as the CO2
+    impact line, do not paraphrase or recompute it), and error (str or None).
+    """
+
+    def _result(
+        *,
+        mode_access_changed: bool = False,
+        delta_kg: float = 0.0,
+        co2_before_kg: float = 0.0,
+        co2_after_kg: float = 0.0,
+        trips_affected: int = 0,
+        explanation: str,
+        error: str | None = None,
+    ) -> dict:
+        return {
+            "status": "error" if error else "ok",
+            "mode_access_changed": mode_access_changed,
+            "delta_kg": round(delta_kg, 2),
+            "co2_before_kg": round(co2_before_kg, 2),
+            "co2_after_kg": round(co2_after_kg, 2),
+            "trips_affected": trips_affected,
+            "explanation": explanation,
+            "error": error,
+        }
+
+    if not target_subscription and not new_product:
+        return _result(
+            explanation="",
+            error="at least one of target_subscription or new_product is required",
+        )
+
+    subs = load_current_subscriptions()["subscriptions"]
+    target_match = None
+    if target_subscription:
+        target_match, error = _resolve_unique_match(target_subscription, subs, ("product", "provider"))
+        if error:
+            return _result(explanation="", error=error)
+
+    catalog_match = None
+    if new_product:
+        catalog_options = load_mobility_catalog()["options"]
+        catalog_match, error = _resolve_unique_match(new_product, catalog_options, ("product", "provider"))
+        if error:
+            return _result(explanation="", error=error)
+
+    # Pure add: no historical trips can be attributed to a mode the user is only now gaining
+    # (or a second subscription for a mode they already have) — stated honestly rather than guessed.
+    if target_match is None:
+        return _result(
+            explanation=(
+                "Neutral — 0 kg CO2/year. This adds a subscription without removing another, "
+                "so it doesn't change which mode you currently use for any trip."
+            )
+        )
+
+    changed_mode = target_match["mode"]
+    if changed_mode not in _MODE_ACCESS_GATED_MODES:
+        return _result(
+            explanation=(
+                "Neutral — 0 kg CO2/year. This changes price/tier only; it doesn't affect "
+                f"which mode of transport you use (you can still use {changed_mode} with or "
+                "without this subscription)."
+            )
+        )
+
+    still_covered = (catalog_match is not None and catalog_match["mode"] == changed_mode) or any(
+        s["mode"] == changed_mode and s is not target_match for s in subs
+    )
+    if still_covered:
+        return _result(
+            explanation=(
+                "Neutral — 0 kg CO2/year. You keep another subscription covering "
+                f"{changed_mode}, so access to this mode is unaffected."
+            )
+        )
+
+    trips = load_travel_history()["trips"]
+    affected = [
+        t
+        for t in trips
+        if t.get("mode") == changed_mode
+        and (date_from is None or t.get("date", "") >= date_from)
+        and (date_to is None or t.get("date", "") <= date_to)
+    ]
+    co2_before_kg = sum(
+        t["co2_emission_kg"] for t in affected if t.get("co2_emission_kg") is not None
+    )
+    generic_factor = _generic_car_co2_factor_kg_per_km()
+    co2_after_kg = sum(
+        t["distance_km"] * generic_factor for t in affected if t.get("distance_km") is not None
+    )
+    delta_kg = co2_before_kg - co2_after_kg
+    period = "in the period considered" if (date_from or date_to) else "from the past 12 months"
+
+    if delta_kg >= 0:
+        explanation = (
+            f"{delta_kg:.1f} kg CO2/year saved. Losing your only {changed_mode} subscription "
+            f"means your {len(affected)} {changed_mode} trip(s) {period} would "
+            f"shift to driving (at {generic_factor * 1000:.0f} g/km), which is actually lower "
+            f"emissions than those trips currently produce ({co2_before_kg:.1f} kg → "
+            f"{co2_after_kg:.1f} kg)."
+        )
+    else:
+        explanation = (
+            f"{abs(delta_kg):.1f} kg CO2/year more emissions. Losing your only {changed_mode} "
+            f"subscription means your {len(affected)} {changed_mode} trip(s) {period} "
+            f"would shift to driving (at {generic_factor * 1000:.0f} g/km), raising "
+            f"emissions from {co2_before_kg:.1f} kg to {co2_after_kg:.1f} kg/year."
+        )
+
+    return _result(
+        mode_access_changed=True,
+        delta_kg=delta_kg,
+        co2_before_kg=co2_before_kg,
+        co2_after_kg=co2_after_kg,
+        trips_affected=len(affected),
+        explanation=explanation,
+    )
 
 
 def _add_months(d: date, months: int) -> date:

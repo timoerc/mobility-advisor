@@ -19,6 +19,9 @@ export type Alternative = {
   annualCostEur: number;
   savingsVsCurrentEur: number;
   co2Impact?: string;
+  // Signed kg CO2/year, same convention as savingsVsCurrentEur: positive = saves CO2
+  // vs. current, negative = emits more.
+  co2ImpactKg?: number;
   tradeoff: string;
   isRecommended: boolean;
   // null only for the always-present "Keep current setup" row; every other

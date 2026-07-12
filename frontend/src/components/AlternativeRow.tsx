@@ -9,6 +9,9 @@ type AlternativeRowProps = {
 export function AlternativeRow({ alt, selected, onSelect }: AlternativeRowProps) {
   const savingsPositive = alt.savingsVsCurrentEur > 0;
   const savingsNeutral = alt.savingsVsCurrentEur === 0;
+  const co2Kg = alt.co2ImpactKg ?? 0;
+  const co2Positive = co2Kg > 0; // saves CO2 vs. current
+  const co2Negative = co2Kg < 0; // emits more CO2 vs. current
 
   return (
     <button
@@ -55,7 +58,14 @@ export function AlternativeRow({ alt, selected, onSelect }: AlternativeRowProps)
       </div>
       <p className="text-xs text-gray-500 m-0 leading-relaxed">{alt.tradeoff}</p>
       {alt.co2Impact && (
-        <p className="text-xs text-green-600 m-0 font-medium">{alt.co2Impact}</p>
+        <p
+          className={`text-xs font-medium m-0 ${
+            co2Positive ? "text-green-600" : co2Negative ? "text-red-600" : "text-gray-500"
+          }`}
+        >
+          <span className="font-semibold">CO₂ impact: </span>
+          {alt.co2Impact}
+        </p>
       )}
     </button>
   );

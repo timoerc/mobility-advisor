@@ -15,6 +15,7 @@ from google.genai import types
 from .tools import (
     MOCK_TODAY,
     REVIEW_YEAR,
+    compute_co2_impact_kg,
     load_annual_travel_history,
     load_calendar_events,
     load_current_subscriptions,
@@ -168,11 +169,10 @@ added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a Ba
 **Proposed monthly cost:** €Y.YY/mo (list the new stack)
 **Monthly saving:** €Z.ZZ/mo
 
-**CO₂ impact:** Use this exact formula — do NOT invent a number:
-  co2_rail_kg = Σ(trip.distance_km × 32) / 1000    (rail: 32 g/km from catalog)
-  co2_car_kg  = Σ(trip.distance_km × 118) / 1000   (car-share baseline: 118 g/km from catalog)
-  co2_saved_kg = co2_car_kg − co2_rail_kg
-Compute only over trips whose mode is "rail". Write: "By choosing rail over car, you avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
+**CO₂ impact:** Call compute_co2_impact_kg with this change's target_subscription/new_product
+(same names as your Proposed change above) and date_from="{_REVIEW_YEAR}-01-01",
+date_to="{_REVIEW_YEAR}-12-31" (this report is scoped to {_REVIEW_YEAR} only), then state its
+"explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
 
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 
@@ -242,11 +242,9 @@ added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a Ba
 (2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
 **Proposed monthly cost:** €Y.YY/mo (list the new stack)
 **Monthly saving:** €Z.ZZ/mo (vs. Current portfolio cost above)
-**CO₂ impact:** Use this exact formula — do NOT invent a number:
-  co2_rail_kg = Σ(trip.distance_km × 32) / 1000    (rail: 32 g/km from catalog)
-  co2_car_kg  = Σ(trip.distance_km × 118) / 1000   (car-share baseline: 118 g/km from catalog)
-  co2_saved_kg = co2_car_kg − co2_rail_kg
-Compute only over trips whose mode is "rail". Write: "By choosing rail over car, you avoided X kg CO₂ over the past 12 months (rail: 32 g/km vs. car-share: 118 g/km). Total rail distance: Y km." State the Y km sum explicitly so the figure is traceable.
+**CO₂ impact:** Call compute_co2_impact_kg with THIS candidate's own target_subscription/
+new_product (same names as this candidate's Proposed change above — never another candidate's)
+and state its "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
@@ -263,7 +261,7 @@ do not include it — one strong recommendation beats a padded list.
 
 Show real numbers from the data.
 """,
-    tools=[load_user_preferences, load_relevant_mobility_catalog],
+    tools=[load_user_preferences, load_relevant_mobility_catalog, compute_co2_impact_kg],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
@@ -383,7 +381,7 @@ annual_optimizer_agent = LlmAgent(
     instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE.replace(
         "over the past 12 months", f"in {_REVIEW_YEAR}"
     ),
-    tools=[load_user_preferences, load_relevant_mobility_catalog],
+    tools=[load_user_preferences, load_relevant_mobility_catalog, compute_co2_impact_kg],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
