@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SubscriptionCard } from "../components/SubscriptionCard";
+import { Combobox } from "../components/Combobox";
 import { fetchCatalog } from "../api";
 import type { CatalogOption } from "../api";
 import type {
@@ -10,7 +11,6 @@ import type {
 type MobilityStackPageProps = {
   subscriptions: SubscriptionEntry[];
   onChange: (subscriptions: SubscriptionEntry[]) => void;
-  userAge: number | null;
 };
 
 const SECTIONS: { mode: MobilityMode; label: string }[] = [
@@ -41,13 +41,8 @@ const inputClass =
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-xs text-gray-600";
 
-function isEligible(opt: CatalogOption, age: number | null): boolean {
-  const elig = opt.eligibility;
-  if (!elig) return true;
-  if (age === null) return true;
-  if (elig.min_age !== null && age < elig.min_age) return false;
-  if (elig.max_age !== null && age > elig.max_age) return false;
-  return true;
+function productLabel(o: CatalogOption): string {
+  return `${o.product} — €${o.monthly_cost_eur.toFixed(2)}/mo`;
 }
 
 function SubscriptionForm({
@@ -57,7 +52,6 @@ function SubscriptionForm({
   onCancel,
   saveLabel = "Add",
   catalogOptions,
-  userAge,
 }: {
   form: FormState;
   onFormChange: (f: FormState) => void;
@@ -65,14 +59,16 @@ function SubscriptionForm({
   onCancel: () => void;
   saveLabel?: string;
   catalogOptions: CatalogOption[];
-  userAge: number | null;
 }) {
   const set = (patch: Partial<FormState>) =>
     onFormChange({ ...form, ...patch });
 
+  // Every mode has at least one catalog option, so this (and `products` once a
+  // provider is picked) is never empty — declaring what you already hold isn't
+  // gated by today's signup eligibility, so no age filtering here.
   const modeOptions = useMemo(
-    () => catalogOptions.filter((o) => o.mode === form.mode && isEligible(o, userAge)),
-    [catalogOptions, form.mode, userAge],
+    () => catalogOptions.filter((o) => o.mode === form.mode),
+    [catalogOptions, form.mode],
   );
 
   const providers = useMemo(
@@ -94,9 +90,8 @@ function SubscriptionForm({
     }
   };
 
-  const handleProductChange = (product: string) => {
-    const match = modeOptions.find((o) => o.provider === form.provider && o.product === product);
-    set({ product, id: match?.id ?? "" });
+  const handleProductChange = (option: CatalogOption) => {
+    set({ product: option.product, id: option.id });
   };
 
   return (
@@ -104,49 +99,28 @@ function SubscriptionForm({
       <div className="grid grid-cols-2 gap-3">
         <label className={labelClass}>
           <span className={labelTextClass}>Provider</span>
-          {providers.length > 0 ? (
-            <select
-              value={form.provider ?? ""}
-              onChange={(e) => handleProviderChange(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">— select —</option>
-              {providers.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              value={form.provider ?? ""}
-              onChange={(e) => set({ provider: e.target.value })}
-              placeholder="e.g. Deutsche Bahn"
-              className={inputClass}
-            />
-          )}
+          <Combobox
+            items={providers}
+            selectedKey={form.provider || null}
+            onSelect={handleProviderChange}
+            getKey={(p) => p}
+            getLabel={(p) => p}
+            placeholder="Search provider…"
+            className={inputClass}
+          />
         </label>
         <label className={labelClass}>
           <span className={labelTextClass}>Product</span>
-          {form.provider && products.length > 0 ? (
-            <select
-              value={form.product ?? ""}
-              onChange={(e) => handleProductChange(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">— select —</option>
-              {products.map((o) => (
-                <option key={o.id} value={o.product}>{o.product}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              value={form.product ?? ""}
-              onChange={(e) => set({ product: e.target.value })}
-              placeholder="e.g. BahnCard 50"
-              className={inputClass}
-            />
-          )}
+          <Combobox
+            items={products}
+            selectedKey={form.id || null}
+            onSelect={handleProductChange}
+            getKey={(o) => o.id}
+            getLabel={productLabel}
+            placeholder={form.provider ? "Search product…" : "Select a provider first"}
+            disabled={!form.provider}
+            className={inputClass}
+          />
         </label>
       </div>
 
@@ -182,7 +156,7 @@ function SubscriptionForm({
         <button
           type="button"
           onClick={onSave}
-          disabled={!form.provider || !form.product}
+          disabled={!form.provider || !form.product || !form.started || !form.next_renewal_date}
           className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-lg border-0 cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saveLabel}
@@ -202,7 +176,6 @@ function SectionAccordion({
   editingEntry,
   onEditDone,
   catalogOptions,
-  userAge,
 }: {
   mode: MobilityMode;
   label: string;
@@ -213,7 +186,6 @@ function SectionAccordion({
   editingEntry: SubscriptionEntry | null;
   onEditDone: (entryToRestore: SubscriptionEntry | null) => void;
   catalogOptions: CatalogOption[];
-  userAge: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [addingForm, setAddingForm] = useState<FormState | null>(null);
@@ -295,7 +267,6 @@ function SectionAccordion({
               onCancel={handleCancel}
               saveLabel={editingId.current ? "Save" : "Add"}
               catalogOptions={catalogOptions}
-              userAge={userAge}
             />
           ) : (
             <button
@@ -315,7 +286,6 @@ function SectionAccordion({
 export function MobilityStackPage({
   subscriptions,
   onChange,
-  userAge,
 }: MobilityStackPageProps) {
   const [loading, setLoading] = useState(false);
   const [editingEntry, setEditingEntry] = useState<SubscriptionEntry | null>(null);
@@ -328,6 +298,7 @@ export function MobilityStackPage({
 
   useEffect(() => {
     if (subscriptions.length > 0 || fetchedRef.current) return;
+    if (catalogOptions.length === 0) return; // wait until we can resolve ids against the catalog
     fetchedRef.current = true;
     setLoading(true);
     fetch("/api/detected-subscriptions.json")
@@ -335,13 +306,29 @@ export function MobilityStackPage({
         if (!r.ok) throw new Error(r.statusText);
         return r.json();
       })
-      .then((data: SubscriptionEntry[]) => {
-        if (Array.isArray(data)) onChange(data);
+      .then((data: { id: string; started?: string; next_renewal_date?: string }[]) => {
+        const byId = new Map(catalogOptions.map((o) => [o.id, o]));
+        const resolved: SubscriptionEntry[] = data.flatMap((d) => {
+          const match = byId.get(d.id);
+          if (!match) return [];
+          return [
+            {
+              id: match.id,
+              mode: match.mode as MobilityMode,
+              provider: match.provider,
+              product: match.product,
+              started: d.started ?? "",
+              next_renewal_date: d.next_renewal_date ?? "",
+              detected: true,
+            },
+          ];
+        });
+        if (resolved.length) onChange(resolved);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [catalogOptions]);
 
   const add = (entry: SubscriptionEntry) =>
     onChange([...subscriptions, entry]);
@@ -383,7 +370,6 @@ export function MobilityStackPage({
               setEditingEntry(null);
             }}
             catalogOptions={catalogOptions}
-            userAge={userAge}
           />
         ))}
       </div>

@@ -20,11 +20,11 @@ from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.adk.runners import InMemoryRunner, Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types as gtypes
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
-from mobility_advisor.models import CarUsage, Recommendation
+from mobility_advisor.models import CarUsage, CurrentSubscriptions, Recommendation
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
 
@@ -81,13 +81,18 @@ class _Commute(BaseModel):
 
 
 class _Subscription(BaseModel):
+    """The client may only choose a catalog id + dates — every other field (mode,
+    provider, product, pricing, ...) is derived server-side from mobility_catalog.json
+    by Subscription's own validator, never trusted from the client."""
     model_config = {"extra": "ignore"}
     id: str
-    mode: str = ""
-    provider: str = ""
-    product: str = ""
-    next_renewal_date: str = ""
-    started: str = ""
+    # Explicitly nullable: a usage-threshold subscription (e.g. a car-rental loyalty
+    # tier reached by rental volume, not signed up on a date) legitimately has no
+    # start/renewal date, and the frontend round-trips that as JSON null rather than
+    # omitting the key — a plain `str` field rejects an explicit null even with a
+    # default, since Pydantic only applies defaults to *missing* keys.
+    next_renewal_date: str | None = None
+    started: str | None = None
 
 
 class _Priorities(BaseModel):
@@ -155,20 +160,12 @@ def _load_catalog_lookup() -> dict[str, dict]:
 
 
 def _subs_from_payload(payload: ProfilePayload) -> dict:
-    catalog = _load_catalog_lookup()
-    subscriptions = []
-    for s in payload.subscriptions:
-        entry: dict = {
-            "id": s.id,
-            "next_renewal_date": s.next_renewal_date,
-            "started": s.started,
-        }
-        if s.id in catalog:
-            entry.update(catalog[s.id])
-        else:
-            entry.update({"mode": s.mode, "provider": s.provider, "product": s.product})
-        subscriptions.append(entry)
-    return {"subscriptions": subscriptions}
+    return {
+        "subscriptions": [
+            {"id": s.id, "next_renewal_date": s.next_renewal_date, "started": s.started}
+            for s in payload.subscriptions
+        ]
+    }
 
 
 def _persona_from_payload(payload: ProfilePayload) -> dict:
@@ -208,8 +205,12 @@ def _activate_from_scenario(persona_id: str) -> bool:
 @app.post("/api/profile")
 async def save_profile(payload: ProfilePayload):
     """Save a persona's full profile and make it the active data set."""
+    try:
+        subscriptions = CurrentSubscriptions.model_validate(_subs_from_payload(payload)).model_dump()
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid subscriptions: {exc}") from exc
     _atomic_write(_DATA / "persona.json", _persona_from_payload(payload))
-    _atomic_write(_DATA / "current_subscriptions.json", _subs_from_payload(payload))
+    _atomic_write(_DATA / "current_subscriptions.json", subscriptions)
     _atomic_write(_DATA / "car_usage.json", payload.car.model_dump())
     if payload.persona_id not in _KNOWN_PERSONAS:
         # Custom/new profile, not one of the pre-built scenario personas: there is no

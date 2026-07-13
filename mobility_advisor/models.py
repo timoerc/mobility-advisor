@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, model_validator
+
+_CATALOG_PATH = Path(__file__).parent / "static" / "mobility_catalog.json"
+
+
+def _catalog_lookup() -> dict[str, dict]:
+    raw = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
+    return {opt["id"]: opt for opt in raw.get("options", [])}
 
 
 class UserPreferences(BaseModel):
@@ -32,14 +41,22 @@ class Subscription(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _null_dates_to_empty(cls, values: dict) -> dict:
-        # Threshold/status-based benefits (e.g. a car-rental loyalty tier reached by
-        # usage volume, not signed up on a date) legitimately have no start/renewal
-        # date and are stored as null in the mock data.
-        for key in ("next_renewal_date", "started"):
-            if values.get(key) is None:
-                values[key] = ""
-        return values
+    def _resolve_from_catalog(cls, values: dict) -> dict:
+        """current_subscriptions.json may only reference products that exist in
+        mobility_catalog.json. Every catalog-owned field (provider, product, mode,
+        pricing, benefits, ...) is always derived from the catalog by id — never
+        trusted from the caller — so the two files can never drift apart. Only
+        next_renewal_date/started/detected are subscription-specific and pulled
+        from the caller; a null value there (e.g. a usage-threshold loyalty tier
+        with no signup date) is left absent so the field default ("") applies."""
+        catalog_entry = _catalog_lookup().get(values.get("id"))
+        if catalog_entry is None:
+            raise ValueError(f"subscription id {values.get('id')!r} is not in mobility_catalog.json")
+        resolved = dict(catalog_entry)
+        for key in ("next_renewal_date", "started", "detected"):
+            if values.get(key) is not None:
+                resolved[key] = values[key]
+        return resolved
 
 
 class CurrentSubscriptions(BaseModel):

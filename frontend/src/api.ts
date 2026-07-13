@@ -61,6 +61,8 @@ export type CatalogOption = {
   provider: string;
   product: string;
   mode: string;
+  monthly_cost_eur: number;
+  billing_cycle: string;
   eligibility: { min_age: number | null; max_age: number | null } | null;
 };
 
