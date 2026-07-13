@@ -9,6 +9,7 @@ import requests
 from dotenv import load_dotenv
 
 from .mail_processor import _enrich_rail_trips
+from .tools import load_current_subscriptions
 
 load_dotenv()
 
@@ -190,10 +191,7 @@ def _driving_distance_km(origin: str, destination: str) -> tuple[float, float] |
 
 
 def _load_subscriptions() -> list[dict]:
-    subs_path = _DATA / "current_subscriptions.json"
-    if not subs_path.exists():
-        return []
-    return json.loads(subs_path.read_text(encoding="utf-8")).get("subscriptions", [])
+    return load_current_subscriptions()["subscriptions"]
 
 
 def _provider_matches(trip_provider: str, sub_provider: str) -> bool:
@@ -227,9 +225,9 @@ def _enrich_booked_under(trips: list[dict]) -> int:
         matched_id = None
 
         if trip_mode == "rail" and _provider_matches(trip_provider, "Deutsche Bahn"):
-            rail_subs = [s for s in subs if s.get("mode") == "rail"
-                         and _provider_matches(trip_provider, s.get("provider", ""))
-                         and _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date"))]
+            rail_subs = [s for s in subs if s["mode"] == "rail"
+                         and _provider_matches(trip_provider, s["provider"])
+                         and _date_in_range(trip_date, s["started"], s["next_renewal_date"])]
 
             bc100 = next((s for s in rail_subs if s["id"].startswith("db_bc100")), None)
             bahncard = next((s for s in rail_subs if s["id"].startswith("db_bc") and not s["id"].startswith("db_bc100")), None)
@@ -248,22 +246,22 @@ def _enrich_booked_under(trips: list[dict]) -> int:
 
         elif trip_mode == "flight":
             for s in subs:
-                if s.get("mode") != "flight":
+                if s["mode"] != "flight":
                     continue
-                if not _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date")):
+                if not _date_in_range(trip_date, s["started"], s["next_renewal_date"]):
                     continue
-                affiliated = s.get("affiliated_airlines", [])
+                affiliated = s.get("affiliated_airlines") or []  # legitimately None outside flight mode
                 if any(_provider_matches(trip_provider, airline) for airline in affiliated):
                     matched_id = s["id"]
                     break
 
         else:
             for s in subs:
-                if s.get("mode") != trip_mode:
+                if s["mode"] != trip_mode:
                     continue
-                if not _provider_matches(trip_provider, s.get("provider", "")):
+                if not _provider_matches(trip_provider, s["provider"]):
                     continue
-                if not _date_in_range(trip_date, s.get("started"), s.get("next_renewal_date")):
+                if not _date_in_range(trip_date, s["started"], s["next_renewal_date"]):
                     continue
                 matched_id = s["id"]
                 break

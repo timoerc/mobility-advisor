@@ -24,12 +24,11 @@ from pydantic import BaseModel, ValidationError
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
-from mobility_advisor.models import CarUsage, CurrentSubscriptions, Recommendation
+from mobility_advisor.models import CarUsage, CurrentSubscriptions, Recommendation, catalog_lookup
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
-_STATIC = Path(__file__).parent / "mobility_advisor" / "static"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
 _KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena"})
 _SCENARIO_FILES = [
@@ -151,14 +150,6 @@ def _atomic_write(path: Path, data: dict) -> None:
         raise
 
 
-def _load_catalog_lookup() -> dict[str, dict]:
-    catalog_path = _STATIC / "mobility_catalog.json"
-    if not catalog_path.exists():
-        return {}
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    return {opt["id"]: opt for opt in catalog.get("options", [])}
-
-
 def _subs_from_payload(payload: ProfilePayload) -> dict:
     return {
         "subscriptions": [
@@ -233,7 +224,10 @@ async def list_personas():
             continue
         persona = json.loads(pf.read_text())
         sf = folder / "current_subscriptions.json"
-        subscriptions = json.loads(sf.read_text()).get("subscriptions", []) if sf.exists() else []
+        subscriptions = (
+            CurrentSubscriptions.model_validate(json.loads(sf.read_text())).model_dump()["subscriptions"]
+            if sf.exists() else []
+        )
         persona["profileData"]["subscriptions"] = subscriptions
         cf = folder / "car_usage.json"
         persona["profileData"]["car"] = (
@@ -263,7 +257,7 @@ async def activate_persona(req: ActivateRequest):
 @app.get("/api/catalog")
 async def get_catalog():
     """Return the mobility catalog for frontend dropdown population."""
-    catalog = _load_catalog_lookup()
+    catalog = catalog_lookup()
     return {"options": list(catalog.values())}
 
 

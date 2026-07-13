@@ -9,6 +9,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Literal
 
+from pydantic import ValidationError
+
 from .models import (
     CalendarEvents,
     CurrentSubscriptions,
@@ -63,10 +65,20 @@ def load_user_preferences() -> dict:
 
 
 def load_current_subscriptions() -> dict:
-    """Load Maja's currently active mobility subscriptions from the mock data store.
+    """Load the active user's currently held mobility subscriptions from the mock data store.
 
-    Returns a dict with key 'subscriptions', a list of entries each containing:
-    provider (str), product (str), monthly_cost_eur (float), started (str date), notes (str).
+    Returns a dict with key 'subscriptions', a list of entries. Every entry is a full,
+    exact mirror of one mobility_catalog.json product (enforced at validation time —
+    a subscription can only ever reference a real catalog id), plus two
+    subscription-specific fields. Every field below is always present; none are ever
+    missing, and only next_renewal_date/started can be an empty string (never absent).
+
+    id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/
+    flight/bus), monthly_cost_eur (float), billing_cycle (str), minimum_months (int),
+    eligibility (dict: min_age/max_age, either may be null), benefits (dict, shape
+    varies by mode), qualifying_threshold (dict or null, shape varies by mode),
+    affiliated_airlines (list[str] or null, flight mode only), notes (str),
+    next_renewal_date (str, "" if not applicable), started (str, "" if not applicable).
     """
     raw = json.loads((_DATA / "current_subscriptions.json").read_text())
     return CurrentSubscriptions.model_validate(raw).model_dump()
@@ -111,8 +123,8 @@ def load_relevant_mobility_catalog() -> dict:
 
     subs = load_current_subscriptions()["subscriptions"]
     trips = load_travel_history()["trips"]
-    touched_modes = {s["mode"] for s in subs if s.get("mode")} | {
-        t["mode"] for t in trips if t.get("mode")
+    touched_modes = {s["mode"] for s in subs} | {
+        t["mode"] for t in trips if t.get("mode")  # trips stay a messier data source, unchanged
     }
 
     persona = json.loads((_DATA / "persona.json").read_text())
@@ -123,8 +135,8 @@ def load_relevant_mobility_catalog() -> dict:
             return False
         if age is None:
             return True
-        elig = option.get("eligibility") or {}
-        min_age, max_age = elig.get("min_age"), elig.get("max_age")
+        elig = option["eligibility"]  # always present as a dict of {min_age, max_age}
+        min_age, max_age = elig["min_age"], elig["max_age"]
         if min_age is not None and age < min_age:
             return False
         if max_age is not None and age > max_age:
@@ -644,7 +656,7 @@ def apply_subscription_change(
         }
         try:
             Subscription.model_validate(new_sub)
-        except Exception as exc:
+        except (ValueError, ValidationError) as exc:
             return _error(f"new subscription entry failed validation: {exc}", before_count)
 
     if (
@@ -667,7 +679,7 @@ def apply_subscription_change(
 
     try:
         CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
-    except Exception as exc:
+    except (ValueError, ValidationError) as exc:
         return _error(f"resulting subscriptions failed validation: {exc}", before_count)
 
     backup_path = _backup_subscriptions_file()

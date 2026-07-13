@@ -9,7 +9,7 @@ from pydantic import BaseModel, model_validator
 _CATALOG_PATH = Path(__file__).parent / "static" / "mobility_catalog.json"
 
 
-def _catalog_lookup() -> dict[str, dict]:
+def catalog_lookup() -> dict[str, dict]:
     raw = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
     return {opt["id"]: opt for opt in raw.get("options", [])}
 
@@ -22,22 +22,118 @@ class UserPreferences(BaseModel):
     notes: str
 
 
-class Subscription(BaseModel):
-    model_config = {"extra": "allow"}
-    id: str
+class Eligibility(BaseModel):
+    model_config = {"extra": "forbid"}
+    min_age: int | None = None
+    max_age: int | None = None
+
+
+class RailBenefits(BaseModel):
+    model_config = {"extra": "forbid"}
+    discount_sparpreis_pct: float | None
+    discount_flexpreis_pct: float | None
+    unlimited_long_distance: bool
+    unlimited_regional: bool
+
+
+class CarShareBenefits(BaseModel):
+    model_config = {"extra": "forbid"}
+    monthly_credit_eur: float
+    discount_km_pct: float
+    discount_time_pct: float
+    unlock_fee_eur_per_trip: float
+    protection_plus_eur_per_trip: float
+
+
+class CarRentalBenefits(BaseModel):
+    model_config = {"extra": "forbid"}
+    bonus_points_pct: float
+    point_value_eur: float
+
+
+class FlightBenefits(BaseModel):
+    model_config = {"extra": "forbid"}
+    bonus_miles_pct: float
+    mile_value_eur: float
+
+
+class BusBenefits(BaseModel):
+    model_config = {"extra": "forbid"}  # flixbus_payperuse's benefits is genuinely {}
+
+
+class CarRentalThreshold(BaseModel):
+    model_config = {"extra": "forbid"}
+    rentals_per_year: int
+    rental_days_per_year: int | None
+
+
+class FlightThreshold(BaseModel):
+    model_config = {"extra": "forbid"}
+    status_miles_per_year: int
+    flights_per_year: int | None
+
+
+_BENEFITS_BY_MODE = {
+    "rail": RailBenefits,
+    "car_share": CarShareBenefits,
+    "car_rental": CarRentalBenefits,
+    "flight": FlightBenefits,
+    "bus": BusBenefits,
+}
+_THRESHOLD_BY_MODE = {"car_rental": CarRentalThreshold, "flight": FlightThreshold}
+
+
+def _typed_benefits(mode: str, raw: dict) -> BaseModel:
+    cls = _BENEFITS_BY_MODE.get(mode)
+    if cls is None:
+        raise ValueError(f"no benefits schema registered for mode {mode!r}")
+    return cls.model_validate(raw)
+
+
+def _typed_qualifying_threshold(mode: str, raw: dict | None) -> BaseModel | None:
+    if raw is None:
+        return None
+    cls = _THRESHOLD_BY_MODE.get(mode)
+    if cls is None:
+        raise ValueError(f"mode {mode!r} does not support a qualifying_threshold")
+    return cls.model_validate(raw)
+
+
+class _CatalogFields(BaseModel):
+    """Fields shared verbatim between a market catalog option and a subscription
+    entry mirroring one — kept in one place so the two schemas can't drift."""
+    model_config = {"extra": "forbid"}
     provider: str
     product: str
-    mode: str
-    monthly_cost_eur: float = 0.0
+    mode: Literal["rail", "car_share", "car_rental", "flight", "bus"]
+    monthly_cost_eur: float
     billing_cycle: str = "monthly"
     minimum_months: int = 0
-    eligibility: dict | None = None
-    benefits: dict | None = None
-    qualifying_threshold: dict | None = None
+    eligibility: Eligibility
+    benefits: RailBenefits | CarShareBenefits | CarRentalBenefits | FlightBenefits | BusBenefits
+    qualifying_threshold: CarRentalThreshold | FlightThreshold | None = None
     affiliated_airlines: list[str] | None = None
+    notes: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _dispatch_by_mode(cls, values: dict) -> dict:
+        mode = values.get("mode")
+        if isinstance(values.get("benefits"), dict):
+            values["benefits"] = _typed_benefits(mode, values["benefits"])
+        if isinstance(values.get("qualifying_threshold"), dict):
+            values["qualifying_threshold"] = _typed_qualifying_threshold(mode, values["qualifying_threshold"])
+        return values
+
+
+class CatalogOption(_CatalogFields):
+    id: str
+
+
+class Subscription(_CatalogFields):
+    id: str
     next_renewal_date: str = ""
     started: str = ""
-    notes: str = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -49,7 +145,7 @@ class Subscription(BaseModel):
         next_renewal_date/started/detected are subscription-specific and pulled
         from the caller; a null value there (e.g. a usage-threshold loyalty tier
         with no signup date) is left absent so the field default ("") applies."""
-        catalog_entry = _catalog_lookup().get(values.get("id"))
+        catalog_entry = catalog_lookup().get(values.get("id"))
         if catalog_entry is None:
             raise ValueError(f"subscription id {values.get('id')!r} is not in mobility_catalog.json")
         resolved = dict(catalog_entry)
@@ -61,22 +157,6 @@ class Subscription(BaseModel):
 
 class CurrentSubscriptions(BaseModel):
     subscriptions: list[Subscription]
-
-
-class CatalogOption(BaseModel):
-    model_config = {"extra": "allow"}
-    id: str
-    provider: str
-    product: str
-    mode: str
-    monthly_cost_eur: float
-    billing_cycle: str = "monthly"
-    minimum_months: int = 0
-    eligibility: dict | None = None
-    benefits: dict | None = None
-    qualifying_threshold: dict | None = None
-    affiliated_airlines: list[str] | None = None
-    notes: str = ""
 
 
 class MobilityCatalog(BaseModel):
