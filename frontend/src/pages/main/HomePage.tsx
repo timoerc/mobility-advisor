@@ -2,6 +2,7 @@ type HomePageProps = {
   onChat: () => void;
   onAnalysis: () => void;
   onAnnualReport: () => void;
+  onHistory: () => void;
 };
 
 type ActionCardProps = {
@@ -40,7 +41,7 @@ function ActionCard({ icon, title, subtitle, onClick, disabled }: ActionCardProp
   );
 }
 
-export function HomePage({ onChat, onAnalysis, onAnnualReport }: HomePageProps) {
+export function HomePage({ onChat, onAnalysis, onAnnualReport, onHistory }: HomePageProps) {
   return (
     <div className="flex flex-col gap-6 py-4">
       <div>
@@ -85,6 +86,18 @@ export function HomePage({ onChat, onAnalysis, onAnnualReport }: HomePageProps) 
           title="Generate Annual Report"
           subtitle="Get your full year-in-review: spend, CO₂, and subscription ROI."
           onClick={onAnnualReport}
+        />
+
+        <ActionCard
+          icon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          }
+          title="History"
+          subtitle="Review past analyses and the decisions you made."
+          onClick={onHistory}
         />
       </div>
     </div>

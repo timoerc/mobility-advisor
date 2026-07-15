@@ -1,6 +1,6 @@
 # Scenario Testing Framework
 
-Each subdirectory is a self-contained set of fixture files that replaces `data/` for a specific demo or evaluation run. Scenarios are fully isolated — every directory contains all six required JSON files (`persona.json`, `current_subscriptions.json`, `travel_history_raw.json`, `mail_raw.json`, `calendar_events_live.json`, `car_usage.json`) so that no shared state exists between scenarios. The mobility catalog is not part of this set — it's a single shared file at `mobility_advisor/static/mobility_catalog.json`, identical for every persona.
+Each subdirectory is a self-contained set of fixture files that replaces `data/` for a specific demo or evaluation run. Scenarios are fully isolated — every directory contains all seven required JSON files (`persona.json`, `current_subscriptions.json`, `travel_history_raw.json`, `mail_raw.json`, `calendar_events_live.json`, `car_usage.json`, `analysis_history.json`) so that no shared state exists between scenarios. The mobility catalog is not part of this set — it's a single shared file at `mobility_advisor/static/mobility_catalog.json`, identical for every persona.
 
 Use `activate_scenario.sh` to switch scenarios. The script creates a timestamped backup of `data/` before overwriting it, so the previous state is always recoverable.
 

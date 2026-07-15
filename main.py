@@ -1,9 +1,11 @@
 """Mobility Advisor API — thin FastAPI wrapper over the ADK agent pipeline."""
+import asyncio
 import json
 import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -24,9 +26,18 @@ from pydantic import BaseModel, ValidationError
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
-from mobility_advisor.models import CarUsage, CurrentSubscriptions, Recommendation, catalog_lookup
+from mobility_advisor.models import (
+    AnalysisHistory,
+    AnalysisHistoryEntry,
+    AnalysisRunResult,
+    CarUsage,
+    CurrentSubscriptions,
+    Recommendation,
+    catalog_lookup,
+)
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
+from mobility_advisor.tools import MOCK_TODAY
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
@@ -38,6 +49,7 @@ _SCENARIO_FILES = [
     "mail_raw.json",
     "calendar_events_live.json",
     "car_usage.json",
+    "analysis_history.json",
 ]
 _MODEL_ID = "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw"
 
@@ -134,6 +146,12 @@ class ExecuteRequest(BaseModel):
     action_consequence: str = ""
 
 
+class ResolveAnalysisRequest(BaseModel):
+    outcome: Literal["kept_current", "executed"]
+    alternative_id: str
+    message: str = ""
+
+
 # ── Profile helpers ───────────────────────────────────────────────────────────
 
 
@@ -180,7 +198,7 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
 
 
 def _activate_from_scenario(persona_id: str) -> bool:
-    """Copy all 6 pipeline JSON files from scenarios/{persona_id}/ into data/."""
+    """Copy all pipeline JSON files from scenarios/{persona_id}/ into data/."""
     scenario_dir = _SCENARIOS / persona_id
     if not scenario_dir.is_dir():
         return False
@@ -189,6 +207,28 @@ def _activate_from_scenario(persona_id: str) -> bool:
         if src.exists():
             shutil.copy2(src, _DATA / fname)
     return True
+
+
+# ── Analysis history helpers ──────────────────────────────────────────────────
+# analysis_history.json lives only in data/ (never scenarios/) — it's part of the
+# single active, mutable dataset and gets reset on every persona activation just
+# like current_subscriptions.json, via _SCENARIO_FILES above.
+
+_history_lock = asyncio.Lock()
+
+
+def _load_history() -> AnalysisHistory:
+    path = _DATA / "analysis_history.json"
+    if not path.exists():
+        return AnalysisHistory(entries=[])
+    try:
+        return AnalysisHistory.model_validate(json.loads(path.read_text()))
+    except (json.JSONDecodeError, ValidationError):
+        return AnalysisHistory(entries=[])
+
+
+def _save_history(hist: AnalysisHistory) -> None:
+    _atomic_write(_DATA / "analysis_history.json", hist.model_dump())
 
 
 # ── Profile endpoints ─────────────────────────────────────────────────────────
@@ -209,6 +249,7 @@ async def save_profile(payload: ProfilePayload):
         # happened to be active last instead of silently analysing it as if it were theirs.
         _atomic_write(_DATA / "travel_history_raw.json", {"trips": []})
         _atomic_write(_DATA / "calendar_events_live.json", {"events": []})
+        _atomic_write(_DATA / "analysis_history.json", {"entries": []})
     return {"ok": True}
 
 
@@ -252,6 +293,22 @@ async def activate_persona(req: ActivateRequest):
             detail=f"No scenario directory for persona '{req.persona_id}'.",
         )
     return {"ok": True}
+
+
+@app.get("/api/current-subscriptions")
+async def get_current_subscriptions():
+    """Return the active, mutable subscriptions list (mobility_advisor/data/current_subscriptions.json).
+
+    Unlike /api/personas — which reads each persona's frozen scenario template and is used to
+    seed onboarding/edit state fresh on persona switch — this reflects whatever apply_subscription_change
+    has actually applied so far in the current session, so the frontend can re-sync after an execution
+    instead of continuing to show its last-loaded (now stale) subscriptions list.
+    """
+    path = _DATA / "current_subscriptions.json"
+    if not path.exists():
+        return {"subscriptions": []}
+    data = CurrentSubscriptions.model_validate(json.loads(path.read_text()))
+    return {"subscriptions": data.model_dump()["subscriptions"]}
 
 
 @app.get("/api/catalog")
@@ -377,15 +434,27 @@ _CO2_METHODOLOGY_ASSUMPTION = (
 
 
 def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
-    """Deterministically guarantee the status-quo 'Keep current setup' row (action is None)
-    never shows a nonzero cost/CO2 delta, regardless of what the LLM extraction step
-    produced for it — it is the baseline by definition, so any nonzero figure there would be
-    a contradiction, not a real number. Also records the CO2 methodology as an assumption so
-    it's visible to the user rather than silently applied.
+    """Deterministically guarantee cost/CO2 deltas can never contradict the cost figures they're
+    derived from, regardless of what the LLM extraction step produced.
+
+    savingsVsCurrentEur is defined as "vs. the current setup" — i.e. vs. the status-quo
+    'Keep current setup' row's own annualCostEur — so it is recomputed here as exactly that
+    difference for every alternative, never trusted as an independently-extracted number. This
+    also covers alternatives whose action reconfirms/renews something unchanged (annualCostEur
+    equal to the keep row's), which must show a €0 delta by the same logic, not a stray figure
+    like a "vs. cancelling" saving that answers a different question.
+
+    Separately, the keep row itself (action is None) is the baseline by definition, so it also
+    always shows Neutral/0 CO2 regardless of extraction. Also records the CO2 methodology as an
+    assumption so it's visible to the user rather than silently applied.
     """
+    keep_rows = [alt for alt in rec.alternatives if alt.action is None]
+    if keep_rows:
+        keep_cost = keep_rows[0].annualCostEur
+        for alt in rec.alternatives:
+            alt.savingsVsCurrentEur = keep_cost - alt.annualCostEur
     for alt in rec.alternatives:
         if alt.action is None:
-            alt.savingsVsCurrentEur = 0.0
             alt.co2Impact = "Neutral"
             alt.co2ImpactKg = 0.0
     if _CO2_METHODOLOGY_ASSUMPTION not in rec.assumptions:
@@ -453,7 +522,7 @@ async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATT
 
 # ── Analyse endpoint ──────────────────────────────────────────────────────────
 
-@app.post("/api/analyze", response_model=Recommendation)
+@app.post("/api/analyze", response_model=AnalysisRunResult)
 async def analyze(req: AnalyzeRequest):
     runner = InMemoryRunner(agent=optimization_pipeline, app_name="mobility_advisor_analyze")
 
@@ -505,11 +574,26 @@ async def analyze(req: AnalyzeRequest):
         ) from exc
 
     try:
-        return await _extract_recommendation_json(report_text)
+        rec = await _extract_recommendation_json(report_text)
     except Exception as exc:
         raise HTTPException(
             status_code=500, detail=f"JSON extraction failed: {exc}"
         ) from exc
+
+    entry_id = f"hist_{uuid4().hex[:10]}"
+    try:
+        async with _history_lock:
+            hist = _load_history()
+            hist.entries.append(
+                AnalysisHistoryEntry(id=entry_id, date=MOCK_TODAY.isoformat(), recommendation=rec)
+            )
+            _save_history(hist)
+    except Exception as exc:
+        # Losing the history-log write is far cheaper than failing the whole call
+        # after an already-completed pipeline run — log and continue regardless.
+        print(f"Warning: failed to append analysis history entry: {exc}")
+
+    return AnalysisRunResult(id=entry_id, recommendation=rec)
 
 
 # ── Annual report endpoint ────────────────────────────────────────────────────
@@ -627,6 +711,34 @@ async def execute(req: ExecuteRequest):
 
     success = bool(tool_result and tool_result.get("status") == "applied")
     return {"success": success, "message": reply}
+
+
+# ── Analysis history endpoints ────────────────────────────────────────────────
+
+@app.get("/api/analysis-history", response_model=list[AnalysisHistoryEntry])
+async def get_analysis_history():
+    """Return this persona's analysis history, newest first. Entries are stored
+    oldest-first on disk (mocked ones authored in narrative order, live ones
+    appended as they occur), and reversed here for display."""
+    hist = _load_history()
+    return list(reversed(hist.entries))
+
+
+@app.post("/api/analysis-history/{entry_id}/resolve")
+async def resolve_analysis(entry_id: str, req: ResolveAnalysisRequest):
+    """Record what the user decided about a past analysis: kept their current
+    setup, or executed one of the proposed alternatives."""
+    async with _history_lock:
+        hist = _load_history()
+        entry = next((e for e in hist.entries if e.id == entry_id), None)
+        if entry is None:
+            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+        entry.outcome = req.outcome
+        entry.resolvedAlternativeId = req.alternative_id
+        entry.resolvedMessage = req.message
+        entry.resolvedAt = MOCK_TODAY.isoformat()
+        _save_history(hist)
+    return {"ok": True}
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────

@@ -43,3 +43,20 @@ export type ExecutionResult = {
   success: boolean;
   message: string;
 };
+
+export type AnalysisRunResult = {
+  id: string;
+  recommendation: Recommendation;
+};
+
+export type AnalysisOutcome = "pending" | "kept_current" | "executed";
+
+export type AnalysisHistoryEntry = {
+  id: string;
+  date: string;
+  recommendation: Recommendation;
+  outcome: AnalysisOutcome;
+  resolvedAlternativeId: string | null;
+  resolvedMessage: string | null;
+  resolvedAt: string | null;
+};

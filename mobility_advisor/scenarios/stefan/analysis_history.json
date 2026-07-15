@@ -1,0 +1,167 @@
+{
+  "entries": [
+    {
+      "id": "hist_stefan_0001",
+      "date": "2026-01-15",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Wanted to see how spring Frankfurt travel shaped up before cancelling.",
+      "resolvedAt": "2026-01-15",
+      "recommendation": {
+        "verdict": "BahnCard 50 usage is borderline this year",
+        "confidence": "medium",
+        "summaryText": "Your discounted DB spend so far this year sits right at the edge of BahnCard 50's break-even point — usage has been thin and irregular.",
+        "metrics": [
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if cancelled" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "Only a handful of DB trips are recorded so far this year, well under the pace needed to clear the €488 breakeven threshold",
+          "No relocation or other major schedule change is on the calendar yet",
+          "Deutschland-Ticket and MILES Silber Pass continue to cover regional and car-share needs separately"
+        ],
+        "assumptions": [
+          "Assumes the travel pattern stays similar for the rest of the year",
+          "No account taken of unquantified car-ownership costs (fuel/insurance/maintenance) — not present in the available data"
+        ],
+        "alternatives": [
+          {
+            "id": "cancel_bc50",
+            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 244,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
+            "isRecommended": true,
+            "action": {
+              "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Cancel before the 15 January 2027 renewal to avoid another year of card fees.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Keeps the discount in case business travel picks up later in the year.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_stefan_0002",
+      "date": "2026-04-20",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Chose to wait and revisit after the Hamburg decision in August.",
+      "resolvedAt": "2026-04-20",
+      "recommendation": {
+        "verdict": "Your mobility setup is in limbo pending the Hamburg decision",
+        "confidence": "low",
+        "summaryText": "A possible relocation to Hamburg could reset your whole commute pattern — it's too early to act on BahnCard 50, Deutschland-Ticket, or MILES until that's resolved.",
+        "metrics": [
+          { "value": 1, "unit": "decision", "direction": "neutral", "label": "Pending: Hamburg move (by 15 Aug 2026)" },
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Recommended change right now" }
+        ],
+        "reasoning": [
+          "An apartment-viewing event for Hamburg appeared on the calendar this quarter, with a job-offer decision due by 15 August 2026",
+          "If the move goes ahead, the car commute disappears and rail/Deutschland-Ticket demand resets entirely — the current break-even analysis wouldn't apply",
+          "BahnCard 50 usage remains borderline in the meantime, but acting now risks the wrong call either way"
+        ],
+        "assumptions": [
+          "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
+          "Assumes the 15 August 2026 decision date holds"
+        ],
+        "alternatives": [
+          {
+            "id": "hold_pending_relocation",
+            "name": "Hold all subscriptions pending the Hamburg decision",
+            "annualCostEur": 1120,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "No savings captured now, but avoids a change the relocation decision could immediately reverse.",
+            "isRecommended": true,
+            "action": {
+              "title": "Postpone any subscription changes until after the 15 August 2026 relocation decision",
+              "description": "Hold BahnCard 50, Deutschland-Ticket, and MILES Silber Pass as-is until the Hamburg job offer is resolved.",
+              "consequence": "No subscriptions change now; this analysis should be revisited once the relocation decision is made."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 1120,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Equivalent outcome to holding pending the decision.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_stefan_0003",
+      "date": "2026-06-05",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "recommendation": {
+        "verdict": "BahnCard 50's future depends on the Hamburg decision",
+        "confidence": "low",
+        "summaryText": "If the Hamburg move doesn't happen, BahnCard 50 is no longer worth its cost given your irregular usage this year — cancelling would save the full €244. If the move goes ahead, the whole subscription stack needs re-evaluating after relocation.",
+        "metrics": [
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if no relocation" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "BahnCard 50 savings this year (~€239) are almost exactly equal to its €244 cost — a marginal net loss either way",
+          "Rail and MILES usage remain irregular, clustering in a few months with long gaps between",
+          "If the 15 August 2026 relocation decision goes ahead, commute patterns reset entirely and this analysis no longer applies",
+          "This recommendation assumes no relocation — cancelling BahnCard 50 is the safer default until the decision is made"
+        ],
+        "assumptions": [
+          "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
+          "If relocation is confirmed, revisit Deutschland-Ticket and MILES Silber Pass as well, not just BahnCard 50"
+        ],
+        "alternatives": [
+          {
+            "id": "cancel_bc50",
+            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 244,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Assumes no relocation; if the Hamburg move goes ahead, revisit the whole stack instead.",
+            "isRecommended": true,
+            "action": {
+              "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Cancel before the 15 January 2027 renewal — savings this year barely covered the card's cost.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Holds everything pending the 15 August 2026 relocation decision.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    }
+  ]
+}

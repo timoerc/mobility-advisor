@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { StatusMessage } from "../../components/StatusMessage";
 import { runAnalysis } from "../../api";
-import type { Recommendation } from "../../types/recommendation";
+import type { AnalysisRunResult } from "../../types/recommendation";
 
 const STATUS_MESSAGES = [
   "Loading your travel history…",
@@ -15,7 +15,7 @@ const STATUS_MESSAGES = [
 
 type AnalysisPageProps = {
   sessionId: string;
-  onComplete: (recommendation: Recommendation) => void;
+  onComplete: (result: AnalysisRunResult) => void;
 };
 
 export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
@@ -27,10 +27,10 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
     setError(null);
     setDone(false);
     runAnalysis(sessionId)
-      .then((rec) => {
+      .then((result) => {
         setDone(true);
         // Brief pause so the progress bar visually completes before navigating
-        window.setTimeout(() => onComplete(rec), 600);
+        window.setTimeout(() => onComplete(result), 600);
       })
       .catch((err) => {
         console.error("Analysis failed:", err);

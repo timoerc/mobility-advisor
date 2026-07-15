@@ -3,9 +3,8 @@ import csv
 import json
 import os
 import re
-import shutil
 import tempfile
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Literal
 
@@ -542,15 +541,6 @@ def _compute_next_renewal_date(as_of: date, billing_cycle: str) -> str:
     raise ValueError(f"unknown billing_cycle: {billing_cycle!r}")
 
 
-def _backup_subscriptions_file() -> Path:
-    """Copy current_subscriptions.json to a timestamped backup alongside it; return the backup path."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    src = _DATA / "current_subscriptions.json"
-    backup_path = _DATA / f"current_subscriptions.json.bak_{timestamp}"
-    shutil.copy2(src, backup_path)
-    return backup_path
-
-
 def _atomic_write_json(path: Path, data: dict) -> None:
     """Write data as JSON to path atomically (temp file + os.replace); never leaves a partial file."""
     fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
@@ -594,10 +584,9 @@ def apply_subscription_change(
 
     Returns a dict with: status ("applied" or "error"), action, removed (list of removed
     subscription dicts, empty if none), added (list of added subscription dicts, empty if
-    none), before_count (int), after_count (int), backup_path (str path to the pre-write
-    backup taken just before the write, or None on error), file
-    ("current_subscriptions.json"), warnings (list[str], e.g. noting a same-product
-    replace), and error (str message, or None on success).
+    none), before_count (int), after_count (int), file ("current_subscriptions.json"),
+    warnings (list[str], e.g. noting a same-product replace), and error (str message, or
+    None on success).
     """
     as_of = as_of or MOCK_TODAY
     warnings: list[str] = []
@@ -610,7 +599,6 @@ def apply_subscription_change(
             "added": [],
             "before_count": before_count,
             "after_count": before_count,
-            "backup_path": None,
             "file": "current_subscriptions.json",
             "warnings": warnings,
             "error": message,
@@ -682,7 +670,6 @@ def apply_subscription_change(
     except (ValueError, ValidationError) as exc:
         return _error(f"resulting subscriptions failed validation: {exc}", before_count)
 
-    backup_path = _backup_subscriptions_file()
     # Write raw dicts (not model_dump) to preserve all fields beyond the pipeline schema.
     _atomic_write_json(_DATA / "current_subscriptions.json", {"subscriptions": new_subs_list})
 
@@ -693,7 +680,6 @@ def apply_subscription_change(
         "added": added,
         "before_count": before_count,
         "after_count": after_count,
-        "backup_path": str(backup_path),
         "file": "current_subscriptions.json",
         "warnings": warnings,
         "error": None,

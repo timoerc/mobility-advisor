@@ -4,8 +4,8 @@ import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
-import { saveProfile, activatePersona, fetchPersonas } from "./api";
-import type { Alternative, ExecutionResult, Recommendation } from "./types/recommendation";
+import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis } from "./api";
+import type { Alternative, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -30,6 +30,7 @@ import { ConfirmationPage } from "./pages/main/ConfirmationPage";
 import { ChatPage } from "./pages/main/ChatPage";
 import { HomePage } from "./pages/main/HomePage";
 import { AnnualReportPage } from "./pages/main/AnnualReportPage";
+import { HistoryPage } from "./pages/main/HistoryPage";
 import type { OnboardingPreferences } from "./types";
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -97,7 +98,7 @@ function downloadJson(filename: string, data: unknown) {
 // ── App ──────────────────────────────────────────────────────────────────────
 
 type Phase = "login" | "onboarding" | "editing" | "main";
-type MainView = "home" | "analysis" | "dashboard" | "approval" | "executing" | "confirmation" | "chat" | "annual";
+type MainView = "home" | "analysis" | "dashboard" | "approval" | "executing" | "confirmation" | "chat" | "annual" | "history";
 type EditConfig = { steps: number[]; currentIndex: number; label: string };
 
 function getOrCreateSessionId(): string {
@@ -119,6 +120,7 @@ export default function App() {
   const [mainView, setMainView] = useState<MainView>("home");
   const [activeArchetypeId, setActiveArchetypeId] = useState<ArchetypeId | null>(null);
   const [liveRecommendation, setLiveRecommendation] = useState<Recommendation | null>(null);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [selectedAlternative, setSelectedAlternative] = useState<Alternative | null>(null);
   const [confirmationVariant, setConfirmationVariant] = useState<"executed" | "no-change">("executed");
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
@@ -140,6 +142,24 @@ export default function App() {
       return rest;
     });
   };
+
+  // Re-sync preferences.subscriptions with the backend's active mutable data after an
+  // execution_agent change (dashboard/approval/execute flow, or a chat-driven action) — without
+  // this, "Edit my mobility modes" keeps showing whatever was loaded at persona-select time,
+  // including subscriptions that have since been cancelled/replaced.
+  const refreshCurrentSubscriptions = useCallback(() => {
+    fetchCurrentSubscriptions()
+      .then((subscriptions) => {
+        setPreferences((c) => {
+          const next = { ...c, subscriptions };
+          if (activePersonaId && activePersonaId !== "new") {
+            savePersistedPersona(activePersonaId, { onboardingComplete: true, profileData: next });
+          }
+          return next;
+        });
+      })
+      .catch(console.warn);
+  }, [activePersonaId]);
 
   // ── Fetch personas from backend on mount ───────────────────────────────────
 
@@ -280,23 +300,44 @@ export default function App() {
 
   // ── Main app navigation ───────────────────────────────────────────────────
 
-  const handleAnalysisComplete = useCallback((rec: Recommendation) => {
-    setLiveRecommendation(rec);
+  const handleAnalysisComplete = useCallback((result: AnalysisRunResult) => {
+    setLiveRecommendation(result.recommendation);
+    setCurrentAnalysisId(result.id);
     setMainView((current) => (current === "analysis" ? "dashboard" : current));
   }, []);
   const handleExecutionComplete = useCallback((result: ExecutionResult) => {
     setExecutionResult(result);
     setMainView((current) => (current === "executing" ? "confirmation" : current));
-  }, []);
+    if (result.success) {
+      refreshCurrentSubscriptions();
+      invalidateAnnualReport(activePersonaId);
+    }
+  }, [refreshCurrentSubscriptions, activePersonaId]);
+  // handleExecutionComplete only fires from ExecutingPage's success branch, so
+  // selectedAlternative always has a non-null action at this point.
+  const handleExecutionResolved = useCallback(
+    (result: ExecutionResult) => {
+      if (currentAnalysisId && selectedAlternative) {
+        resolveAnalysis(currentAnalysisId, {
+          outcome: "executed",
+          alternativeId: selectedAlternative.id,
+          message: result.message,
+        }).catch(console.warn);
+      }
+      handleExecutionComplete(result);
+    },
+    [currentAnalysisId, selectedAlternative, handleExecutionComplete]
+  );
   const handleProceedToApproval = (alt: Alternative) => {
     setSelectedAlternative(alt);
     if (alt.action === null) {
       // "Keep current setup" — nothing to execute, skip Approval/Executing entirely.
+      const message = "You chose to keep your current mobility setup. No changes have been made.";
+      if (currentAnalysisId) {
+        resolveAnalysis(currentAnalysisId, { outcome: "kept_current", alternativeId: alt.id, message }).catch(console.warn);
+      }
       setConfirmationVariant("no-change");
-      setExecutionResult({
-        success: true,
-        message: "You chose to keep your current mobility setup. No changes have been made.",
-      });
+      setExecutionResult({ success: true, message });
       setMainView("confirmation");
       return;
     }
@@ -312,11 +353,15 @@ export default function App() {
   const handleBackFromConfirmation = () => setMainView("home");
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
+    setCurrentAnalysisId(null);
     setSelectedAlternative(null);
     setMainView("analysis");
   };
   const handleAnnualReport = () => {
     setMainView("annual");
+  };
+  const handleViewHistory = () => {
+    setMainView("history");
   };
 
   // ── Deep-link editing (clean single-section edit pages) ──────────────────
@@ -526,7 +571,7 @@ export default function App() {
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
-      onBack={mainView === "chat" || mainView === "annual" || mainView === "analysis" ? () => setMainView("home") : undefined}
+      onBack={mainView === "chat" || mainView === "annual" || mainView === "analysis" || mainView === "history" ? () => setMainView("home") : undefined}
       onLogoClick={() => setMainView("home")}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => startEditing([7], "Edit preferences")}
@@ -541,6 +586,7 @@ export default function App() {
           onChat={() => setMainView("chat")}
           onAnalysis={handleRunAnalysis}
           onAnnualReport={handleAnnualReport}
+          onHistory={handleViewHistory}
         />
       )}
 
@@ -568,7 +614,7 @@ export default function App() {
         <ExecutingPage
           sessionId={sessionId}
           action={selectedAlternative.action}
-          onComplete={handleExecutionComplete}
+          onComplete={handleExecutionResolved}
           onCancel={handleCancelChange}
         />
       )}
@@ -585,7 +631,10 @@ export default function App() {
         <ChatPage
           sessionId={sessionId}
           onRunAnalysis={handleRunAnalysis}
-          onDataChanged={() => invalidateAnnualReport(activePersonaId)}
+          onDataChanged={() => {
+            refreshCurrentSubscriptions();
+            invalidateAnnualReport(activePersonaId);
+          }}
         />
       )}
 
@@ -598,6 +647,8 @@ export default function App() {
           }
         />
       )}
+
+      {mainView === "history" && <HistoryPage />}
     </AppShell>
   );
 }

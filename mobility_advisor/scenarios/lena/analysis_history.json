@@ -1,0 +1,167 @@
+{
+  "entries": [
+    {
+      "id": "hist_lena_0001",
+      "date": "2026-01-25",
+      "outcome": "executed",
+      "resolvedAlternativeId": "renew_bc50_young",
+      "resolvedMessage": "Renewal confirmed — BahnCard 50 Young stays active.",
+      "resolvedAt": "2026-01-25",
+      "recommendation": {
+        "verdict": "BahnCard 50 Young easily pays for itself",
+        "confidence": "high",
+        "summaryText": "Your discounted DB spend so far comfortably clears BahnCard 50 Young's break-even threshold — the card is worth keeping as-is.",
+        "metrics": [
+          { "value": 40, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "Discounted DB spend in the first weeks of the year already implies a full-price equivalent above the €244 breakeven threshold",
+          "Your Frankfurt-area long-distance trips are frequent enough that BahnCard 50 Young more than covers its own cost",
+          "Deutschland-Ticket continues to cover all local and regional travel separately"
+        ],
+        "assumptions": [
+          "Assumes travel frequency observed in January continues",
+          "CO2 impact is neutral — renewing doesn't change which products or transport modes you use"
+        ],
+        "alternatives": [
+          {
+            "id": "renew_bc50_young",
+            "name": "Confirm renewal of BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "No change to your setup — simply reaffirms the card is worth keeping.",
+            "isRecommended": true,
+            "action": {
+              "title": "Confirm renewal of BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "description": "Reconfirm your BahnCard 50 Young ahead of its 15 January 2027 renewal — usage comfortably justifies the cost.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Equivalent to confirming renewal — no action needed either way.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_lena_0002",
+      "date": "2026-03-30",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Didn't want to act on a partial picture — will check again once the data is cleaner.",
+      "resolvedAt": "2026-03-30",
+      "recommendation": {
+        "verdict": "A few trip records this quarter couldn't be classified",
+        "confidence": "medium",
+        "summaryText": "Most of your DB spend this quarter still justifies BahnCard 50 Young, but a couple of trip records had missing or unrecognized data and were excluded from the calculation.",
+        "metrics": [
+          { "value": 2, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)" },
+          { "value": 25, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)" }
+        ],
+        "reasoning": [
+          "2 trip records this quarter had missing cost or an unrecognized mode and were excluded rather than guessed at",
+          "Based on the remaining clean trips, discounted DB spend still exceeds the break-even threshold for BahnCard 50 Young",
+          "Deutschland-Ticket continues to cover local and regional travel"
+        ],
+        "assumptions": [
+          "If the excluded trips included further long-distance rail spend, the case for keeping the card is even stronger",
+          "Recommend a data quality fix before relying on this analysis for a final decision"
+        ],
+        "alternatives": [
+          {
+            "id": "keep_bc50_young",
+            "name": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Based on a partial data subset — worth re-checking once records are cleaned up.",
+            "isRecommended": true,
+            "action": {
+              "title": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "description": "No change needed — clean-subset usage still justifies the card, though 2 trip records were unreadable this run.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Didn't want to act on a partial picture.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_lena_0003",
+      "date": "2026-06-08",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "recommendation": {
+        "verdict": "BahnCard 50 Young still looks justified, but some records are unreadable",
+        "confidence": "medium",
+        "summaryText": "Based on the clean subset of trips this run, BahnCard 50 Young clears its break-even threshold — but several records were excluded due to data issues, so this should be treated as a partial picture.",
+        "metrics": [
+          { "value": 6, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)" },
+          { "value": 30, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)" }
+        ],
+        "reasoning": [
+          "6 of the trip records logged this run had missing cost figures or unrecognized transport modes and were excluded rather than guessed at",
+          "Analysis is based on the remaining 14 clean trips only",
+          "Clean-subset discounted DB spend still exceeds the break-even threshold for BahnCard 50 Young",
+          "Next renewal is 15 January 2027 — worth revisiting once the data quality issue is fixed"
+        ],
+        "assumptions": [
+          "If the excluded trips included further rail spend, the case for keeping the card is even stronger, not weaker",
+          "Data quality fix recommended before the January 2027 renewal decision"
+        ],
+        "alternatives": [
+          {
+            "id": "keep_bc50_young",
+            "name": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Based on 14 of 20 trip records this run — the rest were excluded due to data quality issues.",
+            "isRecommended": true,
+            "action": {
+              "title": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "description": "No change needed — clean-subset usage still justifies the card, though 6 trip records were unreadable this run.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 122,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Equivalent outcome to reaffirming the card given the partial data.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    }
+  ]
+}

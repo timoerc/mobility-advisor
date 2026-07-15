@@ -279,3 +279,25 @@ class Recommendation(BaseModel):
                 "expected at least one 'Keep current setup' alternative (action: null)"
             )
         return self
+
+
+class AnalysisRunResult(BaseModel):
+    """/api/analyze's response wrapper — carries the history entry id created for
+    this run alongside the Recommendation itself, so the frontend can later report
+    back what the user decided (see AnalysisHistoryEntry)."""
+    id: str
+    recommendation: Recommendation
+
+
+class AnalysisHistoryEntry(BaseModel):
+    id: str
+    date: str
+    recommendation: Recommendation
+    outcome: Literal["pending", "kept_current", "executed"] = "pending"
+    resolvedAlternativeId: str | None = None
+    resolvedMessage: str | None = None
+    resolvedAt: str | None = None
+
+
+class AnalysisHistory(BaseModel):
+    entries: list[AnalysisHistoryEntry]

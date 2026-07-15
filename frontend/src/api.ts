@@ -1,5 +1,11 @@
 import type { OnboardingPreferences } from "./types";
-import type { ExecutionResult, ProposedAction, Recommendation } from "./types/recommendation";
+import type {
+  AnalysisHistoryEntry,
+  AnalysisOutcome,
+  AnalysisRunResult,
+  ExecutionResult,
+  ProposedAction,
+} from "./types/recommendation";
 import type { Persona } from "./personas";
 
 const BASE = "/api";
@@ -25,8 +31,8 @@ export async function activatePersona(personaId: string): Promise<void> {
   await post<{ ok: boolean }>("/activate", { persona_id: personaId });
 }
 
-export async function runAnalysis(sessionId: string): Promise<Recommendation> {
-  return post<Recommendation>("/analyze", { session_id: sessionId });
+export async function runAnalysis(sessionId: string): Promise<AnalysisRunResult> {
+  return post<AnalysisRunResult>("/analyze", { session_id: sessionId });
 }
 
 export async function executeAction(sessionId: string, action: ProposedAction): Promise<ExecutionResult> {
@@ -36,6 +42,23 @@ export async function executeAction(sessionId: string, action: ProposedAction): 
     action_description: action.description,
     action_consequence: action.consequence,
   });
+}
+
+export async function resolveAnalysis(
+  entryId: string,
+  body: { outcome: Extract<AnalysisOutcome, "kept_current" | "executed">; alternativeId: string; message: string }
+): Promise<void> {
+  await post<{ ok: boolean }>(`/analysis-history/${entryId}/resolve`, {
+    outcome: body.outcome,
+    alternative_id: body.alternativeId,
+    message: body.message,
+  });
+}
+
+export async function fetchAnalysisHistory(): Promise<AnalysisHistoryEntry[]> {
+  const res = await fetch(`${BASE}/analysis-history`);
+  if (!res.ok) throw new Error(`GET /api/analysis-history ${res.status}`);
+  return res.json() as Promise<AnalysisHistoryEntry[]>;
 }
 
 export async function sendMessage(sessionId: string, text: string): Promise<{ text: string; actionTaken: boolean }> {
@@ -71,6 +94,13 @@ export async function fetchCatalog(): Promise<CatalogOption[]> {
   if (!res.ok) throw new Error(`GET /api/catalog ${res.status}`);
   const data = await res.json() as { options: CatalogOption[] };
   return data.options;
+}
+
+export async function fetchCurrentSubscriptions(): Promise<OnboardingPreferences["subscriptions"]> {
+  const res = await fetch(`${BASE}/current-subscriptions`);
+  if (!res.ok) throw new Error(`GET /api/current-subscriptions ${res.status}`);
+  const data = await res.json() as { subscriptions: OnboardingPreferences["subscriptions"] };
+  return data.subscriptions;
 }
 
 export async function fetchPersonas(): Promise<Persona[]> {
