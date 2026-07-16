@@ -568,6 +568,7 @@ export default function App() {
 
   return (
     <AppShell
+      wide={mainView === "home"}
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
@@ -583,6 +584,7 @@ export default function App() {
     >
       {mainView === "home" && (
         <HomePage
+          personaName={activePersona.profileData.personal.full_name || activePersona.name}
           onChat={() => setMainView("chat")}
           onAnalysis={handleRunAnalysis}
           onAnnualReport={handleAnnualReport}

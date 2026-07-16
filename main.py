@@ -33,6 +33,7 @@ from mobility_advisor.models import (
     CarUsage,
     CurrentSubscriptions,
     Recommendation,
+    TravelHistory,
     catalog_lookup,
 )
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
@@ -309,6 +310,23 @@ async def get_current_subscriptions():
         return {"subscriptions": []}
     data = CurrentSubscriptions.model_validate(json.loads(path.read_text()))
     return {"subscriptions": data.model_dump()["subscriptions"]}
+
+
+@app.get("/api/travel-history")
+async def get_travel_history():
+    """Return the active persona's raw multi-modal travel history plus the frozen reference date.
+
+    Read-only; mirrors the shape of load_travel_history() (mobility_advisor/tools.py) but is served
+    unaggregated so the dashboard can filter trips by time range and compute CO2/spend/distance/mode
+    breakdowns client-side without a refetch on every range switch. The reference_date is MOCK_TODAY
+    (the persona's frozen "today"), which the client must use as the range anchor instead of the real
+    clock, since the mock trips are all dated relative to it.
+    """
+    path = _DATA / "travel_history_raw.json"
+    if not path.exists():
+        return {"trips": [], "reference_date": MOCK_TODAY.isoformat()}
+    data = TravelHistory.model_validate(json.loads(path.read_text()))
+    return {"trips": data.model_dump()["trips"], "reference_date": MOCK_TODAY.isoformat()}
 
 
 @app.get("/api/catalog")

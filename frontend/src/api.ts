@@ -96,6 +96,31 @@ export async function fetchCatalog(): Promise<CatalogOption[]> {
   return data.options;
 }
 
+export type TripRecord = {
+  date: string;
+  mode: string;
+  origin: string;
+  destination: string;
+  provider: string;
+  cost_eur: number | null;
+  distance_km: number | null;
+  co2_emission_kg: number | null;
+};
+
+export type TravelHistory = {
+  trips: TripRecord[];
+  // Frozen "today" (MOCK_TODAY) the trips are dated against — the client anchors time-range
+  // filtering to this, not the real clock.
+  referenceDate: string;
+};
+
+export async function fetchTravelHistory(): Promise<TravelHistory> {
+  const res = await fetch(`${BASE}/travel-history`);
+  if (!res.ok) throw new Error(`GET /api/travel-history ${res.status}`);
+  const data = await res.json() as { trips: TripRecord[]; reference_date: string };
+  return { trips: data.trips, referenceDate: data.reference_date };
+}
+
 export async function fetchCurrentSubscriptions(): Promise<OnboardingPreferences["subscriptions"]> {
   const res = await fetch(`${BASE}/current-subscriptions`);
   if (!res.ok) throw new Error(`GET /api/current-subscriptions ${res.status}`);

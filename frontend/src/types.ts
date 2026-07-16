@@ -42,6 +42,10 @@ export type SubscriptionEntry = {
   product: string;
   next_renewal_date: string;
   started: string;
+  // Present on subscriptions returned by /api/current-subscriptions (resolved server-side from the
+  // catalog); absent on the leaner entries built during onboarding. Used by the home dashboard's
+  // monthly-cost summary.
+  monthly_cost_eur?: number;
 };
 
 export type Integrations = {

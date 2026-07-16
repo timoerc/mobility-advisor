@@ -13,6 +13,9 @@ type AppShellProps = {
   onEditConnections: () => void;
   onRedoOnboarding: () => void;
   onSwitchProfile: () => void;
+  // When true, the header + content use a wider max-width so a multi-column view (the home
+  // dashboard) can spread horizontally. Other views keep the narrow single-column reading width.
+  wide?: boolean;
   children: React.ReactNode;
 };
 
@@ -29,12 +32,14 @@ export function AppShell({
   onEditConnections,
   onRedoOnboarding,
   onSwitchProfile,
+  wide = false,
   children,
 }: AppShellProps) {
+  const widthClass = wide ? "max-w-6xl" : "max-w-2xl";
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className={`${widthClass} mx-auto px-4 py-3 flex items-center gap-3`}>
           {onBack ? (
             <>
               <button
@@ -90,7 +95,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <main className={`flex-1 ${widthClass} mx-auto w-full px-4 py-6`}>
         {children}
       </main>
     </div>

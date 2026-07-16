@@ -1,17 +1,10 @@
 import type { SubscriptionEntry } from "../types";
+import { MODE_LABELS } from "../labels";
 
 type SubscriptionCardProps = {
   entry: SubscriptionEntry;
   onRemove: (id: string) => void;
   onEdit?: (entry: SubscriptionEntry) => void;
-};
-
-const MODE_LABELS: Record<SubscriptionEntry["mode"], string> = {
-  rail: "Rail",
-  car_share: "Carsharing",
-  car_rental: "Car Rental",
-  flight: "Flight",
-  bus: "Bus",
 };
 
 export function SubscriptionCard({ entry, onRemove, onEdit }: SubscriptionCardProps) {
