@@ -1,10 +1,9 @@
 import type { TripRecord } from "./api";
 
 /** Time-range presets for the home dashboard, in display order. */
-export type RangeKey = "7d" | "1m" | "6m" | "1y" | "ytd" | "5y" | "all";
+export type RangeKey = "1m" | "6m" | "1y" | "ytd" | "5y" | "all";
 
 export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
-  { key: "7d", label: "7D" },
   { key: "1m", label: "1M" },
   { key: "6m", label: "6M" },
   { key: "1y", label: "1Y" },
@@ -20,9 +19,6 @@ export const DEFAULT_RANGE: RangeKey = "1y";
 function rangeStart(range: RangeKey, ref: Date): Date | null {
   const d = new Date(ref);
   switch (range) {
-    case "7d":
-      d.setDate(d.getDate() - 7);
-      return d;
     case "1m":
       d.setMonth(d.getMonth() - 1);
       return d;

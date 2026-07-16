@@ -5,7 +5,7 @@ import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
 import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis } from "./api";
-import type { Alternative, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
+import type { Alternative, AnalysisHistoryEntry, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -126,6 +126,10 @@ export default function App() {
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [sessionId] = useState(getOrCreateSessionId);
   const [returnToMain, setReturnToMain] = useState<MainView | null>(null);
+  // Where the decision screen (DashboardPage) was opened from, when it's a review of an existing
+  // history entry rather than a fresh analysis. Drives an optional "back" affordance so a review can
+  // be abandoned without a forced decision. `null` = fresh-analysis flow (no back — you must decide).
+  const [decisionReturnView, setDecisionReturnView] = useState<MainView | null>(null);
   const [editConfig, setEditConfig] = useState<EditConfig | null>(null);
   // Keyed by persona id so each persona keeps its own generated report — switching
   // personas and back doesn't lose or regenerate one that's still valid.
@@ -350,12 +354,28 @@ export default function App() {
   const handleCancelChange = () => setMainView("dashboard");
   // Both the executed and no-change confirmations return Home — treat "confirmed" as
   // the end of this review, whether or not anything was actually applied.
-  const handleBackFromConfirmation = () => setMainView("home");
+  const handleBackFromConfirmation = () => {
+    setDecisionReturnView(null);
+    setMainView("home");
+  };
   const handleRunAnalysis = () => {
     setLiveRecommendation(null);
     setCurrentAnalysisId(null);
     setSelectedAlternative(null);
+    setDecisionReturnView(null);
     setMainView("analysis");
+  };
+  // Re-open an existing analysis (from History or the Home nudge) in the same decision screen the
+  // fresh flow uses. Seeding liveRecommendation + currentAnalysisId (= the entry id resolveAnalysis
+  // expects) lets the whole Approval → Executing → resolveAnalysis chain run unchanged. Only the
+  // newest, non-executed entry is ever passed here (enforced by the callers).
+  const handleReviewEntry = (entry: AnalysisHistoryEntry, from: MainView) => {
+    setLiveRecommendation(entry.recommendation);
+    setCurrentAnalysisId(entry.id);
+    setSelectedAlternative(null);
+    setConfirmationVariant("executed");
+    setDecisionReturnView(from);
+    setMainView("dashboard");
   };
   const handleAnnualReport = () => {
     setMainView("annual");
@@ -572,7 +592,17 @@ export default function App() {
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}
-      onBack={mainView === "chat" || mainView === "annual" || mainView === "analysis" || mainView === "history" ? () => setMainView("home") : undefined}
+      onBack={
+        mainView === "dashboard" && decisionReturnView
+          ? () => {
+              const target = decisionReturnView;
+              setDecisionReturnView(null);
+              setMainView(target);
+            }
+          : mainView === "chat" || mainView === "annual" || mainView === "analysis" || mainView === "history"
+            ? () => setMainView("home")
+            : undefined
+      }
       onLogoClick={() => setMainView("home")}
       onChatOpen={() => setMainView("chat")}
       onEditPreferences={() => startEditing([7], "Edit preferences")}
@@ -589,6 +619,7 @@ export default function App() {
           onAnalysis={handleRunAnalysis}
           onAnnualReport={handleAnnualReport}
           onHistory={handleViewHistory}
+          onReviewRecommendation={(entry) => handleReviewEntry(entry, "home")}
         />
       )}
 
@@ -650,7 +681,9 @@ export default function App() {
         />
       )}
 
-      {mainView === "history" && <HistoryPage />}
+      {mainView === "history" && (
+        <HistoryPage onReviewEntry={(entry) => handleReviewEntry(entry, "history")} />
+      )}
     </AppShell>
   );
 }

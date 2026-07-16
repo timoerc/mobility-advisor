@@ -25,6 +25,7 @@ type HomePageProps = {
   onAnalysis: () => void;
   onAnnualReport: () => void;
   onHistory: () => void;
+  onReviewRecommendation: (entry: AnalysisHistoryEntry) => void;
 };
 
 // ── formatting helpers ────────────────────────────────────────────────────────
@@ -108,7 +109,7 @@ function ActionCard({ icon, title, subtitle, onClick }: ActionCardProps) {
 const USAGE_COLOR = "#374151"; // gray-700
 const CO2_COLOR = "#ef4444"; // red-500
 
-export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHistory }: HomePageProps) {
+export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHistory, onReviewRecommendation }: HomePageProps) {
   const [travel, setTravel] = useState<TravelHistory | null>(null);
   const [travelFailed, setTravelFailed] = useState(false);
   const [subscriptions, setSubscriptions] = useState<SubscriptionEntry[] | null>(null);
@@ -149,9 +150,10 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const maxUsage = usageSorted[0]?.trips ?? 0;
   const maxCo2 = co2Sorted[0]?.co2Kg ?? 0;
 
-  // General (non-range) derivations.
-  const pending = history?.find((h) => h.outcome === "pending");
-  const pendingSavings = pending?.recommendation.alternatives.find((a) => a.isRecommended)?.savingsVsCurrentEur ?? 0;
+  // General (non-range) derivations. Only the newest analysis is "live" — nudge on it iff it's still
+  // undecided (pending), so a stale older pending never resurfaces here.
+  const openRec = history?.[0]?.outcome === "pending" ? history[0] : null;
+  const pendingSavings = openRec?.recommendation.alternatives.find((a) => a.isRecommended)?.savingsVsCurrentEur ?? 0;
 
   const totalMonthly = (subscriptions ?? []).reduce((sum, s) => sum + (s.monthly_cost_eur ?? 0), 0);
   const renewalAnchor = travel?.referenceDate ? new Date(travel.referenceDate) : new Date();
@@ -354,8 +356,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
         <div className="text-sm text-gray-400 py-8 text-center">Loading your dashboard…</div>
       ) : (
         <>
-          {/* Open-recommendation nudge */}
-          {pending && (
+          {/* Open-recommendation nudge — opens the decision screen for the newest, undecided analysis. */}
+          {openRec && (
             <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-2xl p-4">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 m-0">
@@ -363,11 +365,11 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                     ? `Save up to €${fmtInt(pendingSavings)}/yr`
                     : "You have an open recommendation"}
                 </p>
-                <p className="text-xs text-gray-500 m-0 mt-0.5 truncate">{pending.recommendation.verdict}</p>
+                <p className="text-xs text-gray-500 m-0 mt-0.5 truncate">{openRec.recommendation.verdict}</p>
               </div>
               <button
                 type="button"
-                onClick={onHistory}
+                onClick={() => onReviewRecommendation(openRec)}
                 className="bg-brand-red text-white rounded-full px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer flex-shrink-0"
               >
                 Review
