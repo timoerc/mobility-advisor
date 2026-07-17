@@ -4,7 +4,9 @@ from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
 from .tools import (
     compute_travel_stats,
     load_calendar_events,
+    load_car_usage,
     load_current_subscriptions,
+    load_life_events,
     load_mobility_catalog,
     load_travel_history,
     load_user_preferences,
@@ -28,6 +30,11 @@ RULES:
 
 1. Answer only from tool results. Never use outside knowledge of prices, discount rates,
    or CO₂ factors — always call a loader or compute_travel_stats and quote its numbers.
+   For private car ownership/usage questions (e.g. "do I own a car", "how many km do I
+   drive"), call load_car_usage — false/null fields mean "no private car", a real answer,
+   not a missing-data gap. For life-event questions (e.g. "any relocation/job-change
+   signals", "what's changed recently"), call load_life_events — an empty list means no
+   signal detected, also a real answer.
 
 2. For ANY question requiring a count, sum, average, or date-range filter over trips
    (e.g. "how many times did I use X", "how much did I spend on Y", "trips in March"),
@@ -61,5 +68,7 @@ Keep answers short and direct — a sentence or two, with the concrete number(s)
         load_mobility_catalog,
         load_user_preferences,
         load_calendar_events,
+        load_car_usage,
+        load_life_events,
     ],
 )
