@@ -1,14 +1,14 @@
 from google.adk.agents import LlmAgent
 from google.genai import types
 
-from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
+from .sub_agents import _TODAY, build_model
 from .tools import apply_subscription_change, load_mobility_catalog
 
 execution_agent = LlmAgent(
     name="execution_agent",
     model=build_model(),
     description=(
-        f"Applies an explicitly-requested change to {_USER_FIRST_NAME}'s active "
+        "Applies an explicitly-requested change to the user's active "
         "subscriptions (add, remove, or replace) and reports back the exact result. "
         "Never decides whether a change is a good idea — that is the optimizer's job."
     ),

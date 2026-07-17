@@ -1,6 +1,6 @@
 from google.adk.agents import LlmAgent
 
-from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
+from .sub_agents import _TODAY, build_model
 from .tools import (
     compute_travel_stats,
     load_calendar_events,
@@ -16,7 +16,7 @@ qa_agent = LlmAgent(
     name="qa_agent",
     model=build_model(),
     description=(
-        f"Answers factual lookup questions about {_USER_FIRST_NAME}'s mobility data — "
+        "Answers factual lookup questions about the user's mobility data — "
         "counts, spend, distances, renewal dates, usage — without running a full portfolio review."
     ),
     instruction=f"""\

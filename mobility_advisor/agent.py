@@ -6,7 +6,7 @@ from .execution_agent import execution_agent
 from .pipeline import annual_report_pipeline, optimization_pipeline
 from .qa_agent import qa_agent
 from .reject_agent import reject_agent
-from .sub_agents import _TODAY, _USER_FIRST_NAME, _USER_NAME, build_model
+from .sub_agents import _TODAY, build_model
 
 # TODO (Tier 2): add persistent user state, RAG over contracts catalog, calendar-driven forecasting, constraint capture
 COORDINATOR_INSTRUCTION = f"""\

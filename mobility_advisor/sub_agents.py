@@ -9,6 +9,7 @@ os.environ.setdefault("OPENAI_API_KEY", os.environ.get("KICONNECT_API_KEY", ""))
 os.environ.setdefault("OPENAI_API_BASE", "https://chat.kiconnect.nrw/api/v1")
 
 from google.adk.agents import LlmAgent
+from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.lite_llm import LiteLlm
 from google.genai import types
 
@@ -69,16 +70,52 @@ def build_content_config(max_output_tokens: int) -> types.GenerateContentConfig:
 _TODAY = MOCK_TODAY.isoformat()
 _REVIEW_YEAR = REVIEW_YEAR
 _DATA_DIR = Path(__file__).parent / "data"
-_prefs = json.loads((_DATA_DIR / "persona.json").read_text())
-_USER_NAME = _prefs.get("name", "the user")
-_USER_FIRST_NAME = _USER_NAME.split()[0]
-_HOME_CITY = _prefs.get("profileData", {}).get("location", {}).get("home_city", "")
 _RAIL_CO2_G_PER_KM, _CARSHARE_CO2_G_PER_KM = _rail_and_carshare_co2_factors()
+
+
+def _load_home_city() -> str:
+    """Read the active persona's home city fresh from disk on every call.
+
+    Unlike a module-level constant (evaluated once, at process start), this must be
+    read per-invocation: switching personas via POST /api/activate swaps data/persona.json
+    on disk without restarting the backend process, so any value cached at import time goes
+    stale the moment a second persona is activated in the same running server — exactly the
+    scenario the three demo personas (maja/stefan/lena) exist to exercise live.
+    """
+    prefs = json.loads((_DATA_DIR / "persona.json").read_text())
+    return prefs.get("profileData", {}).get("location", {}).get("home_city", "")
+
+
+def _forecaster_instruction(_ctx: ReadonlyContext) -> str:
+    home_city = _load_home_city()
+    return f"""\
+You are the Forecaster agent for your Mobility Advisor.
+Today's date: {_TODAY}.
+
+Your job: summarize forward mobility demand for the next 3–6 months from today.
+The user's current home base is {home_city}.
+
+Step 1 — call load_forecaster_context(). This returns calendar events (key 'calendar_events') and life-event signals (key 'life_events') together in one call. Do this before writing anything.
+
+Step 2 — produce a brief forward-demand summary (3–5 bullet points):
+- Expected dominant modes (rail, local transit, car-share, etc.)
+- Approximate long-distance trip volume
+- Life-event signals from load_forecaster_context()'s life_events field: if any events are returned, state each one's
+  category and summary plus its concrete portfolio implication (e.g. a relocation signal away
+  from {home_city} means the current commute-based subscription mix may no longer fit once it
+  takes effect); if the events list is empty, state plainly "No life-event signals detected."
+- Any notable gaps or uncertainties
+
+Be factual and brief. Do not recommend actions — that is the Optimizer's job.
+
+Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
+"""
+
 
 analyst_agent = LlmAgent(
     name="analyst",
     model=_MODEL,
-    description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
+    description="Analyzes the user's travel history and current subscriptions to identify portfolio inefficiencies.",
     instruction=f"""\
 You are the Analyst agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -110,29 +147,8 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 forecaster_agent = LlmAgent(
     name="forecaster",
     model=_MODEL,
-    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
-    instruction=f"""\
-You are the Forecaster agent for your Mobility Advisor.
-Today's date: {_TODAY}.
-
-Your job: summarize forward mobility demand for the next 3–6 months from today.
-The user's current home base is {_HOME_CITY}.
-
-Step 1 — call load_forecaster_context(). This returns calendar events (key 'calendar_events') and life-event signals (key 'life_events') together in one call. Do this before writing anything.
-
-Step 2 — produce a brief forward-demand summary (3–5 bullet points):
-- Expected dominant modes (rail, local transit, car-share, etc.)
-- Approximate long-distance trip volume
-- Life-event signals from load_forecaster_context()'s life_events field: if any events are returned, state each one's
-  category and summary plus its concrete portfolio implication (e.g. a relocation signal away
-  from {_HOME_CITY} means the current commute-based subscription mix may no longer fit once it
-  takes effect); if the events list is empty, state plainly "No life-event signals detected."
-- Any notable gaps or uncertainties
-
-Be factual and brief. Do not recommend actions — that is the Optimizer's job.
-
-Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
-""",
+    description="Forecasts the user's forward mobility demand for the next 3–6 months based on their calendar.",
+    instruction=_forecaster_instruction,
     tools=[load_forecaster_context],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
@@ -328,7 +344,7 @@ Show real numbers from the data.
 communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
-    description=f"Formats the optimizer's recommendation (one or, when warranted, up to two candidate actions) into a clear, scannable message for {_USER_FIRST_NAME}.",
+    description="Formats the optimizer's recommendation (one or, when warranted, up to two candidate actions) into a clear, scannable message for the user.",
     instruction=f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -449,7 +465,7 @@ annual_optimizer_agent = LlmAgent(
 annual_communicator_agent = LlmAgent(
     name="annual_communicator",
     model=_MODEL,
-    description=f"Formats a full annual mobility review for {_USER_FIRST_NAME} from the optimizer's findings.",
+    description="Formats a full annual mobility review for the user from the optimizer's findings.",
     instruction=f"""\
 You are the Annual Report agent for your Mobility Advisor.
 Today's date: {_TODAY}.
