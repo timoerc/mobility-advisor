@@ -145,10 +145,17 @@ class ExecuteRequest(BaseModel):
     action_title: str
     action_description: str
     action_consequence: str = ""
+    # The analysis this execution resolves, and which alternative was chosen. When present,
+    # /api/execute records the executed outcome + revert snapshot on the newest history entry in the
+    # same request that applies the change — so recording can't be lost to a failed second call.
+    analysis_id: str | None = None
+    alternative_id: str | None = None
 
 
 class ResolveAnalysisRequest(BaseModel):
-    outcome: Literal["kept_current", "executed"]
+    # Only "kept current setup" is recorded here now — an executed change is recorded server-side by
+    # /api/execute in the same request that applies it, so it can't be lost to a failed second call.
+    outcome: Literal["kept_current"]
     alternative_id: str
     message: str = ""
 
@@ -686,6 +693,16 @@ async def execute(req: ExecuteRequest):
     runner = InMemoryRunner(agent=execution_agent, app_name="mobility_advisor_execute")
     sid = f"execute_{uuid4().hex[:12]}"
 
+    # Snapshot the subscription stack BEFORE the agent mutates it, so a successful change can later be
+    # reverted by restoring this exact state (the executed action is free text and not reliably
+    # invertible on its own). Persisted server-side on the history entry below, in this same request.
+    prev_path = _DATA / "current_subscriptions.json"
+    previous_subscriptions = (
+        CurrentSubscriptions.model_validate(json.loads(prev_path.read_text())).model_dump()
+        if prev_path.exists()
+        else None
+    )
+
     await runner.session_service.create_session(
         app_name="mobility_advisor_execute",
         user_id="user",
@@ -728,6 +745,24 @@ async def execute(req: ExecuteRequest):
         raise HTTPException(status_code=500, detail="Execution agent produced no response")
 
     success = bool(tool_result and tool_result.get("status") == "applied")
+
+    # Record the executed outcome + revert snapshot on the newest history entry in THIS request, so a
+    # successful mutation and its record land together server-side. There is no second round-trip that
+    # could fail and leave an applied-but-unrecorded change with no way to revert.
+    if success and req.analysis_id:
+        async with _history_lock:
+            hist = _load_history()
+            newest = hist.entries[-1] if hist.entries else None
+            if newest and newest.id == req.analysis_id and newest.outcome != "executed":
+                newest.outcome = "executed"
+                newest.resolvedAlternativeId = req.alternative_id
+                newest.resolvedMessage = reply
+                newest.resolvedAt = MOCK_TODAY.isoformat()
+                newest.revertSnapshot = previous_subscriptions
+                _save_history(hist)
+            else:
+                print(f"Warning: applied change but could not record it against analysis {req.analysis_id}")
+
     return {"success": success, "message": reply}
 
 
@@ -744,19 +779,63 @@ async def get_analysis_history():
 
 @app.post("/api/analysis-history/{entry_id}/resolve")
 async def resolve_analysis(entry_id: str, req: ResolveAnalysisRequest):
-    """Record what the user decided about a past analysis: kept their current
-    setup, or executed one of the proposed alternatives."""
+    """Record that the user kept their current setup for the newest analysis.
+
+    Executed changes are recorded by /api/execute itself; this endpoint only handles the
+    kept-current decision, which changes nothing on disk.
+
+    Only the newest, not-yet-executed entry can be resolved — older analyses are a read-only ledger,
+    and an already-executed one must be reverted before it can be decided again.
+    """
     async with _history_lock:
         hist = _load_history()
-        entry = next((e for e in hist.entries if e.id == entry_id), None)
-        if entry is None:
+        if not hist.entries:
             raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
-        entry.outcome = req.outcome
-        entry.resolvedAlternativeId = req.alternative_id
-        entry.resolvedMessage = req.message
-        entry.resolvedAt = MOCK_TODAY.isoformat()
+        newest = hist.entries[-1]
+        if newest.id != entry_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Only the newest analysis can be resolved; older analyses are read-only.",
+            )
+        if newest.outcome == "executed":
+            raise HTTPException(
+                status_code=409,
+                detail="This analysis was already executed; revert it before deciding again.",
+            )
+        newest.outcome = req.outcome
+        newest.resolvedAlternativeId = req.alternative_id
+        newest.resolvedMessage = req.message
+        newest.resolvedAt = MOCK_TODAY.isoformat()
+        # A kept-current decision changed nothing, so there is nothing to undo.
+        newest.revertSnapshot = None
         _save_history(hist)
     return {"ok": True}
+
+
+@app.post("/api/analysis-history/{entry_id}/revert")
+async def revert_analysis(entry_id: str):
+    """Undo an executed change on the newest analysis: restore the subscription stack captured just
+    before the change and reset the entry to 'kept_current' (net effect: no change) so it can be
+    decided again. Only the newest, executed entry that still has a stored snapshot can be reverted.
+    """
+    async with _history_lock:
+        hist = _load_history()
+        if not hist.entries:
+            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+        newest = hist.entries[-1]
+        if newest.id != entry_id:
+            raise HTTPException(status_code=409, detail="Only the newest analysis can be reverted.")
+        if newest.outcome != "executed" or newest.revertSnapshot is None:
+            raise HTTPException(status_code=409, detail="This analysis has no executed change to revert.")
+        restored = CurrentSubscriptions.model_validate(newest.revertSnapshot)
+        _atomic_write(_DATA / "current_subscriptions.json", restored.model_dump())
+        newest.outcome = "kept_current"
+        newest.resolvedAlternativeId = None
+        newest.resolvedMessage = "Reverted — your previous mobility setup has been restored."
+        newest.resolvedAt = MOCK_TODAY.isoformat()
+        newest.revertSnapshot = None
+        _save_history(hist)
+    return {"success": True, "message": "Reverted to your previous mobility setup."}
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────

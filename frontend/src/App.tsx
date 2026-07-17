@@ -4,7 +4,7 @@ import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
-import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis } from "./api";
+import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis, revertAnalysis } from "./api";
 import type { Alternative, AnalysisHistoryEntry, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
 import {
   classifyArchetype,
@@ -317,20 +317,23 @@ export default function App() {
       invalidateAnnualReport(activePersonaId);
     }
   }, [refreshCurrentSubscriptions, activePersonaId]);
-  // handleExecutionComplete only fires from ExecutingPage's success branch, so
-  // selectedAlternative always has a non-null action at this point.
-  const handleExecutionResolved = useCallback(
-    (result: ExecutionResult) => {
-      if (currentAnalysisId && selectedAlternative) {
-        resolveAnalysis(currentAnalysisId, {
-          outcome: "executed",
-          alternativeId: selectedAlternative.id,
-          message: result.message,
-        }).catch(console.warn);
+  // Undo the executed change on the newest analysis (restores the pre-change subscriptions server-side)
+  // and re-sync the dependent views. Returns whether the revert succeeded so History can refetch.
+  const handleRevertEntry = useCallback(
+    async (entry: AnalysisHistoryEntry): Promise<boolean> => {
+      try {
+        const res = await revertAnalysis(entry.id);
+        if (res.success) {
+          refreshCurrentSubscriptions();
+          invalidateAnnualReport(activePersonaId);
+        }
+        return res.success;
+      } catch (e) {
+        console.warn(e);
+        return false;
       }
-      handleExecutionComplete(result);
     },
-    [currentAnalysisId, selectedAlternative, handleExecutionComplete]
+    [refreshCurrentSubscriptions, activePersonaId]
   );
   const handleProceedToApproval = (alt: Alternative) => {
     setSelectedAlternative(alt);
@@ -647,7 +650,9 @@ export default function App() {
         <ExecutingPage
           sessionId={sessionId}
           action={selectedAlternative.action}
-          onComplete={handleExecutionResolved}
+          analysisId={currentAnalysisId}
+          alternativeId={selectedAlternative.id}
+          onComplete={handleExecutionComplete}
           onCancel={handleCancelChange}
         />
       )}
@@ -682,7 +687,10 @@ export default function App() {
       )}
 
       {mainView === "history" && (
-        <HistoryPage onReviewEntry={(entry) => handleReviewEntry(entry, "history")} />
+        <HistoryPage
+          onReviewEntry={(entry) => handleReviewEntry(entry, "history")}
+          onRevertEntry={handleRevertEntry}
+        />
       )}
     </AppShell>
   );

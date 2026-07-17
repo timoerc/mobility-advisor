@@ -297,6 +297,10 @@ class AnalysisHistoryEntry(BaseModel):
     resolvedAlternativeId: str | None = None
     resolvedMessage: str | None = None
     resolvedAt: str | None = None
+    # Subscription stack captured just before an executed change, kept so the newest executed entry
+    # can be reverted (restored) as a true undo. Present only while outcome == "executed"; cleared on
+    # revert. Shape: a CurrentSubscriptions dump ({"subscriptions": [...]}).
+    revertSnapshot: dict | None = None
 
 
 class AnalysisHistory(BaseModel):

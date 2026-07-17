@@ -8,11 +8,14 @@ const STATUS_MESSAGES = ["Confirming with the execution agent…", "Updating you
 type ExecutingPageProps = {
   sessionId: string;
   action: ProposedAction;
+  // Identify the analysis + chosen alternative so /api/execute can record the executed outcome server-side.
+  analysisId: string | null;
+  alternativeId: string;
   onComplete: (result: ExecutionResult) => void;
   onCancel: () => void;
 };
 
-export function ExecutingPage({ sessionId, action, onComplete, onCancel }: ExecutingPageProps) {
+export function ExecutingPage({ sessionId, action, analysisId, alternativeId, onComplete, onCancel }: ExecutingPageProps) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Declined/ambiguous responses are deterministic (temperature 0) — retrying the same
@@ -23,7 +26,7 @@ export function ExecutingPage({ sessionId, action, onComplete, onCancel }: Execu
   const start = () => {
     setError(null);
     setDone(false);
-    executeAction(sessionId, action)
+    executeAction(sessionId, action, analysisId, alternativeId)
       .then((result) => {
         if (result.success) {
           setDone(true);

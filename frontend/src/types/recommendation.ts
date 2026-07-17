@@ -59,4 +59,6 @@ export type AnalysisHistoryEntry = {
   resolvedAlternativeId: string | null;
   resolvedMessage: string | null;
   resolvedAt: string | null;
+  // Present (non-null) only while an executed change on the newest entry can still be reverted.
+  revertSnapshot?: unknown | null;
 };

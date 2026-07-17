@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchAnalysisHistory } from "../../api";
 import { ConfidenceBadge } from "../../components/ConfidenceBadge";
 import { OutcomeBadge } from "../../components/OutcomeBadge";
@@ -9,6 +9,9 @@ import type { AnalysisHistoryEntry } from "../../types/recommendation";
 type HistoryPageProps = {
   // Open an entry in the decision screen. Only ever wired to the newest, non-executed entry.
   onReviewEntry: (entry: AnalysisHistoryEntry) => void;
+  // Undo an executed change on the newest entry (restores the previous subscriptions). Resolves to
+  // whether the revert succeeded, so the list can be refetched.
+  onRevertEntry: (entry: AnalysisHistoryEntry) => Promise<boolean>;
 };
 
 function formatDate(iso: string): string {
@@ -19,28 +22,50 @@ function formatDate(iso: string): string {
 
 function HistoryCard({
   entry,
-  isActionable,
+  isNewest,
   expanded,
   onToggle,
   onReview,
+  onRevert,
 }: {
   entry: AnalysisHistoryEntry;
-  isActionable: boolean;
+  isNewest: boolean;
   expanded: boolean;
   onToggle: () => void;
   onReview: () => void;
+  onRevert: () => Promise<boolean>;
 }) {
   const rec = entry.recommendation;
   // An older, never-decided entry: it can no longer be acted on, so don't present it as "Pending".
-  const isSuperseded = !isActionable && entry.outcome === "pending";
-  // Read-only cards show what was on the table, minus the "Keep current setup" baseline (action null).
+  const isSuperseded = !isNewest && entry.outcome === "pending";
+  // The newest entry is the only live one: decide it (pending/kept_current) or revert it (executed).
+  const canDecide = isNewest && entry.outcome !== "executed";
+  const canRevert = isNewest && entry.outcome === "executed" && entry.revertSnapshot != null;
+  // Read-only cards (and the executed newest) show what was on the table, minus the "Keep current
+  // setup" baseline (action null).
   const actionableAlts = rec.alternatives.filter((a) => a.action !== null);
   const ctaLabel = entry.outcome === "kept_current" ? "Reconsider this decision" : "Review & decide";
+
+  const [confirming, setConfirming] = useState(false);
+  const [reverting, setReverting] = useState(false);
+  const [revertError, setRevertError] = useState<string | null>(null);
+
+  const doRevert = async () => {
+    setReverting(true);
+    setRevertError(null);
+    const ok = await onRevert();
+    // On success the parent refetches → this card re-renders as kept_current (no revert footer), so
+    // there's nothing to reset here; only surface a failure.
+    if (!ok) {
+      setReverting(false);
+      setRevertError("Couldn't revert right now. Please try again.");
+    }
+  };
 
   return (
     <div
       className={`bg-white rounded-2xl overflow-hidden border ${
-        isActionable ? "border-brand-red/40 ring-1 ring-brand-red/10" : "border-gray-200"
+        isNewest ? "border-brand-red/40 ring-1 ring-brand-red/10" : "border-gray-200"
       }`}
     >
       <button
@@ -52,7 +77,7 @@ function HistoryCard({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400 font-medium">{formatDate(entry.date)}</span>
-            {isActionable && (
+            {isNewest && (
               <span className="text-[10px] font-bold uppercase tracking-wide text-brand-red bg-red-50 rounded-full px-2 py-0.5">
                 Latest
               </span>
@@ -115,9 +140,10 @@ function HistoryCard({
             </div>
           )}
 
-          {/* Read-only ledger: show the options that were on the table (no "Keep current setup"
-              baseline, no interactivity). The live/actionable card decides on the decision screen. */}
-          {!isActionable && actionableAlts.length > 0 && (
+          {/* Read-only options: shown for older entries and for the executed-newest (so you can see
+              what was executed). Hidden while the entry is still decidable — that happens on the
+              decision screen. No "Keep current setup" baseline row. */}
+          {!canDecide && actionableAlts.length > 0 && (
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">Options considered</h3>
               <div className="flex flex-col gap-2">
@@ -142,7 +168,7 @@ function HistoryCard({
         </div>
       )}
 
-      {isActionable && (
+      {canDecide && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
           <button
             type="button"
@@ -153,27 +179,72 @@ function HistoryCard({
           </button>
         </div>
       )}
+
+      {canRevert && (
+        <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+          {!confirming ? (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="w-full border border-gray-300 text-gray-700 rounded-full py-2.5 font-semibold hover:border-gray-400 cursor-pointer bg-white"
+            >
+              Revert this change
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-gray-500 m-0">
+                Revert this change? Your previous mobility setup will be restored.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={reverting}
+                  onClick={() => setConfirming(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 rounded-full py-2 font-semibold cursor-pointer bg-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={reverting}
+                  onClick={doRevert}
+                  className="flex-1 bg-brand-red text-white rounded-full py-2 font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                >
+                  {reverting ? "Reverting…" : "Revert"}
+                </button>
+              </div>
+              {revertError && <p className="text-xs text-red-600 m-0">{revertError}</p>}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-export function HistoryPage({ onReviewEntry }: HistoryPageProps) {
+export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) {
   const [entries, setEntries] = useState<AnalysisHistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAnalysisHistory()
-      .then((data) => {
-        setEntries(data);
-        // Default-expand the newest actionable entry so its reasoning + CTA are visible on arrival.
-        if (data[0] && data[0].outcome !== "executed") setExpandedId(data[0].id);
-      })
-      .catch((err) => {
-        console.error("Failed to load analysis history:", err);
-        setError(err instanceof Error ? err.message : "Could not load your analysis history.");
-      });
+  const load = useCallback(async (): Promise<AnalysisHistoryEntry[] | null> => {
+    try {
+      const data = await fetchAnalysisHistory();
+      setEntries(data);
+      return data;
+    } catch (err) {
+      console.error("Failed to load analysis history:", err);
+      setError(err instanceof Error ? err.message : "Could not load your analysis history.");
+      return null;
+    }
   }, []);
+
+  useEffect(() => {
+    load().then((data) => {
+      // Default-expand the newest entry so its context + action are visible on arrival.
+      if (data && data[0]) setExpandedId(data[0].id);
+    });
+  }, [load]);
 
   if (error) {
     return (
@@ -210,20 +281,21 @@ export function HistoryPage({ onReviewEntry }: HistoryPageProps) {
       </div>
 
       <div className="flex flex-col gap-3 pb-4">
-        {entries.map((entry, index) => {
-          // Only the newest analysis is live; once executed it's terminal. Everything else is read-only.
-          const isActionable = index === 0 && entry.outcome !== "executed";
-          return (
-            <HistoryCard
-              key={entry.id}
-              entry={entry}
-              isActionable={isActionable}
-              expanded={expandedId === entry.id}
-              onToggle={() => setExpandedId((current) => (current === entry.id ? null : entry.id))}
-              onReview={() => onReviewEntry(entry)}
-            />
-          );
-        })}
+        {entries.map((entry, index) => (
+          <HistoryCard
+            key={entry.id}
+            entry={entry}
+            isNewest={index === 0}
+            expanded={expandedId === entry.id}
+            onToggle={() => setExpandedId((current) => (current === entry.id ? null : entry.id))}
+            onReview={() => onReviewEntry(entry)}
+            onRevert={async () => {
+              const ok = await onRevertEntry(entry);
+              if (ok) await load();
+              return ok;
+            }}
+          />
+        ))}
       </div>
     </div>
   );

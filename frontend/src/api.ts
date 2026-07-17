@@ -35,24 +35,39 @@ export async function runAnalysis(sessionId: string): Promise<AnalysisRunResult>
   return post<AnalysisRunResult>("/analyze", { session_id: sessionId });
 }
 
-export async function executeAction(sessionId: string, action: ProposedAction): Promise<ExecutionResult> {
-  return post<ExecutionResult>("/execute", {
+export async function executeAction(
+  sessionId: string,
+  action: ProposedAction,
+  analysisId: string | null,
+  alternativeId: string
+): Promise<ExecutionResult> {
+  // analysis_id + alternative_id let the backend record the executed outcome (and its revert
+  // snapshot) server-side, in the same request that applies the change — no second call to lose.
+  const data = await post<{ success: boolean; message: string }>("/execute", {
     session_id: sessionId,
     action_title: action.title,
     action_description: action.description,
     action_consequence: action.consequence,
+    analysis_id: analysisId,
+    alternative_id: alternativeId,
   });
+  return { success: data.success, message: data.message };
 }
 
 export async function resolveAnalysis(
   entryId: string,
-  body: { outcome: Extract<AnalysisOutcome, "kept_current" | "executed">; alternativeId: string; message: string }
+  // Only the kept-current decision is resolved here; an executed change is recorded by executeAction.
+  body: { outcome: Extract<AnalysisOutcome, "kept_current">; alternativeId: string; message: string }
 ): Promise<void> {
   await post<{ ok: boolean }>(`/analysis-history/${entryId}/resolve`, {
     outcome: body.outcome,
     alternative_id: body.alternativeId,
     message: body.message,
   });
+}
+
+export async function revertAnalysis(entryId: string): Promise<{ success: boolean; message: string }> {
+  return post<{ success: boolean; message: string }>(`/analysis-history/${entryId}/revert`, {});
 }
 
 export async function fetchAnalysisHistory(): Promise<AnalysisHistoryEntry[]> {
