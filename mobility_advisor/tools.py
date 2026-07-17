@@ -4,7 +4,7 @@ import json
 import os
 import re
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -98,6 +98,88 @@ def load_life_events() -> dict:
         return {"events": []}
     raw = json.loads(path.read_text())
     return LifeEvents.model_validate(raw).model_dump()
+
+
+# Signals whose arrival would, on their own, invalidate the current commute-based
+# portfolio if it takes effect — a home relocation or a change of work pattern resets
+# which subscriptions make sense at all. Lower-impact signals (income_change,
+# d_ticket_relevance_change, rail_card_relevance_change, non_mobility_spend, ...)
+# deliberately do NOT gate deferral: they refine an existing setup rather than reset it,
+# so the normal optimize-now path still applies. This narrow set is what keeps the
+# "hold pending a decision" recommendation from ever firing spuriously (e.g. for Lena,
+# whose only signals are ticket-relevance/spend changes, or Maja, who has none).
+_PORTFOLIO_RESET_SIGNALS = frozenset({"home_base_change", "work_pattern_change"})
+
+# How far ahead an unresolved reset event may sit and still justify holding. A move a
+# couple of months out is worth waiting for; one years away should not freeze the
+# portfolio indefinitely, so beyond this horizon the normal optimize-now path resumes.
+_DECISION_HORIZON_DAYS = 275  # ~9 months
+
+
+def detect_pending_portfolio_decision() -> dict:
+    """Detect whether an unresolved, near-term life event would reset the portfolio.
+
+    This is the deterministic gate for the Optimizer's "hold / defer pending a decision"
+    recommendation: the pipeline may only propose holding subscriptions instead of acting
+    now when this returns exists=True. It fires only for a genuine portfolio-resetting
+    change — a relocation or work-pattern change (a life event whose signals include
+    home_base_change or work_pattern_change) that is still upcoming (event_date on/after
+    today) and lands within ~9 months. A persona with no life events (e.g. Maja), or only
+    lower-impact signals such as a ticket-relevance or non-mobility-spend change (e.g.
+    Lena), returns exists=False, so their reviews behave exactly as before. Once every
+    qualifying event's date has passed (the move has happened or been called off), it
+    returns exists=False again — the setup should then be re-optimized against the new
+    reality, not held indefinitely.
+
+    Returns a dict with keys:
+      - exists (bool): whether a deferral-worthy pending decision was found.
+      - reason (str): one-line explanation of the pending decision; "" when exists is False.
+      - revisit_after (str | None): ISO date the last qualifying event takes effect — the
+        point by which the uncertainty is certainly resolved and the review should be
+        re-run; None when exists is False.
+      - events (list[dict]): the qualifying life events (category, summary, event_date,
+        signals), empty when exists is False.
+    """
+    today = MOCK_TODAY
+    horizon_end = today + timedelta(days=_DECISION_HORIZON_DAYS)
+    qualifying: list[tuple[dict, date]] = []
+    for event in load_life_events()["events"]:
+        if not (_PORTFOLIO_RESET_SIGNALS & set(event.get("signals", []))):
+            continue
+        raw_date = event.get("event_date")
+        if not raw_date:
+            continue  # undated reset signal: can't confirm it's near-term or unresolved
+        try:
+            event_date = date.fromisoformat(raw_date)
+        except ValueError:
+            continue
+        if today <= event_date <= horizon_end:
+            qualifying.append((event, event_date))
+
+    if not qualifying:
+        return {"exists": False, "reason": "", "revisit_after": None, "events": []}
+
+    revisit_after = max(event_date for _, event_date in qualifying)
+    categories = "/".join(sorted({event["category"] for event, _ in qualifying}))
+    reason = (
+        f"A pending {categories} is expected to take effect by "
+        f"{revisit_after.isoformat()}, which would reset the current commute-based "
+        f"portfolio — acting now risks a change the decision could immediately reverse."
+    )
+    return {
+        "exists": True,
+        "reason": reason,
+        "revisit_after": revisit_after.isoformat(),
+        "events": [
+            {
+                "category": event["category"],
+                "summary": event["summary"],
+                "event_date": event.get("event_date"),
+                "signals": event.get("signals", []),
+            }
+            for event, _ in qualifying
+        ],
+    }
 
 
 def load_car_usage() -> dict:
@@ -368,15 +450,14 @@ def load_optimizer_context() -> dict:
     """Load all fixed-context data the Optimizer agent needs up front, in one call: user
     preferences, the user-relevant mobility catalog, and recent recommendation history.
 
-    Internally calls load_user_preferences(), load_relevant_mobility_catalog(), and
-    load_recommendation_history() and returns their results together — saves two
-    tool-call round-trips versus calling them individually; changes zero fields and zero
-    values.
+    Internally calls load_user_preferences(), load_relevant_mobility_catalog(),
+    load_recommendation_history(), and detect_pending_portfolio_decision() and returns
+    their results together — saves three tool-call round-trips versus calling them
+    individually; changes zero fields and zero values.
 
     Does NOT include compute_co2_impact_kg — that tool stays a separate, on-demand call
     invoked once per candidate action in Step 3 (with different target_subscription/
-    new_product arguments each time), not once up front like the three loaders bundled
-    here.
+    new_product arguments each time), not once up front like the loaders bundled here.
 
     Returns a dict with keys:
       - user_preferences: exactly load_user_preferences()'s return value.
@@ -384,11 +465,16 @@ def load_optimizer_context() -> dict:
         value (key 'options').
       - recommendation_history: exactly load_recommendation_history()'s return value
         (key 'history', up to the 3 most recent entries).
+      - pending_portfolio_decision: exactly detect_pending_portfolio_decision()'s return
+        value (keys exists/reason/revisit_after/events) — the deterministic gate for the
+        Optimizer's "hold pending a decision" recommendation. exists=False for personas
+        with no near-term portfolio-resetting life event, which is the normal case.
     """
     return {
         "user_preferences": load_user_preferences(),
         "relevant_mobility_catalog": load_relevant_mobility_catalog(),
         "recommendation_history": load_recommendation_history(),
+        "pending_portfolio_decision": detect_pending_portfolio_decision(),
     }
 
 

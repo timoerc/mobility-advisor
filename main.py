@@ -32,13 +32,14 @@ from mobility_advisor.models import (
     AnalysisRunResult,
     CarUsage,
     CurrentSubscriptions,
+    MetricDelta,
     Recommendation,
     TravelHistory,
     catalog_lookup,
 )
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
-from mobility_advisor.tools import MOCK_TODAY
+from mobility_advisor.tools import MOCK_TODAY, detect_pending_portfolio_decision
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
@@ -402,9 +403,19 @@ Rules:
     - co2ImpactKg: 0
     - isRecommended: false
     - action: JSON null (not an object, not omitted)
+  HOLD OPTION: if one of the "Option:" blocks is a "Hold pending decision" / no-change option
+  (its Change line says to make no change or hold everything as-is, it shows a "Revisit by:"
+  line instead of an "Action by … auto-renewal" line, and its saving is €0.00), emit its
+  alternatives entry with "action": null — accepting it executes nothing, it is a deliberate
+  wait — with annualCostEur = the current-setup annual figure, savingsVsCurrentEur = 0,
+  co2Impact "Neutral", co2ImpactKg 0, id "hold", and a name like "Hold pending decision".
+  Set its isRecommended to true if that block is the one suffixed " — Recommended". This is
+  the one case where a recommended alternative legitimately carries a null action, and it is
+  separate from (and in addition to) the "Keep current setup" baseline row above.
   Never produce more than 2 alternatives with a non-null "action". If the report somehow
   contains more than 2 Option blocks, use only the first 2.
-- Exactly one alternative must have isRecommended: true, and its action must not be null.
+- Exactly one alternative must have isRecommended: true. Its action must be non-null UNLESS it
+  is the "Hold pending decision" no-change option described above, whose action is null.
 - metrics must include at minimum: the monthly or annual saving (direction 'save') for the
   RECOMMENDED alternative, and CO2 impact (direction 'reduce' or 'neutral')
 - for each alternative with a non-null action: annualCostEur and savingsVsCurrentEur come from
@@ -509,7 +520,51 @@ async def _extract_recommendation_json(report_text: str) -> Recommendation:
     parsed = json.loads(text)
     recommendation = Recommendation.model_validate(parsed)
     recommendation = _normalize_keep_current_setup(recommendation)
+    recommendation = _enforce_hold_when_decision_pending(recommendation)
     return _clamp_actionable_alternatives(recommendation)
+
+
+def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
+    """When a portfolio-resetting life decision is pending, make the deliberate "Hold pending
+    decision" alternative the recommended one — deterministically, not at the LLM's discretion.
+
+    detect_pending_portfolio_decision() is a strict gate: it fires ONLY for a genuine, near-term
+    relocation / work-pattern change (see its docstring), so this override never touches an
+    ordinary review — for every persona without such a signal it is a no-op and the pipeline's
+    own pick stands. When the gate IS active, holding until the decision resolves is the correct
+    conservative call (acting now bets on a decision that isn't settled), but the optimizer LLM
+    does not reliably choose it — so if it recommended a concrete change instead, re-point the
+    recommendation at the Hold row here and rewrite the headline fields to match, keeping the
+    concrete change visible as the non-recommended option the user is deferring.
+    """
+    decision = detect_pending_portfolio_decision()
+    if not decision["exists"]:
+        return rec
+    hold = next(
+        (
+            a
+            for a in rec.alternatives
+            if a.action is None
+            and (a.id == "hold" or "hold pending" in a.name.lower())
+        ),
+        None,
+    )
+    if hold is None or hold.isRecommended:
+        # No hold candidate to promote (optimizer omitted it), or it is already the pick.
+        return rec
+    for alt in rec.alternatives:
+        alt.isRecommended = alt is hold
+    revisit = decision["revisit_after"]
+    rec.verdict = f"Hold your current setup until the pending decision resolves ({revisit})"
+    rec.summaryText = decision["reason"]
+    rec.confidence = "low"
+    rec.metrics = [
+        MetricDelta(
+            value=0, unit="€/year", direction="neutral", label="Recommended change right now"
+        ),
+        MetricDelta(value=0, unit="kg CO2", direction="neutral", label="CO2 impact"),
+    ]
+    return rec
 
 
 # ── Pipeline retry helper ─────────────────────────────────────────────────────

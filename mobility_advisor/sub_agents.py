@@ -241,7 +241,7 @@ Show real numbers from the data. Do not propose more than one change.
 optimizer_agent = LlmAgent(
     name="optimizer",
     model=_MODEL,
-    description="Proposes one or (when genuinely comparable) up to two concrete contract-change candidates based on analysis, forecast, preferences, and catalog.",
+    description="Proposes one or (when genuinely comparable) up to two candidate actions based on analysis, forecast, preferences, and catalog — normally concrete contract changes, but holding the portfolio pending an unresolved near-term life decision when the data flags one.",
     instruction=f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -266,7 +266,44 @@ that continuity explicitly instead of re-stating the finding as if it were new, 
 the Nth review flagging <subscription> — you kept it before; here's the updated picture." If
 the history is empty or unrelated to this review's finding, say nothing about it.
 
-PREFERENCE WEIGHTING — load_optimizer_context()'s user_preferences field returns priority_weights (raw cost/time/
+PENDING PORTFOLIO DECISION (deferral gate) — load_optimizer_context()'s pending_portfolio_decision
+field is a deterministic signal of whether an unresolved, near-term life event (a relocation or
+work-pattern change) would reset the user's whole portfolio. Honor its "exists" flag EXACTLY —
+do not second-guess it from the forecast prose:
+- If pending_portfolio_decision.exists is FALSE (the normal case — most reviews): you MUST NOT
+  propose any hold / defer / "wait and see" candidate, and MUST NOT mention deferral at all.
+  Proceed exactly as you otherwise would — pick the highest-value concrete change(s). Stop
+  reading this section.
+- If pending_portfolio_decision.exists is TRUE: you MUST add ONE extra candidate block, a
+  "Hold pending decision" candidate, ALONGSIDE the single best concrete change, and you MUST
+  mark the Hold candidate Recommended: YES and the concrete change Recommended: NO. The
+  pending reset makes acting now premature: any change justified by the move happening (or by
+  it NOT happening) is a bet on a decision that is not resolved yet, so holding until it
+  resolves is the correct call. Do NOT mark the concrete change Recommended in this case, and
+  do NOT rationalise acting now with "the ticket looks unused" or "the move probably makes it
+  redundant" — that is exactly the premature call the Hold exists to prevent, because it
+  silently assumes one outcome of the very decision that is still open. Still include the
+  concrete change as the second (Recommended: NO) candidate, so the user can see the option
+  they are choosing to defer.
+  Fill the Hold candidate's Step 3 block using the SAME structure as any other candidate, with
+  these field values (this reuses the existing shape — it is not a new format):
+    - Candidate name: "Hold pending decision"
+    - Proposed change: "Make no change now — hold [list every current subscription by exact
+      name] as-is until the pending decision resolves."
+    - Proposed monthly cost: equal to the Current portfolio cost (nothing changes).
+    - Monthly saving: €0.00/mo — deliberate; it avoids a change the decision could reverse.
+    - CO₂ impact: state "Neutral — no change (0 kg)". Do NOT call compute_co2_impact_kg for
+      this candidate; there is no product change to price.
+    - Action deadline: "Revisit after <the pending_portfolio_decision.revisit_after date> once
+      the pending change resolves." Use that revisit_after date, NOT a renewal date.
+    - What stays and why: every current subscription — all kept intact pending the decision.
+    - Why this candidate: cite pending_portfolio_decision.reason and the specific event
+      summaries from pending_portfolio_decision.events, and note that the acting-now
+      candidate's figures would themselves be reset if the change goes ahead.
+
+PREFERENCE WEIGHTING (does NOT apply when the PENDING PORTFOLIO DECISION gate above is active —
+there the Hold is always the Recommended pick regardless of weights) — load_optimizer_context()'s
+user_preferences field returns priority_weights (raw cost/time/
 sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
 values_time_over_money, to decide WHICH candidate is your Recommended pick, not merely how you
 phrase it:
@@ -319,6 +356,8 @@ added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a Ba
 **CO₂ impact:** Call compute_co2_impact_kg with THIS candidate's own target_subscription/
 new_product (same names as this candidate's Proposed change above — never another candidate's)
 and state its "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
+(Exception: a "Hold pending decision" candidate makes no product change — state "Neutral — no
+change (0 kg)" and do NOT call compute_co2_impact_kg for it.)
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
@@ -331,7 +370,10 @@ cancellation vs. a partial downgrade of the same subscription, or a genuinely di
 (e.g. a car-share membership instead of a rail card) — never two candidates that differ only
 by a small numeric variation on the same underlying choice (e.g. rounding, or a €2/month gap
 between near-identical options). If you are unsure whether a second candidate clears this bar,
-do not include it — one strong recommendation beats a padded list.
+do not include it — one strong recommendation beats a padded list. When the PENDING PORTFOLIO
+DECISION gate above is active (exists=TRUE), the "Hold pending decision" candidate and the
+single best concrete change ARE the two candidates — that pairing is a sanctioned use of this
+2-candidate cap, not padding, and you must not add a third.
 
 Show real numbers from the data.
 """,
@@ -377,6 +419,13 @@ For EACH candidate action from the Optimizer, in the same order, repeat this blo
 - Action by: **[next_renewal_date, formatted as DD Month YYYY]** to avoid auto-renewal
 - CO₂ impact: [one line]
 - Trade-off: [1–2 sentences on the downside or uncertainty specific to THIS candidate]
+
+HOLD CANDIDATE: if a candidate is a "Hold pending decision" one (its Monthly saving is €0.00/mo
+and it proposes making no change now), adapt exactly two of its lines and leave the rest as
+normal: render "- Monthly cost: €Y.YY/mo (no change)" (no saving clause), and replace the
+"Action by … to avoid auto-renewal" line with "- Revisit by: **[the candidate's revisit date
+from its Action deadline, formatted as DD Month YYYY]** — once your pending move/job decision
+resolves". Never invent this candidate — only render it when the Optimizer actually produced it.
 
 (Output exactly one Option block per candidate the Optimizer actually gave you — never add a
 second Option block if the Optimizer proposed only one.)

@@ -299,12 +299,26 @@ class Recommendation(BaseModel):
             raise ValueError(
                 f"expected exactly one isRecommended alternative, got {len(recommended)}"
             )
-        if recommended[0].action is None:
-            raise ValueError("the recommended alternative must have a non-null action")
-        if not any(a.action is None for a in self.alternatives):
+        no_action_rows = [a for a in self.alternatives if a.action is None]
+        if not no_action_rows:
             raise ValueError(
                 "expected at least one 'Keep current setup' alternative (action: null)"
             )
+        # The recommended alternative normally must be executable (non-null action). The one
+        # exception is a deliberate "Hold pending decision" recommendation, which is itself a
+        # no-op: holding costs exactly the same as the status-quo baseline. So a null-action
+        # recommendation is allowed only when another no-action row (the "Keep current setup"
+        # baseline) carries the same annualCostEur. A null action on a row whose cost differs
+        # from baseline means a real change lost its action (an extraction bug) — stays rejected.
+        rec_alt = recommended[0]
+        if rec_alt.action is None:
+            is_deliberate_hold = any(
+                abs(a.annualCostEur - rec_alt.annualCostEur) < 0.01
+                for a in no_action_rows
+                if a is not rec_alt
+            )
+            if not is_deliberate_hold:
+                raise ValueError("the recommended alternative must have a non-null action")
         return self
 
 
