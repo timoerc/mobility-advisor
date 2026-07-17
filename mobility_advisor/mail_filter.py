@@ -44,6 +44,25 @@ SUBJECT_KEYWORDS = [
     "gekündigt",
     "abonnement",
     "mietvertrag",
+    "stellenangebot",
+    "besichtigungstermin",
+    "aktiviert",
+]
+
+# Life-event signals that must win categorization even when the sender happens to be a
+# booking domain (e.g. a BahnCard non-renewal notice from bahn.de is not a trip booking) —
+# checked before CATEGORY_MAP in _get_category so a subscription/relocation/job signal is
+# never swallowed by the domain-based booking categories below.
+LIFE_EVENT_KEYWORDS = [
+    "mietvertrag",
+    "kündigung",
+    "gekündigt",
+    "wird nicht verlängert",
+    "nicht automatisch verlängert",
+    "stellenangebot",
+    "jobangebot",
+    "besichtigungstermin",
+    "ist aktiviert",
 ]
 
 BODY_KEYWORDS = [
@@ -105,6 +124,8 @@ def _matches_body(body: str) -> bool:
 
 def _get_category(sender_email: str, subject: str, body: str) -> str:
     combined = sender_email.lower() + " " + subject.lower() + " " + body.lower()
+    if any(kw in combined for kw in LIFE_EVENT_KEYWORDS):
+        return "life_event"
     for key, category in CATEGORY_MAP.items():
         if key in combined:
             return category

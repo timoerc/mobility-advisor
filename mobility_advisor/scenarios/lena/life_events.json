@@ -1,0 +1,34 @@
+{
+  "events": [
+    {
+      "category": "subscription_change",
+      "summary": "Activated Deutschlandticket (HVV) subscription",
+      "event_date": "2023-05-01",
+      "signals": [
+        "d_ticket_relevance_change"
+      ],
+      "source_mail_id": "mail_019",
+      "detected_on": "2026-06-15"
+    },
+    {
+      "category": "subscription_change",
+      "summary": "BahnCard 50 will not be renewed and expires on 30 June 2025",
+      "event_date": "2025-06-30",
+      "signals": [
+        "rail_card_relevance_change"
+      ],
+      "source_mail_id": "mail_020",
+      "detected_on": "2026-06-15"
+    },
+    {
+      "category": "other",
+      "summary": "Spotify Premium subscription payment of €10.99 on 2026-07-01",
+      "event_date": "2026-07-01",
+      "signals": [
+        "non_mobility_spend"
+      ],
+      "source_mail_id": "mail_023",
+      "detected_on": "2026-06-15"
+    }
+  ]
+}

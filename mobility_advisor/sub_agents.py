@@ -15,10 +15,14 @@ from google.genai import types
 from .tools import (
     MOCK_TODAY,
     REVIEW_YEAR,
+    _rail_and_carshare_co2_factors,
     compute_co2_impact_kg,
     load_annual_travel_history,
     load_calendar_events,
+    load_car_usage,
     load_current_subscriptions,
+    load_life_events,
+    load_recommendation_history,
     load_relevant_mobility_catalog,
     load_travel_history,
     load_user_preferences,
@@ -33,7 +37,13 @@ def build_model() -> LiteLlm:
 
 
 # Output-length tiers for the pipeline agents below (see build_content_config).
-_SHORT_REPORT_TOKENS = 1024   # analyst / forecaster: concise bullet-point summaries
+_SHORT_REPORT_TOKENS = 2048   # analyst / forecaster: concise bullet-point summaries. Bumped
+# from 1024 — analyst/forecaster each gained an extra tool call (load_car_usage,
+# load_life_events) plus more required output. GPT-OSS-120B's internal reasoning tokens count
+# against max_output_tokens, so with the old 1024 budget the reasoning across 3 sequential
+# tool calls could exhaust it before any visible text was written, producing an empty
+# response — confirmed empirically against Stefan's larger dataset (3 subscriptions):
+# 1024 tokens -> 1/4 successful runs, 2048 tokens -> 4/4.
 _MEDIUM_REPORT_TOKENS = 2048  # optimizer / communicator: structured recommendation with numeric derivations
 _LONG_REPORT_TOKENS = 4096    # annual_communicator: full multi-section annual review
 
@@ -58,6 +68,8 @@ _DATA_DIR = Path(__file__).parent / "data"
 _prefs = json.loads((_DATA_DIR / "persona.json").read_text())
 _USER_NAME = _prefs.get("name", "the user")
 _USER_FIRST_NAME = _USER_NAME.split()[0]
+_HOME_CITY = _prefs.get("profileData", {}).get("location", {}).get("home_city", "")
+_RAIL_CO2_G_PER_KM, _CARSHARE_CO2_G_PER_KM = _rail_and_carshare_co2_factors()
 
 analyst_agent = LlmAgent(
     name="analyst",
@@ -71,19 +83,22 @@ You MUST call load_travel_history and load_current_subscriptions first. Use ONLY
 
 Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
 
-Step 1 — call load_travel_history() and load_current_subscriptions(). Do this before writing anything.
+Step 1 — call load_travel_history(), load_current_subscriptions(), and load_car_usage(). Do this before writing anything.
 
 Step 2 — for each subscription, report:
 - **Subscription name** and monthly cost (verbatim from tool)
 - **Trip count**: how many trips in the past 12 months used this subscription (from travel history)
 - **Spend figures**: total amount paid under this subscription in the past 12 months (verbatim from tool data)
 - **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
+- **Duration/ticket type**: where a trip's duration_min and ticket_type fields are present in the travel history data, mention them alongside the trip count — this surfaces travel time, not just cost, for later steps that weigh time
+
+Step 3 — report private car ownership from load_car_usage(): if owns_car is true, state "Holds a private <type> <size> car, ~<monthly_km_estimate> km/month"; if false, state "No private car."
 
 Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-    tools=[load_travel_history, load_current_subscriptions],
+    tools=[load_travel_history, load_current_subscriptions, load_car_usage],
     output_key="analysis",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
 )
@@ -97,20 +112,24 @@ You are the Forecaster agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 Your job: summarize forward mobility demand for the next 3–6 months from today.
+The user's current home base is {_HOME_CITY}.
 
-Step 1 — call load_calendar_events(). Do this before writing anything.
+Step 1 — call load_calendar_events() and load_life_events(). Do this before writing anything.
 
 Step 2 — produce a brief forward-demand summary (3–5 bullet points):
 - Expected dominant modes (rail, local transit, car-share, etc.)
 - Approximate long-distance trip volume
-- Any life-event signals that could meaningfully shift the portfolio (e.g. relocation, work-pattern change)
+- Life-event signals from load_life_events(): if any events are returned, state each one's
+  category and summary plus its concrete portfolio implication (e.g. a relocation signal away
+  from {_HOME_CITY} means the current commute-based subscription mix may no longer fit once it
+  takes effect); if the events list is empty, state plainly "No life-event signals detected."
 - Any notable gaps or uncertainties
 
 Be factual and brief. Do not recommend actions — that is the Optimizer's job.
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-    tools=[load_calendar_events],
+    tools=[load_calendar_events, load_life_events],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
     include_contents="none",
@@ -136,6 +155,18 @@ Address the user directly as "you"/"your" throughout your output — not by name
 Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the single highest-impact change.
+
+PREFERENCE WEIGHTING — load_user_preferences() returns priority_weights (raw cost/time/
+sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
+values_time_over_money, to decide WHICH change is your pick, not merely how you phrase it:
+- Weigh the €-saving, time/convenience impact, and CO2 impact by these three weights before
+  picking. A change that wins on the user's highest-weighted dimension can outrank one that
+  only wins on a lower-weighted dimension, even with a smaller raw €-saving.
+- If sustainability is the highest weight (or clearly elevated vs. the other two), prefer a
+  CO2-reducing change at modest extra cost over a cheaper but CO2-neutral one.
+- If values_time_over_money is true, never recommend a slower or less convenient option purely
+  because it saves money.
+- State explicitly in "Why this change" which preference weight(s) drove the pick.
 
 CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
 All rail trips in history are priced at the BahnCard 50 discount (50% off).
@@ -180,7 +211,9 @@ date_to="{_REVIEW_YEAR}-12-31" (this report is scoped to {_REVIEW_YEAR} only), t
 - [subscription] — [one-line justification with the key metric]
 
 **Why this change:**
-- [bullet-point rationale referencing the analysis, forecast, and user preferences]
+- [bullet-point rationale referencing the analysis, forecast, and user preferences —
+  including which preference weight(s) (cost/time/sustainability) drove this pick per
+  PREFERENCE WEIGHTING above]
 
 Show real numbers from the data. Do not propose more than one change.
 """
@@ -203,9 +236,30 @@ comparable in value to the first AND materially different in kind — never as p
 CANDIDATE CAP rule in Step 3 for the exact bar a second candidate must clear.
 Address the user directly as "you"/"your" throughout your output — not by name.
 
-Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call load_user_preferences(), load_relevant_mobility_catalog(), and load_recommendation_history(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the highest-impact change(s), applying the CANDIDATE CAP rule below to decide whether one or two candidates are warranted.
+
+CONTINUITY — check load_recommendation_history()'s past entries. If a prior review already
+flagged the same subscription with the same (or an equivalent) recommended_action, acknowledge
+that continuity explicitly instead of re-stating the finding as if it were new, e.g. "This is
+the Nth review flagging <subscription> — you kept it before; here's the updated picture." If
+the history is empty or unrelated to this review's finding, say nothing about it.
+
+PREFERENCE WEIGHTING — load_user_preferences() returns priority_weights (raw cost/time/
+sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
+values_time_over_money, to decide WHICH candidate is your Recommended pick, not merely how you
+phrase it:
+- Weight each candidate's €-saving, time/convenience impact, and CO2 impact by these three
+  weights before choosing the winner. A candidate that wins on the user's highest-weighted
+  dimension can outrank a candidate that only wins on a lower-weighted one, even with a smaller
+  raw €-saving.
+- If sustainability is the highest weight (or clearly elevated vs. the other two), prefer a
+  CO2-reducing candidate at modest extra cost over a cheaper but CO2-neutral one.
+- If values_time_over_money is true, never recommend a slower or less convenient option purely
+  because it saves money.
+- State explicitly in "Why this candidate" which preference weight(s) drove the pick — this
+  must be visible reasoning, not just a number used silently.
 
 CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
 All rail trips in history are priced at the BahnCard 50 discount (50% off).
@@ -248,7 +302,7 @@ and state its "explanation" field verbatim — do NOT compute CO₂ yourself or 
 **Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
-**Why this candidate:** [bullet-point rationale referencing the analysis, forecast, and user preferences — and, if there is more than one candidate, what specifically makes this one different in kind from the others, not just in degree]
+**Why this candidate:** [bullet-point rationale referencing the analysis, forecast, and user preferences — including which preference weight(s) (cost/time/sustainability) drove this pick per PREFERENCE WEIGHTING above — and, if there is more than one candidate, what specifically makes this one different in kind from the others, not just in degree]
 
 CANDIDATE CAP: propose at most 2 candidate blocks total. Default to exactly 1. Only add a
 second candidate when it is genuinely comparable in value to the first AND materially
@@ -261,7 +315,12 @@ do not include it — one strong recommendation beats a padded list.
 
 Show real numbers from the data.
 """,
-    tools=[load_user_preferences, load_relevant_mobility_catalog, compute_co2_impact_kg],
+    tools=[
+        load_user_preferences,
+        load_relevant_mobility_catalog,
+        compute_co2_impact_kg,
+        load_recommendation_history,
+    ],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
@@ -351,14 +410,14 @@ annual_analyst_agent = LlmAgent(
         .replace("in the past 12 months", f"in {_REVIEW_YEAR}")
         + f"""
 
-Step 3 — after the subscription summary, output a "Trips considered ({_REVIEW_YEAR})" table listing
+Step 4 — after the subscription summary, output a "Trips considered ({_REVIEW_YEAR})" table listing
 EVERY trip returned by load_annual_travel_history(), one row per trip, verbatim — do not omit,
 summarize, or round any trip. Columns: date | mode | origin → destination | distance_km | cost_eur | provider.
 This table exists so the report's figures can be manually cross-checked against the raw data — completeness
 matters more than brevity here.
 """
     ),
-    tools=[load_annual_travel_history, load_current_subscriptions],
+    tools=[load_annual_travel_history, load_current_subscriptions, load_car_usage],
     output_key="analysis",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
 )
@@ -368,7 +427,7 @@ annual_forecaster_agent = LlmAgent(
     model=_MODEL,
     description=forecaster_agent.description,
     instruction=forecaster_agent.instruction,
-    tools=[load_calendar_events],
+    tools=[load_calendar_events, load_life_events],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
     include_contents="none",
@@ -449,12 +508,12 @@ Use this format for each:
 ## 3. CO₂ Report
 
 Compute from {{analysis}} using these exact formulas:
-- Rail trips: distance_km × 32 g/km ÷ 1000 = kg CO₂
-- Car-share baseline: same distance × 118 g/km ÷ 1000 = kg CO₂
+- Rail trips: distance_km × {_RAIL_CO2_G_PER_KM} g/km ÷ 1000 = kg CO₂
+- Car-share baseline: same distance × {_CARSHARE_CO2_G_PER_KM} g/km ÷ 1000 = kg CO₂
 - CO₂ avoided = car-share baseline − rail actual
 
 Write:
-> You traveled X km by rail, emitting X kg CO₂. Choosing rail over car avoided X kg CO₂ (rail: 32 g/km vs. car-share: 118 g/km).
+> You traveled X km by rail, emitting X kg CO₂. Choosing rail over car avoided X kg CO₂ (rail: {_RAIL_CO2_G_PER_KM} g/km vs. car-share: {_CARSHARE_CO2_G_PER_KM} g/km).
 
 Then list mode split: X% rail, X% regional, X% car-share, etc. by trip count.
 

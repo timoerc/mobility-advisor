@@ -11,8 +11,11 @@ from typing import Literal
 from pydantic import ValidationError
 
 from .models import (
+    AnalysisHistory,
     CalendarEvents,
+    CarUsage,
     CurrentSubscriptions,
+    LifeEvents,
     MobilityCatalog,
     Subscription,
     TravelHistory,
@@ -45,7 +48,11 @@ def load_user_preferences() -> dict:
     """Load the active user's mobility preferences derived from their persona profile.
 
     Returns a dict with keys: name (str), flexibility_need (str: low/medium/high),
-    sustainability_weight (float 0-1), values_time_over_money (bool), and notes (str).
+    sustainability_weight (float 0-1, rounded), values_time_over_money (bool), notes (str),
+    home_city (str), office_days (list[str], weekday codes e.g. "mon"), wfh_days (list[str]),
+    and priority_weights (dict: cost/time/sustainability, the raw un-rounded priority floats
+    that sum to ~1.0 — use these, not sustainability_weight/values_time_over_money alone, to
+    weight which candidate to recommend).
     """
     raw = json.loads((_DATA / "persona.json").read_text())
     pd = raw["profileData"]
@@ -59,8 +66,84 @@ def load_user_preferences() -> dict:
         "sustainability_weight": round(p["sustainability"], 4),
         "values_time_over_money": p["time"] > p["cost"],
         "notes": pd.get("notes", ""),
+        "home_city": pd.get("location", {}).get("home_city", ""),
+        "office_days": pd["commute"].get("office_days", []),
+        "wfh_days": wfh,
+        "priority_weights": {
+            "cost": p["cost"],
+            "time": p["time"],
+            "sustainability": p["sustainability"],
+        },
     }
     return UserPreferences.model_validate(prefs).model_dump()
+
+
+def load_life_events() -> dict:
+    """Load life-event signals distilled offline from the active user's mail.
+
+    A life event is a relocation, job change, mobility-relevant subscription change
+    (activation/cancellation/non-renewal), household change, or other notable context
+    (e.g. a recurring non-mobility subscription) — never raw mail; this is always the
+    small, pre-extracted fixture life_events.json.
+
+    Returns a dict with key 'events', a list of entries each containing: category (str:
+    relocation/job_change/subscription_change/household_change/other), summary (str, one
+    line), event_date (str or null, ISO date the event itself takes effect), signals
+    (list[str], short machine-readable tags), source_mail_id (str or null), and detected_on
+    (str, ISO date the extraction ran). An empty list is a legitimate result meaning no
+    life-event signal was found in the user's mail — not a loading failure.
+    """
+    path = _DATA / "life_events.json"
+    if not path.exists():
+        return {"events": []}
+    raw = json.loads(path.read_text())
+    return LifeEvents.model_validate(raw).model_dump()
+
+
+def load_car_usage() -> dict:
+    """Load the active user's private car ownership/usage facts from the mock data store.
+
+    Returns a dict with keys: owns_car (bool), mode (str, always "car_private"), type (str
+    or null, e.g. Petrol/Diesel/Electric/Hybrid), size (str or null, e.g. "Medium car"), and
+    monthly_km_estimate (float or null). All fields are false/null for a persona without a
+    private car — that is a real "no private car" fact, not a missing-data gap.
+    """
+    raw = json.loads((_DATA / "car_usage.json").read_text())
+    return CarUsage.model_validate(raw).model_dump()
+
+
+def load_recommendation_history(limit: int = 3) -> dict:
+    """Load a compact summary of the user's most recent past analysis recommendations and outcomes.
+
+    Use this to give continuity to a new review — e.g. noting that this is the Nth review
+    flagging the same subscription, and what the user decided last time — instead of
+    re-analyzing cold every run.
+
+    Returns a dict with key 'history', a list of up to the `limit` most recent entries
+    (oldest first, newest last), each containing: date (str), verdict (str, that review's
+    headline finding), outcome (str: pending/kept_current/executed), and recommended_action
+    (str, the name of the alternative that review marked as recommended). Deliberately
+    excludes full Recommendation/Alternative objects (metrics, reasoning, non-recommended
+    alternatives) to keep this small. Returns an empty list if no analysis history exists yet
+    (e.g. a brand-new persona) — that is a legitimate result, not a loading failure.
+    """
+    path = _DATA / "analysis_history.json"
+    if not path.exists():
+        return {"history": []}
+    raw = json.loads(path.read_text())
+    entries = AnalysisHistory.model_validate(raw).entries[-limit:]
+    history = []
+    for entry in entries:
+        recommended = next(
+            (alt for alt in entry.recommendation.alternatives if alt.isRecommended), None
+        )
+        history.append({
+            "date": entry.date,
+            "verdict": entry.recommendation.verdict,
+            "outcome": entry.outcome,
+            "recommended_action": recommended.name if recommended else "",
+        })
+    return {"history": history}
 
 
 def load_current_subscriptions() -> dict:
@@ -358,6 +441,28 @@ def _generic_car_co2_factor_kg_per_km() -> float:
             if row["mode"] == "Car_Sharing" and row["type"] == "Null" and row["size"] == "Null":
                 return float(row["kg_co2e_per_km"])
     raise RuntimeError("Car_Sharing,Null,Null row missing from co2_factors.csv")
+
+
+def _rail_and_carshare_co2_factors() -> tuple[float, float]:
+    """Return (rail, car_share) generic CO2 factors in g/km, sourced from co2_factors.csv's
+    Rail/Null/Null and Car_Sharing/Null/Null rows — the same generic-average rows
+    _generic_car_co2_factor_kg_per_km already reads for the optimizer, so the annual report's
+    fixed CO2 formula can never disagree with the optimizer's own per-candidate CO2 math about
+    what a generic rail/car-share km costs. Used to interpolate real figures into
+    annual_communicator's prompt instead of a hardcoded assumption."""
+    rail_kg_per_km: float | None = None
+    car_share_kg_per_km: float | None = None
+    with (_STATIC / "co2_factors.csv").open(encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["type"] != "Null" or row["size"] != "Null":
+                continue
+            if row["mode"] == "Rail":
+                rail_kg_per_km = float(row["kg_co2e_per_km"])
+            elif row["mode"] == "Car_Sharing":
+                car_share_kg_per_km = float(row["kg_co2e_per_km"])
+    if rail_kg_per_km is None or car_share_kg_per_km is None:
+        raise RuntimeError("Rail,Null,Null or Car_Sharing,Null,Null row missing from co2_factors.csv")
+    return round(rail_kg_per_km * 1000, 2), round(car_share_kg_per_km * 1000, 2)
 
 
 def compute_co2_impact_kg(

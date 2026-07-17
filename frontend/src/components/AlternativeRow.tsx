@@ -58,7 +58,9 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
                 savingsPositive ? "text-green-700" : "text-red-600"
               }`}
             >
-              {savingsPositive ? `–€${alt.savingsVsCurrentEur}` : `+€${Math.abs(alt.savingsVsCurrentEur)}`}
+              {savingsPositive
+                ? `–€${alt.savingsVsCurrentEur.toFixed(0)}`
+                : `+€${Math.abs(alt.savingsVsCurrentEur).toFixed(0)}`}
               {" vs. status quo"}
             </p>
           )}

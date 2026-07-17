@@ -14,12 +14,24 @@ def catalog_lookup() -> dict[str, dict]:
     return {opt["id"]: opt for opt in raw.get("options", [])}
 
 
+class PriorityWeights(BaseModel):
+    cost: float = 1 / 3
+    time: float = 1 / 3
+    sustainability: float = 1 / 3
+
+
 class UserPreferences(BaseModel):
     name: str
     flexibility_need: str
     sustainability_weight: float
     values_time_over_money: bool
     notes: str
+    # Optional-safe additions (persona geography + raw priority weights) — existing
+    # callers validating a dict without these keys still pass via the defaults below.
+    home_city: str = ""
+    office_days: list[str] = []
+    wfh_days: list[str] = []
+    priority_weights: PriorityWeights = PriorityWeights()
 
 
 class Eligibility(BaseModel):
@@ -216,6 +228,21 @@ class CarUsage(BaseModel):
     type: str | None = None
     size: str | None = None
     monthly_km_estimate: float | None = None
+
+
+class LifeEvent(BaseModel):
+    category: Literal[
+        "relocation", "job_change", "subscription_change", "household_change", "other"
+    ]
+    summary: str
+    event_date: str | None = None
+    signals: list[str] = []
+    source_mail_id: str | None = None
+    detected_on: str
+
+
+class LifeEvents(BaseModel):
+    events: list[LifeEvent]
 
 
 # ── Pipeline output / API response schemas ──────────────────────────────────────

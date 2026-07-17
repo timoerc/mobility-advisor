@@ -51,6 +51,7 @@ _SCENARIO_FILES = [
     "calendar_events_live.json",
     "car_usage.json",
     "analysis_history.json",
+    "life_events.json",
 ]
 _MODEL_ID = "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw"
 
@@ -218,9 +219,10 @@ def _activate_from_scenario(persona_id: str) -> bool:
 
 
 # ── Analysis history helpers ──────────────────────────────────────────────────
-# analysis_history.json lives only in data/ (never scenarios/) — it's part of the
-# single active, mutable dataset and gets reset on every persona activation just
-# like current_subscriptions.json, via _SCENARIO_FILES above.
+# analysis_history.json is part of the single active, mutable dataset in data/ — each
+# scenario also ships its own seed copy (scenarios/<persona>/analysis_history.json), copied
+# into data/ on every persona activation via _SCENARIO_FILES above, same as
+# current_subscriptions.json.
 
 _history_lock = asyncio.Lock()
 
@@ -258,6 +260,7 @@ async def save_profile(payload: ProfilePayload):
         _atomic_write(_DATA / "travel_history_raw.json", {"trips": []})
         _atomic_write(_DATA / "calendar_events_live.json", {"events": []})
         _atomic_write(_DATA / "analysis_history.json", {"entries": []})
+        _atomic_write(_DATA / "life_events.json", {"events": []})
     return {"ok": True}
 
 
@@ -477,7 +480,7 @@ def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
     if keep_rows:
         keep_cost = keep_rows[0].annualCostEur
         for alt in rec.alternatives:
-            alt.savingsVsCurrentEur = keep_cost - alt.annualCostEur
+            alt.savingsVsCurrentEur = round(keep_cost - alt.annualCostEur, 2)
     for alt in rec.alternatives:
         if alt.action is None:
             alt.co2Impact = "Neutral"
