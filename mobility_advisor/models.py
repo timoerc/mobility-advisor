@@ -16,10 +16,13 @@ def catalog_lookup() -> dict[str, dict]:
 
 class UserPreferences(BaseModel):
     name: str
-    flexibility_need: str
+    home_city: str
+    age: int | None = None
+    owns_car: bool = False
+    cost_weight: float
+    time_weight: float
     sustainability_weight: float
-    values_time_over_money: bool
-    notes: str
+    notes: str = ""
 
 
 class Eligibility(BaseModel):
@@ -38,6 +41,7 @@ class RailBenefits(BaseModel):
 
 class CarShareBenefits(BaseModel):
     model_config = {"extra": "forbid"}
+    base_km_rate_eur: float
     monthly_credit_eur: float
     discount_km_pct: float
     discount_time_pct: float
@@ -216,6 +220,34 @@ class CarUsage(BaseModel):
     type: str | None = None
     size: str | None = None
     monthly_km_estimate: float | None = None
+
+
+# ── Projected trip models (used by the redesigned pipeline) ───────────────────
+
+
+class RouteAlternative(BaseModel):
+    mode: str
+    distance_km: float
+    duration_min: float
+    co2_kg: float
+    estimated_price_eur: float
+
+
+class ProjectedTrip(BaseModel):
+    route: str
+    origin: str
+    destination: str
+    frequency_per_year: int
+    source: Literal["history", "calendar", "car_usage"]
+    category: str | None = None
+    distance_km: float
+    alternatives: list[RouteAlternative]
+
+
+class ProjectedTripSet(BaseModel):
+    trips: list[ProjectedTrip]
+    generated_at: str
+    warnings: list[str] = []
 
 
 # ── Pipeline output / API response schemas ──────────────────────────────────────

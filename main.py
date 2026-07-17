@@ -166,7 +166,7 @@ class ResolveAnalysisRequest(BaseModel):
 def _atomic_write(path: Path, data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.write("\n")
         os.replace(tmp, path)
@@ -230,7 +230,7 @@ def _load_history() -> AnalysisHistory:
     if not path.exists():
         return AnalysisHistory(entries=[])
     try:
-        return AnalysisHistory.model_validate(json.loads(path.read_text()))
+        return AnalysisHistory.model_validate(json.loads(path.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, ValidationError):
         return AnalysisHistory(entries=[])
 
@@ -271,16 +271,16 @@ async def list_personas():
         pf = folder / "persona.json"
         if not pf.exists():
             continue
-        persona = json.loads(pf.read_text())
+        persona = json.loads(pf.read_text(encoding="utf-8"))
         sf = folder / "current_subscriptions.json"
         subscriptions = (
-            CurrentSubscriptions.model_validate(json.loads(sf.read_text())).model_dump()["subscriptions"]
+            CurrentSubscriptions.model_validate(json.loads(sf.read_text(encoding="utf-8"))).model_dump()["subscriptions"]
             if sf.exists() else []
         )
         persona["profileData"]["subscriptions"] = subscriptions
         cf = folder / "car_usage.json"
         persona["profileData"]["car"] = (
-            json.loads(cf.read_text()) if cf.exists() else CarUsage().model_dump()
+            json.loads(cf.read_text(encoding="utf-8")) if cf.exists() else CarUsage().model_dump()
         )
         result.append(persona)
     return result
@@ -315,7 +315,7 @@ async def get_current_subscriptions():
     path = _DATA / "current_subscriptions.json"
     if not path.exists():
         return {"subscriptions": []}
-    data = CurrentSubscriptions.model_validate(json.loads(path.read_text()))
+    data = CurrentSubscriptions.model_validate(json.loads(path.read_text(encoding="utf-8")))
     return {"subscriptions": data.model_dump()["subscriptions"]}
 
 
@@ -332,7 +332,7 @@ async def get_travel_history():
     path = _DATA / "travel_history_raw.json"
     if not path.exists():
         return {"trips": [], "reference_date": MOCK_TODAY.isoformat()}
-    data = TravelHistory.model_validate(json.loads(path.read_text()))
+    data = TravelHistory.model_validate(json.loads(path.read_text(encoding="utf-8")))
     return {"trips": data.model_dump()["trips"], "reference_date": MOCK_TODAY.isoformat()}
 
 
@@ -367,7 +367,7 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
     {
       "id": "<short slug, e.g. 'cancel' or 'keep'>",
       "name": "<human-readable name describing this OPTION, not just a product — see naming rules below>",
-      "annualCostEur": <annual subscription cost for this option in EUR>,
+      "annualCostEur": <total annual cost for this option in EUR — subscription cost PLUS trip cost if the report shows both; if only subscription cost is stated, use that>,
       "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
       "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
       "co2ImpactKg": <the signed kg/year number stated in this option's CO2 impact line;
@@ -393,7 +393,7 @@ Rules:
     - id: a short slug like "keep"
     - name: the literal string "Keep current setup" — never the product name, even though the
       product being kept is the same one named elsewhere
-    - annualCostEur: the report's "Your current setup" monthly figure x 12
+    - annualCostEur: the report's total annual cost for the current setup (subscription + trip costs if both are shown; "Your current setup" monthly figure x 12 if only monthly is shown)
     - savingsVsCurrentEur: 0
     - co2Impact: "Neutral"
     - co2ImpactKg: 0
@@ -404,9 +404,10 @@ Rules:
 - Exactly one alternative must have isRecommended: true, and its action must not be null.
 - metrics must include at minimum: the monthly or annual saving (direction 'save') for the
   RECOMMENDED alternative, and CO2 impact (direction 'reduce' or 'neutral')
-- for each alternative with a non-null action: annualCostEur and savingsVsCurrentEur come from
-  THAT option's own "Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo ...)" line, x 12 — never copy one
-  option's numbers onto another
+- for each alternative with a non-null action: annualCostEur is the TOTAL annual cost
+  (subscription fees + trip costs). If the report shows "Annual cost: €X (subscriptions: €Y +
+  trips: €Z)", use X. If only monthly subscription cost is shown, multiply by 12. savingsVsCurrentEur
+  will be recomputed server-side as (keep_cost - annualCostEur), so extract annualCostEur accurately
 - alternatives[].name must always describe the ACTION for that row, never a bare product name
   on its own — two rows must never end up with an identical name just because they both
   reference the same product. Prefix with the verb that matches what actually happens to that
@@ -698,7 +699,7 @@ async def execute(req: ExecuteRequest):
     # invertible on its own). Persisted server-side on the history entry below, in this same request.
     prev_path = _DATA / "current_subscriptions.json"
     previous_subscriptions = (
-        CurrentSubscriptions.model_validate(json.loads(prev_path.read_text())).model_dump()
+        CurrentSubscriptions.model_validate(json.loads(prev_path.read_text(encoding="utf-8"))).model_dump()
         if prev_path.exists()
         else None
     )

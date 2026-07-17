@@ -208,6 +208,7 @@
       "minimum_months": 0,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 0.00,
         "discount_km_pct": 0,
         "discount_time_pct": 0,
@@ -227,6 +228,7 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 10.00,
         "discount_km_pct": 10,
         "discount_time_pct": 5,
@@ -246,6 +248,7 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 50.00,
         "discount_km_pct": 15,
         "discount_time_pct": 10,
@@ -265,6 +268,7 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 50.00,
         "discount_km_pct": 15,
         "discount_time_pct": 10,
@@ -284,6 +288,7 @@
       "minimum_months": 1,
       "eligibility": { "min_age": 18, "max_age": null },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 250.00,
         "discount_km_pct": 15,
         "discount_time_pct": 15,

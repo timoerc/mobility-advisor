@@ -6,7 +6,7 @@
       "time_start": null,
       "time_end": null,
       "type": "meeting",
-      "description": "Weekly Frankfurt office day",
+      "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -18,19 +18,7 @@
       "time_start": null,
       "time_end": null,
       "type": "meeting",
-      "description": "Weekly Frankfurt office day",
-      "location": "Frankfurt",
-      "signals": [
-        "local_transit_regular"
-      ]
-    },
-    {
-      "start_date": "2026-07-03",
-      "end_date": "2026-07-03",
-      "time_start": null,
-      "time_end": null,
-      "type": "meeting",
-      "description": "Weekly Frankfurt office day",
+      "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -42,43 +30,83 @@
       "time_start": null,
       "time_end": null,
       "type": "meeting",
-      "description": "Weekly Frankfurt office day",
+      "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
       ]
     },
     {
-      "start_date": "2026-07-20",
-      "end_date": "2026-07-20",
+      "start_date": "2026-07-18",
+      "end_date": "2026-07-18",
+      "time_start": null,
+      "time_end": null,
+      "type": "life_event",
+      "description": "Apartment viewing in Hamburg — exploring housing options",
+      "location": "Hamburg",
+      "signals": [
+        "possible_relocation",
+        "possible_d_ticket_relevance_change"
+      ]
+    },
+    {
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
       "time_start": null,
       "time_end": null,
       "type": "trip",
-      "description": "Weekend trip to Heidelberg — leisure, accessible by D-Ticket",
-      "location": "Heidelberg",
+      "description": "Business trip to Amsterdam — international, neither D-Ticket nor BahnCard applies",
+      "location": "Amsterdam",
       "signals": [
-        "leisure"
+        "long_distance_rail_likely"
       ]
     },
     {
-      "start_date": "2026-06-25",
-      "end_date": "2026-06-25",
+      "start_date": "2026-08-15",
+      "end_date": "2026-08-15",
+      "time_start": null,
+      "time_end": null,
+      "type": "life_event",
+      "description": "Job offer decision deadline — possible relocation to Hamburg in September",
+      "location": null,
+      "signals": [
+        "possible_relocation",
+        "work_pattern_change"
+      ]
+    },
+    {
+      "start_date": "2026-09-01",
+      "end_date": "2026-09-01",
+      "time_start": null,
+      "time_end": null,
+      "type": "life_event",
+      "description": "Potential start date for new Hamburg-based role — remote with biweekly on-site",
+      "location": "Hamburg",
+      "signals": [
+        "possible_relocation",
+        "work_pattern_change",
+        "possible_d_ticket_relevance_change"
+      ]
+    },
+    {
+      "start_date": "2026-06-20",
+      "end_date": "2026-06-20",
       "time_start": null,
       "time_end": null,
       "type": "meeting",
-      "description": "Doctor appointment — local errand in Frankfurt",
+      "description": "Recurring project sync — Frankfurt office",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
       ]
     },
     {
-      "start_date": "2026-08-08",
-      "end_date": "2026-08-08",
+      "start_date": "2026-07-25",
+      "end_date": "2026-07-25",
       "time_start": null,
       "time_end": null,
       "type": "meeting",
-      "description": "Team lunch in Frankfurt Innenstadt",
+      "description": "Client meeting — Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"

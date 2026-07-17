@@ -58,21 +58,23 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
                 savingsPositive ? "text-green-700" : "text-red-600"
               }`}
             >
-              {savingsPositive ? `–€${alt.savingsVsCurrentEur}` : `+€${Math.abs(alt.savingsVsCurrentEur)}`}
+              {savingsPositive ? `–€${Math.round(alt.savingsVsCurrentEur)}` : `+€${Math.round(Math.abs(alt.savingsVsCurrentEur))}`}
               {" vs. status quo"}
             </p>
           )}
         </div>
       </div>
       <p className="text-xs text-gray-500 m-0 leading-relaxed">{alt.tradeoff}</p>
-      {alt.co2Impact && (
+      {(co2Kg !== 0 || alt.co2Impact) && (
         <p
           className={`text-xs font-medium m-0 ${
             co2Positive ? "text-green-600" : co2Negative ? "text-red-600" : "text-gray-500"
           }`}
         >
           <span className="font-semibold">CO₂ impact: </span>
-          {alt.co2Impact}
+          {co2Kg !== 0
+            ? `${co2Positive ? "–" : "+"}${Math.round(Math.abs(co2Kg))} kg CO₂/year`
+            : "Neutral"}
         </p>
       )}
     </>

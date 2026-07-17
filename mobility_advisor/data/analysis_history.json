@@ -1,166 +1,264 @@
 {
   "entries": [
     {
-      "id": "hist_maja_0001",
-      "date": "2026-02-02",
-      "outcome": "kept_current",
-      "resolvedAlternativeId": "keep",
-      "resolvedMessage": "Wanted to see how the rest of the year shaped up before making a change.",
-      "resolvedAt": "2026-02-02",
+      "id": "hist_stefan_0001",
+      "date": "2026-01-15",
       "recommendation": {
-        "verdict": "BahnCard 50 usage is off to a slow start this year",
+        "verdict": "BahnCard 50 usage is borderline this year",
         "confidence": "medium",
-        "summaryText": "Only a couple of long-distance DB trips are logged so far in 2026 — discounted spend is well below what's needed to justify BahnCard 50's €244/year cost. Downgrading to BahnCard 25 would still cover your usage at less than half the price.",
+        "summaryText": "Your discounted DB spend so far this year sits right at the edge of BahnCard 50's break-even point — usage has been thin and irregular.",
         "metrics": [
-          { "value": 133, "unit": "€/year", "direction": "save", "label": "Potential saving vs. BahnCard 50" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
-        ],
-        "reasoning": [
-          "Only 2 long-distance rail trips have been recorded since January",
-          "Discounted DB spend so far this year is far below the €488 needed to break even on BahnCard 50",
-          "BahnCard 25 costs €111/year and would still apply to the same trips at a lower discount tier"
-        ],
-        "assumptions": [
-          "Assumes the travel pattern for the rest of the year resembles the first quarter",
-          "CO2 impact is neutral — this only changes card tier, not which transport mode you use"
-        ],
-        "alternatives": [
           {
-            "id": "downgrade_bc25",
-            "name": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 111,
-            "savingsVsCurrentEur": 133,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
-            "tradeoff": "Lower discount (25% vs. 50%) but still profitable at your current usage level.",
-            "isRecommended": true,
-            "action": {
-              "title": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-              "description": "Replace your BahnCard 50 with the cheaper BahnCard 25 tier before your next renewal.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
-            }
+            "value": 244.0,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving if cancelled"
           },
           {
-            "id": "keep",
-            "name": "Keep current setup",
-            "annualCostEur": 244,
-            "savingsVsCurrentEur": 0,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
-            "tradeoff": "Keeps your existing discount tier in case travel picks up later in the year.",
-            "isRecommended": false,
-            "action": null
+            "value": 0.0,
+            "unit": "kg CO2",
+            "direction": "neutral",
+            "label": "CO2 impact"
           }
-        ]
-      }
-    },
-    {
-      "id": "hist_maja_0002",
-      "date": "2026-04-14",
-      "outcome": "kept_current",
-      "resolvedAlternativeId": "keep",
-      "resolvedMessage": "Waiting to see if a possible Hamburg trip changes the picture before cancelling.",
-      "resolvedAt": "2026-04-14",
-      "recommendation": {
-        "verdict": "BahnCard 50 is on track to lose you money again this year",
-        "confidence": "high",
-        "summaryText": "Discounted DB spend through mid-April covers less than half of BahnCard 50's €244 annual cost. At this pace you're on track for a net loss of about €132 this year — cancelling would save the full card cost.",
-        "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
         ],
         "reasoning": [
-          "Discounted DB spend year-to-date is far short of the €488 breakeven threshold",
-          "Trips remain genuinely long-distance Intercity journeys (Köln↔Ulm, Köln↔Freiburg) but too infrequent to justify the card",
-          "Cancelling before the 31 December 2026 renewal avoids another year of the same shortfall"
+          "Only a handful of DB trips are recorded so far this year, well under the pace needed to clear the €488 breakeven threshold",
+          "No relocation or other major schedule change is on the calendar yet",
+          "Deutschland-Ticket and MILES Silber Pass continue to cover regional and car-share needs separately"
         ],
         "assumptions": [
-          "Assumes no unplanned surge in long-distance rail travel before year-end",
-          "A possible Hamburg trip could change the picture but isn't confirmed on the calendar yet"
+          "Assumes the travel pattern stays similar for the rest of the year",
+          "No account taken of unquantified car-ownership costs (fuel/insurance/maintenance) — not present in the available data"
         ],
         "alternatives": [
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 0,
-            "savingsVsCurrentEur": 244,
+            "annualCostEur": 0.0,
+            "savingsVsCurrentEur": 244.0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
+            "co2ImpactKg": 0.0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
             "isRecommended": true,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-              "description": "Cancel before the 31 December 2026 renewal date to avoid another year of card fees.",
+              "description": "Cancel before the 15 January 2027 renewal to avoid another year of card fees.",
               "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
-            "annualCostEur": 244,
-            "savingsVsCurrentEur": 0,
+            "annualCostEur": 244.0,
+            "savingsVsCurrentEur": 0.0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
-            "tradeoff": "Keeps the 50% Flexpreis discount in case a Hamburg trip materializes.",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "Keeps the discount in case business travel picks up later in the year.",
             "isRecommended": false,
             "action": null
           }
         ]
-      }
+      },
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Wanted to see how spring Frankfurt travel shaped up before cancelling.",
+      "resolvedAt": "2026-01-15",
+      "revertSnapshot": null
     },
     {
-      "id": "hist_maja_0003",
-      "date": "2026-06-02",
+      "id": "hist_stefan_0002",
+      "date": "2026-04-20",
+      "recommendation": {
+        "verdict": "Your mobility setup is in limbo pending the Hamburg decision",
+        "confidence": "low",
+        "summaryText": "A possible relocation to Hamburg could reset your whole commute pattern — it's too early to act on BahnCard 50, Deutschland-Ticket, or MILES until that's resolved.",
+        "metrics": [
+          {
+            "value": 1.0,
+            "unit": "decision",
+            "direction": "neutral",
+            "label": "Pending: Hamburg move (by 15 Aug 2026)"
+          },
+          {
+            "value": 0.0,
+            "unit": "€/year",
+            "direction": "neutral",
+            "label": "Recommended change right now"
+          }
+        ],
+        "reasoning": [
+          "An apartment-viewing event for Hamburg appeared on the calendar this quarter, with a job-offer decision due by 15 August 2026",
+          "If the move goes ahead, the car commute disappears and rail/Deutschland-Ticket demand resets entirely — the current break-even analysis wouldn't apply",
+          "BahnCard 50 usage remains borderline in the meantime, but acting now risks the wrong call either way"
+        ],
+        "assumptions": [
+          "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
+          "Assumes the 15 August 2026 decision date holds"
+        ],
+        "alternatives": [
+          {
+            "id": "hold_pending_relocation",
+            "name": "Hold all subscriptions pending the Hamburg decision",
+            "annualCostEur": 1120.0,
+            "savingsVsCurrentEur": 0.0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "No savings captured now, but avoids a change the relocation decision could immediately reverse.",
+            "isRecommended": true,
+            "action": {
+              "title": "Postpone any subscription changes until after the 15 August 2026 relocation decision",
+              "description": "Hold BahnCard 50, Deutschland-Ticket, and MILES Silber Pass as-is until the Hamburg job offer is resolved.",
+              "consequence": "No subscriptions change now; this analysis should be revisited once the relocation decision is made."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 1120.0,
+            "savingsVsCurrentEur": 0.0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "Equivalent outcome to holding pending the decision.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      },
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Chose to wait and revisit after the Hamburg decision in August.",
+      "resolvedAt": "2026-04-20",
+      "revertSnapshot": null
+    },
+    {
+      "id": "hist_stefan_0003",
+      "date": "2026-06-05",
+      "recommendation": {
+        "verdict": "BahnCard 50's future depends on the Hamburg decision",
+        "confidence": "low",
+        "summaryText": "If the Hamburg move doesn't happen, BahnCard 50 is no longer worth its cost given your irregular usage this year — cancelling would save the full €244. If the move goes ahead, the whole subscription stack needs re-evaluating after relocation.",
+        "metrics": [
+          {
+            "value": 244.0,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving if no relocation"
+          },
+          {
+            "value": 0.0,
+            "unit": "kg CO2",
+            "direction": "neutral",
+            "label": "CO2 impact"
+          }
+        ],
+        "reasoning": [
+          "BahnCard 50 savings this year (~€239) are almost exactly equal to its €244 cost — a marginal net loss either way",
+          "Rail and MILES usage remain irregular, clustering in a few months with long gaps between",
+          "If the 15 August 2026 relocation decision goes ahead, commute patterns reset entirely and this analysis no longer applies",
+          "This recommendation assumes no relocation — cancelling BahnCard 50 is the safer default until the decision is made"
+        ],
+        "assumptions": [
+          "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
+          "If relocation is confirmed, revisit Deutschland-Ticket and MILES Silber Pass as well, not just BahnCard 50"
+        ],
+        "alternatives": [
+          {
+            "id": "cancel_bc50",
+            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 0.0,
+            "savingsVsCurrentEur": 244.0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "Assumes no relocation; if the Hamburg move goes ahead, revisit the whole stack instead.",
+            "isRecommended": true,
+            "action": {
+              "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Cancel before the 15 January 2027 renewal — savings this year barely covered the card's cost.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 244.0,
+            "savingsVsCurrentEur": 0.0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "Holds everything pending the 15 August 2026 relocation decision.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      },
       "outcome": "pending",
       "resolvedAlternativeId": null,
       "resolvedMessage": null,
       "resolvedAt": null,
+      "revertSnapshot": null
+    },
+    {
+      "id": "hist_809c908693",
+      "date": "2026-06-15",
       "recommendation": {
-        "verdict": "BahnCard 50 did not pay off this year",
+        "verdict": "Switch to BahnCard 25 saves €725 per year annually",
         "confidence": "high",
-        "summaryText": "Your discounted DB spend this year covers less than half of BahnCard 50's €244 cost — cancelling would save the full amount with no change to your travel pattern.",
+        "summaryText": "Switching to the BahnCard 25 (2nd Klasse, annual) reduces your total mobility cost to €2,830.70, saving €725.21 per year compared with doing nothing. It also cuts CO₂ emissions by about 276 kg annually.",
         "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          {
+            "value": 725.21,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving"
+          },
+          {
+            "value": 275.912,
+            "unit": "kg CO2/year",
+            "direction": "reduce",
+            "label": "CO₂ reduction"
+          }
         ],
         "reasoning": [
-          "5 DB trips this year produced €111.70 in discounted spend, far below the €488 breakeven threshold",
-          "Trips are genuinely long-distance (Köln↔Ulm, Köln↔Freiburg) — the issue is frequency, not distance",
-          "Net loss from holding BahnCard 50 this year is about €132"
+          "The BahnCard 25 discount lowers ticket prices enough to offset any extra travel time.",
+          "Total annual cost drops from €3,555.91 to €2,830.70, a clear €725.21 saving.",
+          "CO₂ emissions decrease by ~20 % (275.9 kg) due to higher rail usage."
         ],
         "assumptions": [
-          "Assumes the remaining months follow the same low-frequency pattern",
-          "No Hamburg trip has materialized on the calendar"
+          "CO2 impact is 0 for any change that only adjusts price or tier on a mode you already use (e.g. BahnCard 50 → BahnCard 25) — it only changes when an action adds or removes your only means of accessing a transport mode, such as a car-sharing membership."
         ],
         "alternatives": [
           {
-            "id": "cancel_bc50",
-            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 0,
-            "savingsVsCurrentEur": 244,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
-            "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
+            "id": "switch",
+            "name": "Switch to BahnCard 25 (2nd Klasse, annual)",
+            "annualCostEur": 2830.7,
+            "savingsVsCurrentEur": 725.21,
+            "co2Impact": "+275.912 kg CO2/year",
+            "co2ImpactKg": 275.912,
+            "tradeoff": "Slightly longer travel time (+98.4 min per year)",
             "isRecommended": true,
             "action": {
-              "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-              "description": "Cancel before 31 December 2026 to avoid auto-renewal and stop paying for a card you're not using enough.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "title": "Switch to BahnCard 25 (2nd Klasse, annual)",
+              "description": "Your current subscriptions will be replaced with the BahnCard 25 (2nd Klasse, annual). This change saves €725.21 per year and reduces CO₂ emissions by 275.9 kg annually.",
+              "consequence": "Your current setup (Do Nothing) will be replaced by the BahnCard 25 (2nd Klasse, annual) subscription, costing €2,830.70 per year."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
-            "annualCostEur": 244,
-            "savingsVsCurrentEur": 0,
+            "annualCostEur": 3555.91,
+            "savingsVsCurrentEur": 0.0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0,
-            "tradeoff": "Keeps the discount tier unchanged for now.",
+            "co2ImpactKg": 0.0,
+            "tradeoff": "No change to cost or emissions",
             "isRecommended": false,
             "action": null
           }
         ]
-      }
+      },
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "revertSnapshot": null
     }
   ]
 }

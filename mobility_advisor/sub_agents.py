@@ -16,12 +16,20 @@ from .tools import (
     MOCK_TODAY,
     REVIEW_YEAR,
     compute_co2_impact_kg,
+    compute_portfolio_score,
+    derive_car_usage_trips,
+    derive_projected_trips_from_calendar,
+    derive_projected_trips_from_history,
     load_annual_travel_history,
     load_calendar_events,
+    load_car_usage,
     load_current_subscriptions,
     load_relevant_mobility_catalog,
+    load_simulation_candidates,
     load_travel_history,
     load_user_preferences,
+    merge_projected_trip_sets,
+    simulate_portfolio,
 )
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
@@ -33,8 +41,9 @@ def build_model() -> LiteLlm:
 
 
 # Output-length tiers for the pipeline agents below (see build_content_config).
-_SHORT_REPORT_TOKENS = 1024   # analyst / forecaster: concise bullet-point summaries
-_MEDIUM_REPORT_TOKENS = 2048  # optimizer / communicator: structured recommendation with numeric derivations
+_SHORT_REPORT_TOKENS = 4096   # analyst / forecaster: trip projection summaries
+_MEDIUM_REPORT_TOKENS = 4096  # communicator: structured recommendation with scoring breakdown
+_OPTIMIZER_TOKENS = 8192      # optimizer: simulation results + scoring analysis
 _LONG_REPORT_TOKENS = 4096    # annual_communicator: full multi-section annual review
 
 
@@ -55,35 +64,40 @@ def build_content_config(max_output_tokens: int) -> types.GenerateContentConfig:
 _TODAY = MOCK_TODAY.isoformat()
 _REVIEW_YEAR = REVIEW_YEAR
 _DATA_DIR = Path(__file__).parent / "data"
-_prefs = json.loads((_DATA_DIR / "persona.json").read_text())
+_prefs = json.loads((_DATA_DIR / "persona.json").read_text(encoding="utf-8"))
 _USER_NAME = _prefs.get("name", "the user")
 _USER_FIRST_NAME = _USER_NAME.split()[0]
+_profile = _prefs.get("profileData", {})
+_USER_HOME_CITY = _profile.get("location", {}).get("home_city", "unknown")
 
 analyst_agent = LlmAgent(
     name="analyst",
     model=_MODEL,
-    description=f"Analyzes {_USER_FIRST_NAME}'s travel history and current subscriptions to identify portfolio inefficiencies.",
+    description=f"Derives projected trips from {_USER_FIRST_NAME}'s travel history.",
     instruction=f"""\
 You are the Analyst agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-You MUST call load_travel_history and load_current_subscriptions first. Use ONLY the exact figures returned by the tools — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
+Your job: derive projected recurring trips from historical travel patterns.
 
-Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
+Step 1 — call load_travel_history() to examine the user's travel history.
 
-Step 1 — call load_travel_history() and load_current_subscriptions(). Do this before writing anything.
+Step 2 — call derive_projected_trips_from_history(). This tool:
+- Groups historical trips by route (direction-independent)
+- Extrapolates to annual frequency
+- Computes per-mode alternatives (rail, car_share, car_rental, flight) with cost/time/CO2
+- Writes the result to _projected_trips_history.json
 
-Step 2 — for each subscription, report:
-- **Subscription name** and monthly cost (verbatim from tool)
-- **Trip count**: how many trips in the past 12 months used this subscription (from travel history)
-- **Spend figures**: total amount paid under this subscription in the past 12 months (verbatim from tool data)
-- **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
+Step 3 — output a summary of what was projected:
+- How many recurring routes were found
+- Total projected annual trips
+- For each route: route name, annual frequency, and number of mode alternatives
+- Any warnings from the tool
 
-Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
-
-Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
+Keep the output concise — bullet points, no prose. Your output is consumed by downstream agents.
+Do not include questions, offers, or conversational phrases at the end.
 """,
-    tools=[load_travel_history, load_current_subscriptions],
+    tools=[load_travel_history, derive_projected_trips_from_history],
     output_key="analysis",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
 )
@@ -91,28 +105,49 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 forecaster_agent = LlmAgent(
     name="forecaster",
     model=_MODEL,
-    description=f"Forecasts {_USER_FIRST_NAME}'s forward mobility demand for the next 3–6 months based on {_USER_FIRST_NAME}'s calendar.",
+    description=f"Derives projected trips from {_USER_FIRST_NAME}'s calendar, car usage, and life events, then merges all trip sources.",
     instruction=f"""\
 You are the Forecaster agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-Your job: summarize forward mobility demand for the next 3–6 months from today.
+Your job: derive projected trips from calendar events, car usage, and life events,
+then merge all trip sources into a single projected trip set.
 
-Step 1 — call load_calendar_events(). Do this before writing anything.
+The Analyst has already derived projected trips from travel history.
 
-Step 2 — produce a brief forward-demand summary (3–5 bullet points):
-- Expected dominant modes (rail, local transit, car-share, etc.)
-- Approximate long-distance trip volume
-- Any life-event signals that could meaningfully shift the portfolio (e.g. relocation, work-pattern change)
-- Any notable gaps or uncertainties
+Step 1 — call load_calendar_events() to see the user's upcoming events over the next 12 months.
 
-Be factual and brief. Do not recommend actions — that is the Optimizer's job.
+Step 2 — for each calendar event that implies a trip to a DIFFERENT city,
+call derive_projected_trips_from_calendar(origin, destination, frequency_per_year).
+The user's home city is {_USER_HOME_CITY} — always use "{_USER_HOME_CITY}" as the origin parameter.
+Estimate frequency: a weekly recurring meeting = 48/yr, a monthly event = 12/yr, a one-off trip = 1/yr.
+Skip events that are local (location is {_USER_HOME_CITY} or same city), virtual/online,
+or life events without a concrete travel destination.
 
-Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
+Step 3 — call load_car_usage() to check if the user has car usage data. If monthly_km_estimate > 0,
+call derive_car_usage_trips() to generate car-based projected trips.
+
+Step 4 — call merge_projected_trip_sets() to combine all sources (history, calendar, car usage)
+into a single merged trip set. This tool also flags duplicate routes across sources.
+
+Step 5 — output a summary:
+- How many trips from each source (history, calendar, car usage)
+- Total merged trips and annual instances
+- Any duplicate warnings
+- Life-event signals from the calendar that could shift mobility needs
+
+Keep the output concise — bullet points, no prose. Your output is consumed by downstream agents.
+Do not include questions, offers, or conversational phrases at the end.
 """,
-    tools=[load_calendar_events],
+    tools=[
+        load_calendar_events,
+        derive_projected_trips_from_calendar,
+        derive_car_usage_trips,
+        load_car_usage,
+        merge_projected_trip_sets,
+    ],
     output_key="forecast",
-    generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
+    generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
 )
 
@@ -188,7 +223,7 @@ Show real numbers from the data. Do not propose more than one change.
 optimizer_agent = LlmAgent(
     name="optimizer",
     model=_MODEL,
-    description="Proposes one or (when genuinely comparable) up to two concrete contract-change candidates based on analysis, forecast, preferences, and catalog.",
+    description="Simulates subscription portfolios and finds the mathematically optimal one via scoring.",
     instruction=f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -197,133 +232,91 @@ Context from upstream agents:
 - Analyst finding: {{analysis}}
 - Forecaster outlook: {{forecast}}
 
-Your job: propose the highest-value action(s) for the user's contract portfolio. Default to
-exactly ONE recommended change. Only propose a second candidate action when it is genuinely
-comparable in value to the first AND materially different in kind — never as padding. See the
-CANDIDATE CAP rule in Step 3 for the exact bar a second candidate must clear.
-Address the user directly as "you"/"your" throughout your output — not by name.
+Your job: simulate candidate subscription portfolios against the merged projected trips
+and find the optimal portfolio using mathematical scoring.
 
-Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call load_user_preferences() and load_simulation_candidates().
 
-Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the highest-impact change(s), applying the CANDIDATE CAP rule below to decide whether one or two candidates are warranted.
+Step 2 — generate 5–10 candidate portfolios to simulate. Always include:
+- [] (empty list = "Do Nothing" / no subscriptions baseline)
+- Each single chooseable subscription alone (e.g. ["db_bc25_2nd_annual_standard"])
+- The user's current subscriptions (from {{analysis}})
+- 2–3 sensible combinations (e.g. BahnCard + Deutschlandticket, BahnCard + MILES tier)
 
-CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
-All rail trips in history are priced at the BahnCard 50 discount (50% off).
-Therefore: full_price_per_trip = trip.cost_eur × 2
+Do NOT include subscriptions filtered out by load_simulation_candidates (1st class BahnCards,
+BC100, automatic tiers like Enterprise/Miles&More).
 
-For each candidate BahnCard tier, compute:
-  annual_trip_cost_at_tier = Σ(full_price_per_trip × (1 − tier_discount_rate))
-    BC25 discount = 0.25  →  multiply full_price by 0.75
-    BC50 discount = 0.50  →  multiply full_price by 0.50
-  net_saving_at_tier = (full_price_total − annual_trip_cost_at_tier) − (tier_monthly_cost × 12)
+Step 3 — for each candidate portfolio, call simulate_portfolio(subscription_ids).
+Collect all simulation results.
 
-Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
-Include the net_saving figures for both tiers in your output.
+Step 4 — call compute_portfolio_score(simulation_results, weights) with the user's
+preference weights from Step 1. This returns a ranked list with normalized scores.
 
-NAMING — always use the exact, full product name as it appears in load_relevant_mobility_catalog's
-"product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)") or in the Analyst
-finding's subscription names — never a short form like "BahnCard 25" alone. The catalog has
-several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
-name cannot distinguish, and this name is what gets executed later — an underspecified name
-cannot be applied. This applies everywhere you name a specific product, in every candidate block.
-
-Step 3 — output your recommendation in this exact structure:
-
-**Current portfolio cost:** €X.XX/mo (list all active subscriptions and their costs)
-
-For EACH candidate action (see CANDIDATE CAP below), repeat this entire block — do not merge
-two candidates into one block, and do not omit any sub-field:
-
-## Candidate: [short name, e.g. "Cancel BahnCard 50" or "Downgrade to BahnCard 25"]
-**Recommended:** [YES for exactly one candidate — your single highest-value pick — NO for every other candidate]
-**Proposed change:** [what to add / cancel / swap — if this is a swap/replace, explicitly
-name BOTH the exact current subscription being removed AND the exact new product being
-added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a BahnCard 25
-(2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
-**Proposed monthly cost:** €Y.YY/mo (list the new stack)
-**Monthly saving:** €Z.ZZ/mo (vs. Current portfolio cost above)
-**CO₂ impact:** Call compute_co2_impact_kg with THIS candidate's own target_subscription/
-new_product (same names as this candidate's Proposed change above — never another candidate's)
-and state its "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
-**What stays and why:**
-- [subscription] — [one-line justification with the key metric]
-**Why this candidate:** [bullet-point rationale referencing the analysis, forecast, and user preferences — and, if there is more than one candidate, what specifically makes this one different in kind from the others, not just in degree]
-
-CANDIDATE CAP: propose at most 2 candidate blocks total. Default to exactly 1. Only add a
-second candidate when it is genuinely comparable in value to the first AND materially
-different in kind — e.g. a different discrete plan tier (BahnCard 25 vs. BahnCard 50), full
-cancellation vs. a partial downgrade of the same subscription, or a genuinely different mode
-(e.g. a car-share membership instead of a rail card) — never two candidates that differ only
-by a small numeric variation on the same underlying choice (e.g. rounding, or a €2/month gap
-between near-identical options). If you are unsure whether a second candidate clears this bar,
-do not include it — one strong recommendation beats a padded list.
-
-Show real numbers from the data.
+Step 5 — output a structured report with the scoring weights from load_user_preferences,
+the ranked portfolios from compute_portfolio_score, and a recommended portfolio.
+Include the score, annual cost, travel time, and CO2 for each portfolio.
+If "Do Nothing" ranks #1, say so clearly.
+Show real numbers from simulation results. Do not invent figures.
+Your output is consumed by downstream agents. Do not include questions or conversational phrases.
 """,
-    tools=[load_user_preferences, load_relevant_mobility_catalog, compute_co2_impact_kg],
+    tools=[load_user_preferences, load_simulation_candidates, simulate_portfolio, compute_portfolio_score],
     output_key="recommendation",
-    generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
+    generate_content_config=build_content_config(_OPTIMIZER_TOKENS),
     include_contents="none",
 )
 
 communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
-    description=f"Formats the optimizer's recommendation (one or, when warranted, up to two candidate actions) into a clear, scannable message for {_USER_FIRST_NAME}.",
+    description=f"Presents the portfolio optimization results as a clear, scannable report for {_USER_FIRST_NAME}.",
     instruction=f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-The Optimizer has produced this recommendation, containing one or two candidate actions:
+The Optimizer has produced a portfolio ranking with simulation results:
 {{recommendation}}
 
-Your job: reformat it into a friendly, scannable message that speaks directly to
-the user as "you"/"your" throughout — not by name. If the Optimizer proposed more than one
-candidate, present all of them, clearly marking which one is the recommended pick — never
-invent a candidate that isn't in the Optimizer's output, and never drop one that is.
+Your job: present the results as a friendly, scannable report that speaks directly to
+the user as "you"/"your" throughout — not by name.
 
 Structure your output exactly as follows:
 
 ---
-**Your Mobility Advisor Report**
+**Your Mobility Portfolio Optimization**
 
-**Your current setup:** €X.XX/mo (copy the Optimizer's "Current portfolio cost" line and
-subscription list verbatim)
+**Recommended portfolio:** [name of the #1 ranked portfolio]
+[one-sentence summary of why it wins]
 
-**Recommendation:** [one-sentence headline for the candidate marked Recommended: YES]
+**Scoring breakdown** (weights from your preferences):
 
-For EACH candidate action from the Optimizer, in the same order, repeat this block:
+| Portfolio | Score | Annual Cost | Travel Time | CO₂ |
+|-----------|-------|-------------|-------------|-----|
+| [#1 name] | [score] | €[cost] | [time] min | [co2] kg |
+| [#2 name] | [score] | €[cost] | [time] min | [co2] kg |
+| ... | ... | ... | ... | ... |
 
-**Option: [short candidate name]**[append " — Recommended" only on the candidate marked Recommended: YES]
-- Change: [the proposed change, one sentence]
-- Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo vs. your current setup) — copy these two numbers
-  verbatim from this candidate's own "Proposed monthly cost" / "Monthly saving" lines, never
-  the other candidate's numbers
-- Action by: **[next_renewal_date, formatted as DD Month YYYY]** to avoid auto-renewal
-- CO₂ impact: [one line]
-- Trade-off: [1–2 sentences on the downside or uncertainty specific to THIS candidate]
+**What the recommended portfolio means for you:**
+- Subscriptions: [list subscriptions in the portfolio, or "None" for Do Nothing]
+- Annual subscription cost: €[amount]
+- Annual trip cost (after discounts): €[amount]
+- Total annual mobility cost: €[amount]
+- How you'd travel: [describe the dominant modes for your trips]
 
-(Output exactly one Option block per candidate the Optimizer actually gave you — never add a
-second Option block if the Optimizer proposed only one.)
+**Compared to doing nothing:**
+- Cost difference: €[amount saved or extra] per year
+- Time difference: [minutes saved or extra] per year
+- CO₂ difference: [kg saved or extra] per year
 
-**What stays in your portfolio:**
-- [subscription] — [reason, with the key number that justifies it]
-- [subscription] — [reason]
-
-**Why now:** [1–2 sentences referencing your upcoming calendar or life events]
+**Cross-mode highlights:**
+[If the simulation shows interesting mode switches — e.g. rail beating car-share on certain
+routes, or flight being optimal for long distances — call them out in 2–3 bullets]
 
 ---
 ⚠️ **No change has been made to your subscriptions. This recommendation awaits your approval.**
 ---
 
-Keep the tone direct and professional. Do not invent numbers not present in the recommendation.
-Do not claim any action was taken. Do not shorten or paraphrase a product name — copy it exactly
-as given in the recommendation above (e.g. keep "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
-intact, never just "BahnCard 25"). Every Option block's "Change" line must name both the exact
-subscription being removed and the exact product being added for a swap/replace — this wording
-is what gets executed later if the user picks that option, so an underspecified name breaks
-execution for whichever option the user ends up choosing, not just the recommended one.
+Keep the tone direct and professional. Use all numbers verbatim from the Optimizer's output.
+Do not invent numbers. If "Do Nothing" is the best option, say so clearly — do not spin it.
 """,
     tools=[],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),

@@ -1,10 +1,12 @@
 import calendar
 import csv
 import json
+import logging
 import os
 import re
 import tempfile
-from datetime import date
+import time
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -12,15 +14,30 @@ from pydantic import ValidationError
 
 from .models import (
     CalendarEvents,
+    CarUsage,
     CurrentSubscriptions,
     MobilityCatalog,
+    ProjectedTrip,
+    ProjectedTripSet,
+    RouteAlternative,
     Subscription,
     TravelHistory,
     UserPreferences,
 )
+from .route_utils import (
+    clean_location,
+    co2_kg_for_mode,
+    driving_route,
+    estimate_duration_min,
+    estimate_trip_price,
+    geocode,
+    haversine_distance_km,
+)
 
 _DATA = Path(__file__).parent / "data"
 _STATIC = Path(__file__).parent / "static"
+
+logger = logging.getLogger(__name__)
 
 USE_MOCK_DATA = True
 
@@ -32,7 +49,7 @@ _DEFAULT_REFERENCE_DATE = date(2026, 6, 15)
 
 def _load_reference_date() -> date:
     try:
-        raw = json.loads((_DATA / "persona.json").read_text())
+        raw = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
         return date.fromisoformat(raw["reference_date"])
     except (FileNotFoundError, KeyError, ValueError):
         return _DEFAULT_REFERENCE_DATE
@@ -42,25 +59,945 @@ MOCK_TODAY = _load_reference_date()
 REVIEW_YEAR = MOCK_TODAY.year - 1  # annual report always covers the last full calendar year
 
 def load_user_preferences() -> dict:
-    """Load the active user's mobility preferences derived from their persona profile.
+    """Load the active user's mobility preferences including priority weights.
 
-    Returns a dict with keys: name (str), flexibility_need (str: low/medium/high),
-    sustainability_weight (float 0-1), values_time_over_money (bool), and notes (str).
+    Returns a dict with keys: name (str), home_city (str), age (int or null),
+    owns_car (bool), cost_weight (float 0-1), time_weight (float 0-1),
+    sustainability_weight (float 0-1), and notes (str).
+    The three weights come directly from the frontend sliders and sum to 1.
     """
-    raw = json.loads((_DATA / "persona.json").read_text())
-    pd = raw["profileData"]
-    wfh = pd["commute"]["wfh_days"]
-    n = len(wfh)
-    flexibility = "high" if n >= 4 else "medium" if n >= 2 else "low"
+    persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
+    car = json.loads((_DATA / "car_usage.json").read_text(encoding="utf-8"))
+    pd = persona["profileData"]
     p = pd["priorities"]
     prefs = {
         "name": pd["personal"]["full_name"] or "the user",
-        "flexibility_need": flexibility,
+        "home_city": pd["location"]["home_city"],
+        "age": pd["personal"].get("age"),
+        "owns_car": car.get("owns_car", False),
+        "cost_weight": round(p["cost"], 4),
+        "time_weight": round(p["time"], 4),
         "sustainability_weight": round(p["sustainability"], 4),
-        "values_time_over_money": p["time"] > p["cost"],
         "notes": pd.get("notes", ""),
     }
     return UserPreferences.model_validate(prefs).model_dump()
+
+
+def load_car_usage() -> dict:
+    """Load the active user's private car usage profile.
+
+    Returns a dict with keys: owns_car (bool), mode (str), type (str or null),
+    size (str or null), monthly_km_estimate (float or null).
+    """
+    raw = json.loads((_DATA / "car_usage.json").read_text(encoding="utf-8"))
+    return CarUsage.model_validate(raw).model_dump()
+
+
+# ── Mode filter thresholds for route alternatives ────────────────────────────
+
+_MODE_DISTANCE_FILTERS: dict[str, tuple[float, float]] = {
+    "rail_intercity": (0, float("inf")),
+    "rail_regional": (0, float("inf")),
+    "car_share": (0, 100),
+    "car_rental": (100, float("inf")),
+    "car_private": (0, float("inf")),
+    "flight_short_haul": (400, float("inf")),
+    "flight_domestic": (400, float("inf")),
+}
+
+_RAIL_DISTANCE_THRESHOLD_KM = 100
+
+_REQUEST_DELAY = 1.2
+
+_geocode_cache: dict[str, tuple[float, float] | None] = {}
+
+
+def _cached_geocode(place: str) -> tuple[float, float] | None:
+    """Geocode with in-memory cache to avoid redundant API calls."""
+    if place in _geocode_cache:
+        return _geocode_cache[place]
+    time.sleep(_REQUEST_DELAY)
+    try:
+        result = geocode(place)
+    except Exception:
+        result = None
+    _geocode_cache[place] = result
+    return result
+
+
+def _geocode_pair(
+    origin: str, destination: str
+) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    """Geocode an origin/destination pair with caching. Returns None on failure."""
+    orig_clean = clean_location(origin)
+    dest_clean = clean_location(destination)
+    orig_coords = _cached_geocode(orig_clean)
+    if not orig_coords:
+        logger.warning("geocode failed for origin: %s", orig_clean)
+        return None
+    dest_coords = _cached_geocode(dest_clean)
+    if not dest_coords:
+        logger.warning("geocode failed for destination: %s", dest_clean)
+        return None
+    return orig_coords, dest_coords
+
+
+def compute_route_alternatives(origin: str, destination: str) -> dict:
+    """Compute per-mode travel alternatives for a given origin–destination pair.
+
+    Geocodes both endpoints, computes haversine distance as a cheap pre-filter,
+    then for each mode that passes the distance filter computes distance, duration,
+    CO2, and estimated price.
+
+    Args:
+        origin: City or station name (e.g. "Köln" or "Köln Hbf").
+        destination: City or station name.
+
+    Returns a dict with keys: origin, destination, haversine_km, alternatives
+    (list of RouteAlternative dicts), and warnings (list of strings for any
+    issues encountered).
+    """
+    warnings: list[str] = []
+
+    coords = _geocode_pair(origin, destination)
+    if coords is None:
+        return {
+            "origin": origin,
+            "destination": destination,
+            "haversine_km": None,
+            "alternatives": [],
+            "warnings": ["geocoding failed — cannot compute alternatives"],
+        }
+
+    orig_coords, dest_coords = coords
+    hav_km = haversine_distance_km(orig_coords, dest_coords)
+
+    car_usage = load_car_usage()
+    owns_car = car_usage.get("owns_car", False)
+
+    alternatives: list[dict] = []
+
+    for mode, (min_km, max_km) in _MODE_DISTANCE_FILTERS.items():
+        if not (min_km <= hav_km <= max_km):
+            continue
+
+        if mode == "car_private" and not owns_car:
+            continue
+
+        if mode == "rail_regional" and hav_km > _RAIL_DISTANCE_THRESHOLD_KM:
+            continue
+        if mode == "rail_intercity" and hav_km <= _RAIL_DISTANCE_THRESHOLD_KM:
+            continue
+
+        if mode in ("car_share", "car_rental", "car_private"):
+            try:
+                route_result = driving_route(origin, destination)
+                time.sleep(_REQUEST_DELAY)
+            except Exception as exc:
+                logger.warning("driving_route failed for %s → %s: %s", origin, destination, exc)
+                route_result = None
+            if route_result:
+                dist_km, dur_min = route_result
+            else:
+                dist_km = hav_km * 1.3
+                dur_min = estimate_duration_min("car", dist_km)
+                warnings.append(f"{mode}: driving route API failed, using heuristic")
+        elif mode.startswith("rail"):
+            dist_km = round(hav_km * 1.3, 1)
+            dur_min = estimate_duration_min(mode, dist_km)
+        elif mode.startswith("flight"):
+            dist_km = round(hav_km, 1)
+            dur_min = estimate_duration_min("flight", dist_km)
+        else:
+            continue
+
+        co2_mode = mode
+        if mode in ("flight_short_haul", "flight_domestic"):
+            co2_mode = "flight"
+        elif mode in ("rail_intercity", "rail_regional"):
+            co2_mode = "rail"
+        co2 = co2_kg_for_mode(co2_mode, dist_km)
+        price = estimate_trip_price(mode, dist_km)
+
+        alt = RouteAlternative(
+            mode=mode,
+            distance_km=round(dist_km, 1),
+            duration_min=round(dur_min, 1),
+            co2_kg=round(co2, 3),
+            estimated_price_eur=round(price, 2),
+        )
+        alternatives.append(alt.model_dump())
+
+    return {
+        "origin": origin,
+        "destination": destination,
+        "haversine_km": hav_km,
+        "alternatives": alternatives,
+        "warnings": warnings,
+    }
+
+
+# ── City normalization for route grouping ────────────────────────────────────
+
+_STATION_CITY_MAP = {
+    "basel euroairport": "Basel",
+    "athens eleftherios venizelos": "Athen",
+    "athens": "Athen",
+}
+
+_SUFFIX_RE = re.compile(
+    r"\s+(?:Hbf|Hauptbahnhof|Messe/Deutz|EuroAirport|Eleftherios Venizelos|Airport).*$",
+    re.IGNORECASE,
+)
+
+_AM_AN_RE = re.compile(r"\s+(?:am|an|im|bei)\s+\S+$", re.IGNORECASE)
+
+
+def _normalize_to_city(station: str) -> str:
+    """Extract the city name from a station/airport/provider-prefixed location."""
+    cleaned = clean_location(station)
+    lower = cleaned.lower().strip()
+
+    for pattern, city in _STATION_CITY_MAP.items():
+        if pattern in lower:
+            return city
+
+    iata = re.search(r"\(([A-Z]{3})\)", station)
+    if iata:
+        before_iata = station[:iata.start()].strip().rstrip(",").strip()
+        if before_iata:
+            return before_iata
+
+    if "," in cleaned:
+        parts = [p.strip() for p in cleaned.split(",")]
+        for part in reversed(parts):
+            if re.search(r"\b(?:am|an|im|bei)\b", part, re.IGNORECASE):
+                city_part = _AM_AN_RE.sub("", part).strip()
+                first_word = city_part.split()[0] if city_part else ""
+                if len(first_word) >= 3 and first_word[0].isupper():
+                    return first_word
+        first_part = _SUFFIX_RE.sub("", parts[0]).strip()
+        first_word = first_part.split()[0] if first_part else ""
+        if len(first_word) >= 3 and first_word[0].isupper():
+            return first_word
+
+    cleaned = _SUFFIX_RE.sub("", cleaned).strip()
+
+    first_word = cleaned.split()[0] if cleaned.split() else cleaned
+    if first_word and first_word[0].isupper():
+        return first_word
+    return cleaned
+
+
+def _route_key(origin: str, destination: str) -> tuple[str, str]:
+    """Normalized, direction-independent route key."""
+    a = _normalize_to_city(origin)
+    b = _normalize_to_city(destination)
+    return (min(a, b), max(a, b))
+
+
+def derive_projected_trips_from_history() -> dict:
+    """Analyze travel history and derive projected recurring routes with annual frequencies.
+
+    Groups historical trips by normalized city pair (direction-independent), counts
+    occurrences, extrapolates to annual frequency, and computes per-mode alternatives
+    for routes with frequency >= 2/year.
+
+    Writes results to data/_projected_trips_history.json and returns a summary.
+    """
+    history = load_travel_history()
+    trips = history["trips"]
+
+    route_counts: dict[tuple[str, str], dict] = {}
+    for trip in trips:
+        origin_city = _normalize_to_city(trip["origin"])
+        dest_city = _normalize_to_city(trip["destination"])
+        if origin_city.lower() == dest_city.lower():
+            continue
+        key = _route_key(origin_city, dest_city)
+
+        if key not in route_counts:
+            route_counts[key] = {
+                "origin": key[0],
+                "destination": key[1],
+                "origin_city": origin_city,
+                "dest_city": dest_city,
+                "count": 0,
+                "dates": [],
+            }
+        route_counts[key]["count"] += 1
+        route_counts[key]["dates"].append(trip["date"])
+
+    if not trips:
+        data_window_months = 12
+    else:
+        all_dates = sorted(t["date"] for t in trips)
+        earliest = date.fromisoformat(all_dates[0])
+        latest = date.fromisoformat(all_dates[-1])
+        data_window_months = max(1, round((latest - earliest).days / 30.44))
+
+    projected: list[dict] = []
+    warnings: list[str] = []
+
+    for key, info in route_counts.items():
+        annual_freq = round(info["count"] * 12 / data_window_months)
+        if annual_freq < 2:
+            continue
+
+        origin = info["origin"]
+        dest = info["destination"]
+
+        time.sleep(_REQUEST_DELAY)
+        result = compute_route_alternatives(origin, dest)
+        if result.get("warnings"):
+            warnings.extend(result["warnings"])
+
+        alternatives = result.get("alternatives", [])
+        hav_km = result.get("haversine_km")
+        dist_km = hav_km * 1.3 if hav_km else 0.0
+
+        trip = ProjectedTrip(
+            route=f"{origin} → {dest}",
+            origin=origin,
+            destination=dest,
+            frequency_per_year=annual_freq,
+            source="history",
+            distance_km=round(dist_km, 1),
+            alternatives=alternatives,
+        )
+        projected.append(trip.model_dump())
+
+    trip_set = ProjectedTripSet(
+        trips=projected,
+        generated_at=datetime.now().isoformat(),
+        warnings=warnings,
+    )
+
+    out_path = _DATA / "_projected_trips_history.json"
+    _atomic_write_json(out_path, trip_set.model_dump())
+
+    return {
+        "status": "ok",
+        "routes_projected": len(projected),
+        "total_annual_trips": sum(t["frequency_per_year"] for t in projected),
+        "routes": [
+            {"route": t["route"], "frequency": t["frequency_per_year"], "alternatives_count": len(t["alternatives"])}
+            for t in projected
+        ],
+        "file": "_projected_trips_history.json",
+        "warnings": warnings,
+    }
+
+
+def derive_projected_trips_from_calendar(
+    origin: str,
+    destination: str,
+    frequency_per_year: int,
+) -> dict:
+    """Derive a projected trip from an LLM-interpreted calendar event.
+
+    The LLM reads calendar events, identifies recurring travel patterns
+    (e.g. "Weekly Frankfurt office day"), and calls this tool with the
+    origin, destination, and annual frequency it inferred.
+
+    This tool computes route alternatives and appends the result to
+    data/_projected_trips_calendar.json.
+
+    Args:
+        origin: Origin city (e.g. "Köln").
+        destination: Destination city (e.g. "Frankfurt").
+        frequency_per_year: How many times per year this trip occurs.
+
+    Returns a dict with the projected trip and its alternatives.
+    """
+    result = compute_route_alternatives(origin, destination)
+    alternatives = result.get("alternatives", [])
+    hav_km = result.get("haversine_km")
+    dist_km = round(hav_km * 1.3, 1) if hav_km else 0.0
+
+    trip = ProjectedTrip(
+        route=f"{origin} → {destination}",
+        origin=origin,
+        destination=destination,
+        frequency_per_year=frequency_per_year,
+        source="calendar",
+        distance_km=dist_km,
+        alternatives=alternatives,
+    )
+
+    cal_path = _DATA / "_projected_trips_calendar.json"
+    if cal_path.exists():
+        existing = json.loads(cal_path.read_text(encoding="utf-8"))
+        existing_set = ProjectedTripSet.model_validate(existing)
+        existing_trips = existing_set.trips
+    else:
+        existing_trips = []
+
+    new_key = _route_key(origin, destination)
+    duplicate_idx = None
+    for i, t in enumerate(existing_trips):
+        t_dict = t.model_dump() if isinstance(t, ProjectedTrip) else t
+        if t_dict.get("origin") == "various":
+            continue
+        existing_key = _route_key(t_dict["origin"], t_dict["destination"])
+        if existing_key == new_key:
+            duplicate_idx = i
+            break
+
+    if duplicate_idx is not None:
+        old = existing_trips[duplicate_idx]
+        old_dict = old.model_dump() if isinstance(old, ProjectedTrip) else old
+        old_freq = old_dict.get("frequency_per_year", 0)
+        if frequency_per_year > old_freq:
+            existing_trips[duplicate_idx] = trip
+            logger.info("Calendar dedup: %s updated freq %d → %d", new_key, old_freq, frequency_per_year)
+        else:
+            logger.info("Calendar dedup: %s already exists with freq %d ≥ %d, skipping", new_key, old_freq, frequency_per_year)
+    else:
+        existing_trips.append(trip)
+
+    trip_set = ProjectedTripSet(
+        trips=[t.model_dump() if isinstance(t, ProjectedTrip) else t for t in existing_trips],
+        generated_at=datetime.now().isoformat(),
+        warnings=result.get("warnings", []),
+    )
+    _atomic_write_json(cal_path, trip_set.model_dump())
+
+    return {
+        "status": "ok",
+        "trip": trip.model_dump(),
+        "alternatives_count": len(alternatives),
+        "file": "_projected_trips_calendar.json",
+        "warnings": result.get("warnings", []),
+        "deduplicated": duplicate_idx is not None,
+    }
+
+
+def derive_car_usage_trips() -> dict:
+    """Derive projected trips from the user's private car usage profile.
+
+    Uses deterministic formulas based on monthly_km_estimate from car_usage.json:
+    - Short trips (20km): 40% of km budget → rail_regional, car_share alternatives
+    - Medium trips (100km): 30% of km budget → rail, bus, car_share, car_rental alternatives
+    - Long trips (500km): 30% of km budget → rail, bus, car_rental, flight alternatives
+
+    Writes results to data/_projected_trips_car_usage.json and returns a summary.
+    Only produces output if the user has a non-zero monthly_km_estimate.
+    """
+    car = load_car_usage()
+    km_est = car.get("monthly_km_estimate")
+
+    if not km_est or km_est <= 0:
+        empty_set = ProjectedTripSet(
+            trips=[],
+            generated_at=datetime.now().isoformat(),
+            warnings=["monthly_km_estimate is null or 0 — no car usage trips derived"],
+        )
+        _atomic_write_json(_DATA / "_projected_trips_car_usage.json", empty_set.model_dump())
+        return {
+            "status": "ok",
+            "categories": [],
+            "total_annual_trips": 0,
+            "file": "_projected_trips_car_usage.json",
+            "warnings": empty_set.warnings,
+        }
+
+    categories = [
+        {
+            "name": "short",
+            "distance_km": 20,
+            "km_share": 0.4,
+            "modes": ["rail_regional", "car_share", "car_private"],
+        },
+        {
+            "name": "medium",
+            "distance_km": 100,
+            "km_share": 0.3,
+            "modes": ["rail_intercity", "car_share", "car_rental", "car_private"],
+        },
+        {
+            "name": "long",
+            "distance_km": 500,
+            "km_share": 0.3,
+            "modes": ["rail_intercity", "car_rental", "flight_domestic", "car_private"],
+        },
+    ]
+
+    owns_car = car.get("owns_car", False)
+    projected: list[dict] = []
+    summary_cats: list[dict] = []
+
+    for cat in categories:
+        dist = cat["distance_km"]
+        freq = max(1, round(cat["km_share"] * km_est / dist * 12))
+        if freq < 1:
+            continue
+
+        alternatives: list[dict] = []
+        for mode in cat["modes"]:
+            if mode == "car_private" and not owns_car:
+                continue
+            co2_mode = mode
+            if mode.startswith("flight"):
+                co2_mode = "flight"
+            elif mode.startswith("rail"):
+                co2_mode = "rail"
+            co2 = co2_kg_for_mode(co2_mode, dist)
+            price = estimate_trip_price(mode, dist)
+            dur = estimate_duration_min(mode, dist)
+
+            alt = RouteAlternative(
+                mode=mode,
+                distance_km=dist,
+                duration_min=round(dur, 1),
+                co2_kg=round(co2, 3),
+                estimated_price_eur=round(price, 2),
+            )
+            alternatives.append(alt.model_dump())
+
+        trip = ProjectedTrip(
+            route=f"Car usage ({cat['name']}, ~{dist}km)",
+            origin="various",
+            destination="various",
+            frequency_per_year=freq,
+            source="car_usage",
+            category=cat["name"],
+            distance_km=dist,
+            alternatives=alternatives,
+        )
+        projected.append(trip.model_dump())
+        summary_cats.append({
+            "category": cat["name"],
+            "distance_km": dist,
+            "frequency_per_year": freq,
+            "alternatives_count": len(alternatives),
+        })
+
+    trip_set = ProjectedTripSet(
+        trips=projected,
+        generated_at=datetime.now().isoformat(),
+    )
+    _atomic_write_json(_DATA / "_projected_trips_car_usage.json", trip_set.model_dump())
+
+    return {
+        "status": "ok",
+        "categories": summary_cats,
+        "total_annual_trips": sum(c["frequency_per_year"] for c in summary_cats),
+        "file": "_projected_trips_car_usage.json",
+        "warnings": [],
+    }
+
+
+def merge_projected_trip_sets() -> dict:
+    """Merge all projected trip sources into a single combined trip set.
+
+    Reads _projected_trips_history.json, _projected_trips_calendar.json, and
+    _projected_trips_car_usage.json. Concatenates all trips and flags potential
+    duplicates (same normalized route from different sources).
+
+    Writes the merged result to data/_projected_trips_merged.json and returns a summary.
+    """
+    sources = [
+        ("history", "_projected_trips_history.json"),
+        ("calendar", "_projected_trips_calendar.json"),
+        ("car_usage", "_projected_trips_car_usage.json"),
+    ]
+
+    raw_trips: list[dict] = []
+    warnings: list[str] = []
+    source_counts: dict[str, int] = {}
+
+    for source_name, filename in sources:
+        path = _DATA / filename
+        if not path.exists():
+            source_counts[source_name] = 0
+            continue
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        trip_set = ProjectedTripSet.model_validate(raw)
+        trips = [t.model_dump() for t in trip_set.trips]
+        source_counts[source_name] = len(trips)
+        raw_trips.extend(trips)
+        warnings.extend(trip_set.warnings)
+
+    _SOURCE_PRIORITY = {"calendar": 2, "history": 1}
+    deduped: dict[tuple[str, str], dict] = {}
+    car_usage_trips: list[dict] = []
+
+    for trip in raw_trips:
+        if trip.get("origin") == "various":
+            car_usage_trips.append(trip)
+            continue
+        key = _route_key(trip["origin"], trip["destination"])
+        if key in deduped:
+            existing = deduped[key]
+            existing_prio = _SOURCE_PRIORITY.get(existing["source"], 0)
+            new_prio = _SOURCE_PRIORITY.get(trip["source"], 0)
+            if new_prio > existing_prio:
+                warnings.append(
+                    f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
+                )
+                deduped[key] = trip
+            elif new_prio == existing_prio and trip["frequency_per_year"] > existing["frequency_per_year"]:
+                deduped[key] = trip
+        else:
+            deduped[key] = trip
+
+    all_trips = list(deduped.values()) + car_usage_trips
+
+    merged = ProjectedTripSet(
+        trips=all_trips,
+        generated_at=datetime.now().isoformat(),
+        warnings=warnings,
+    )
+    _atomic_write_json(_DATA / "_projected_trips_merged.json", merged.model_dump())
+
+    return {
+        "status": "ok",
+        "total_trips": len(all_trips),
+        "source_counts": source_counts,
+        "total_annual_trip_instances": sum(t["frequency_per_year"] for t in all_trips),
+        "duplicate_warnings": [w for w in warnings if w.startswith("Potential duplicate")],
+        "file": "_projected_trips_merged.json",
+    }
+
+
+# ── Portfolio simulation (Branch 3) ──────────────────────────────────────────
+
+# Enterprise tiers are automatic based on rental count per year.
+_ENTERPRISE_TIERS = [
+    (24, "enterprise_platinum"),
+    (12, "enterprise_gold"),
+    (6, "enterprise_silver"),
+    (0, "enterprise_plus"),
+]
+
+# Miles & More tiers are automatic based on status miles per year.
+# Rough heuristic: 1 intra-Europe flight ≈ 750 status miles.
+_STATUS_MILES_PER_FLIGHT = 750
+_MM_TIERS = [
+    (600000, "lh_miles_hon_circle"),
+    (100000, "lh_miles_senator"),
+    (35000, "lh_miles_frequent_traveller"),
+    (0, "lh_miles_member"),
+]
+
+
+def _resolve_automatic_tiers(
+    projected_trips: list[dict], catalog: dict[str, dict]
+) -> list[str]:
+    """Determine automatic Enterprise and Miles & More tier IDs from projected trip volumes."""
+    car_rental_trips = sum(
+        t["frequency_per_year"]
+        for t in projected_trips
+        if any(a["mode"] == "car_rental" for a in t.get("alternatives", []))
+    )
+    flight_trips = sum(
+        t["frequency_per_year"]
+        for t in projected_trips
+        if any(a["mode"].startswith("flight") for a in t.get("alternatives", []))
+    )
+
+    auto_ids: list[str] = []
+    for threshold, tier_id in _ENTERPRISE_TIERS:
+        if car_rental_trips >= threshold and tier_id in catalog:
+            auto_ids.append(tier_id)
+            break
+    status_miles = flight_trips * _STATUS_MILES_PER_FLIGHT
+    for threshold, tier_id in _MM_TIERS:
+        if status_miles >= threshold and tier_id in catalog:
+            auto_ids.append(tier_id)
+            break
+    return auto_ids
+
+
+def apply_subscription_discount(
+    mode: str,
+    estimated_price_eur: float,
+    distance_km: float,
+    portfolio: list[dict],
+) -> float:
+    """Apply subscription discounts to a single trip's estimated price.
+
+    Returns the discounted price. The cheapest applicable discount wins.
+    """
+    best_price = estimated_price_eur
+
+    for sub in portfolio:
+        sub_mode = sub.get("mode")
+        benefits = sub.get("benefits", {})
+
+        if sub_mode == "rail" and mode in ("rail_intercity", "rail_regional"):
+            if benefits.get("unlimited_regional") and mode == "rail_regional":
+                best_price = min(best_price, 0.0)
+            if benefits.get("unlimited_long_distance") and mode == "rail_intercity":
+                best_price = min(best_price, 0.0)
+
+            spar_pct = benefits.get("discount_sparpreis_pct")
+            if spar_pct and not benefits.get("unlimited_long_distance"):
+                discounted = estimated_price_eur * (1 - spar_pct / 100)
+                best_price = min(best_price, discounted)
+
+        elif sub_mode == "car_share" and mode == "car_share":
+            base_km = benefits.get("base_km_rate_eur", 0.79)
+            disc_km = benefits.get("discount_km_pct", 0)
+            unlock = benefits.get("unlock_fee_eur_per_trip", 1.0)
+            protection = benefits.get("protection_plus_eur_per_trip", 3.9)
+            credit = benefits.get("monthly_credit_eur", 0)
+
+            km_cost = base_km * (1 - disc_km / 100) * distance_km
+            trip_cost = km_cost + unlock + protection
+            if credit > 0:
+                trip_cost = max(0, trip_cost - credit / 4)
+            best_price = min(best_price, round(trip_cost, 2))
+
+    return round(best_price, 2)
+
+
+def simulate_portfolio(subscription_ids: list[str]) -> dict:
+    """Simulate total annual cost, time, and CO2 for a given subscription portfolio.
+
+    Loads the merged projected trip set, applies subscription discounts per trip,
+    selects the cheapest mode for each trip, and sums up totals.
+
+    Args:
+        subscription_ids: List of catalog option IDs forming the portfolio
+            (e.g. ["db_bc50_2nd_annual_standard", "miles_basis"]).
+
+    Returns a dict with total_subscription_cost_eur, total_trip_cost_eur,
+    total_annual_cost_eur, total_annual_time_min, total_annual_co2_kg,
+    and a per-trip breakdown.
+    """
+    merged_path = _DATA / "_projected_trips_merged.json"
+    if not merged_path.exists():
+        return {"status": "error", "error": "_projected_trips_merged.json not found — run merge_projected_trip_sets first"}
+
+    merged = json.loads(merged_path.read_text(encoding="utf-8"))
+    trip_set = ProjectedTripSet.model_validate(merged)
+
+    catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
+    catalog_by_id = {opt["id"]: opt for opt in catalog_raw["options"]}
+
+    portfolio = []
+    for sid in subscription_ids:
+        opt = catalog_by_id.get(sid)
+        if opt is None:
+            return {"status": "error", "error": f"unknown subscription id: {sid}"}
+        portfolio.append(opt)
+
+    total_sub_cost = sum(opt["monthly_cost_eur"] * 12 for opt in portfolio)
+
+    total_trip_cost = 0.0
+    total_time = 0.0
+    total_co2 = 0.0
+    trip_breakdown: list[dict] = []
+
+    for trip in trip_set.trips:
+        alts = trip.alternatives
+        if not alts:
+            continue
+
+        best_alt = None
+        best_cost = float("inf")
+
+        for alt in alts:
+            alt_dict = alt if isinstance(alt, dict) else alt.model_dump()
+            discounted = apply_subscription_discount(
+                alt_dict["mode"],
+                alt_dict["estimated_price_eur"],
+                alt_dict["distance_km"],
+                portfolio,
+            )
+            if discounted < best_cost:
+                best_cost = discounted
+                best_alt = alt_dict
+
+        if best_alt is None:
+            continue
+
+        annual_cost = best_cost * trip.frequency_per_year
+        annual_time = best_alt["duration_min"] * trip.frequency_per_year
+        annual_co2 = best_alt["co2_kg"] * trip.frequency_per_year
+
+        total_trip_cost += annual_cost
+        total_time += annual_time
+        total_co2 += annual_co2
+
+        trip_breakdown.append({
+            "route": trip.route,
+            "frequency": trip.frequency_per_year,
+            "selected_mode": best_alt["mode"],
+            "price_per_trip": best_cost,
+            "annual_cost": round(annual_cost, 2),
+            "annual_time_min": round(annual_time, 1),
+            "annual_co2_kg": round(annual_co2, 3),
+        })
+
+    return {
+        "status": "ok",
+        "subscription_ids": subscription_ids,
+        "total_subscription_cost_eur": round(total_sub_cost, 2),
+        "total_trip_cost_eur": round(total_trip_cost, 2),
+        "total_annual_cost_eur": round(total_sub_cost + total_trip_cost, 2),
+        "total_annual_time_min": round(total_time, 1),
+        "total_annual_co2_kg": round(total_co2, 3),
+        "trip_breakdown": trip_breakdown,
+    }
+
+
+def compute_portfolio_score(
+    simulation_results: list[dict],
+    weights: dict,
+) -> dict:
+    """Score and rank multiple portfolio simulations using weighted normalization.
+
+    Takes simulation results from multiple simulate_portfolio() calls and the
+    user's priority weights. Normalizes each dimension (cost, time, CO2) to 0-1
+    across all candidates, applies weights. Lower score = better.
+
+    Args:
+        simulation_results: List of dicts from simulate_portfolio().
+        weights: Dict with cost_weight, time_weight, sustainability_weight (sum to 1).
+
+    Returns a dict with ranked portfolios and their scores.
+    """
+    if not simulation_results:
+        return {"status": "error", "error": "no simulation results to score"}
+
+    parsed = []
+    for r in simulation_results:
+        if isinstance(r, str):
+            try:
+                r = json.loads(r)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if isinstance(r, dict):
+            parsed.append(r)
+
+    valid = [r for r in parsed if r.get("status") == "ok"]
+    if not valid:
+        return {"status": "error", "error": "no valid simulation results"}
+
+    if isinstance(weights, str):
+        try:
+            weights = json.loads(weights)
+        except (json.JSONDecodeError, TypeError):
+            weights = {}
+    w_cost = weights.get("cost_weight", 0.34) if isinstance(weights, dict) else 0.34
+    w_time = weights.get("time_weight", 0.33) if isinstance(weights, dict) else 0.33
+    w_co2 = weights.get("sustainability_weight", 0.33) if isinstance(weights, dict) else 0.33
+
+    costs = [r["total_annual_cost_eur"] for r in valid]
+    times = [r["total_annual_time_min"] for r in valid]
+    co2s = [r["total_annual_co2_kg"] for r in valid]
+
+    def _normalize(values: list[float]) -> list[float]:
+        lo, hi = min(values), max(values)
+        if hi == lo:
+            return [0.0] * len(values)
+        spread_pct = (hi - lo) / max(abs(hi), abs(lo), 1)
+        if spread_pct < 0.05:
+            return [0.0] * len(values)
+        return [(v - lo) / (hi - lo) for v in values]
+
+    norm_cost = _normalize(costs)
+    norm_time = _normalize(times)
+    norm_co2 = _normalize(co2s)
+
+    scored: list[dict] = []
+    for i, r in enumerate(valid):
+        score = w_cost * norm_cost[i] + w_time * norm_time[i] + w_co2 * norm_co2[i]
+        scored.append({
+            "subscription_ids": r["subscription_ids"],
+            "score": round(score, 4),
+            "total_annual_cost_eur": r["total_annual_cost_eur"],
+            "total_annual_time_min": r["total_annual_time_min"],
+            "total_annual_co2_kg": r["total_annual_co2_kg"],
+            "norm_cost": round(norm_cost[i], 4),
+            "norm_time": round(norm_time[i], 4),
+            "norm_co2": round(norm_co2[i], 4),
+        })
+
+    scored.sort(key=lambda x: x["score"])
+
+    return {
+        "status": "ok",
+        "weights": {"cost": w_cost, "time": w_time, "sustainability": w_co2},
+        "ranked_portfolios": scored,
+        "best": scored[0],
+        "worst": scored[-1],
+    }
+
+
+def load_simulation_candidates() -> dict:
+    """Load catalog options filtered for portfolio simulation.
+
+    Pre-filters the catalog to a manageable set of chooseable subscriptions:
+    1. Age-eligible options only
+    2. Exclude 1st class BahnCards (simplification for v1)
+    3. Exclude automatic tiers (Enterprise, Miles & More) — those are computed from trip volume
+    4. Include only one MILES tier (the most relevant)
+
+    Returns a dict with chooseable options and automatic tier info.
+    """
+    catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
+    catalog_options = catalog_raw["options"]
+    catalog_by_id = {opt["id"]: opt for opt in catalog_options}
+
+    persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
+    age = persona.get("profileData", {}).get("personal", {}).get("age")
+
+    auto_tier_ids = {
+        "enterprise_plus", "enterprise_silver", "enterprise_gold", "enterprise_platinum",
+        "lh_miles_member", "lh_miles_frequent_traveller", "lh_miles_senator", "lh_miles_hon_circle",
+    }
+    first_class_ids = {
+        "db_bc25_1st_annual_standard", "db_bc50_1st_annual_standard",
+        "db_bc100_1st_annual", "db_bc100_2nd_annual",
+    }
+    excluded_no_sub_ids = {"flixbus_payperuse"}
+
+    chooseable: list[dict] = []
+    for opt in catalog_options:
+        if opt["id"] in auto_tier_ids:
+            continue
+        if opt["id"] in first_class_ids:
+            continue
+        if opt["id"] in excluded_no_sub_ids:
+            continue
+
+        elig = opt.get("eligibility", {})
+        if age is not None:
+            min_age = elig.get("min_age")
+            max_age = elig.get("max_age")
+            if min_age is not None and age < min_age:
+                continue
+            if max_age is not None and age > max_age:
+                continue
+
+        chooseable.append(opt)
+
+    merged_path = _DATA / "_projected_trips_merged.json"
+    auto_tiers: list[str] = []
+    if merged_path.exists():
+        merged = json.loads(merged_path.read_text(encoding="utf-8"))
+        trip_set = ProjectedTripSet.model_validate(merged)
+        auto_tiers = _resolve_automatic_tiers(
+            [t.model_dump() for t in trip_set.trips], catalog_by_id
+        )
+
+    return {
+        "status": "ok",
+        "chooseable_options": [
+            {"id": o["id"], "product": o["product"], "mode": o["mode"], "monthly_cost_eur": o["monthly_cost_eur"]}
+            for o in chooseable
+        ],
+        "chooseable_count": len(chooseable),
+        "automatic_tiers": auto_tiers,
+        "excluded_reasons": {
+            "automatic_tiers": list(auto_tier_ids),
+            "first_class": list(first_class_ids),
+        },
+    }
 
 
 def load_current_subscriptions() -> dict:
@@ -79,7 +1016,7 @@ def load_current_subscriptions() -> dict:
     affiliated_airlines (list[str] or null, flight mode only), notes (str),
     next_renewal_date (str, "" if not applicable), started (str, "" if not applicable).
     """
-    raw = json.loads((_DATA / "current_subscriptions.json").read_text())
+    raw = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
     return CurrentSubscriptions.model_validate(raw).model_dump()
 
 
@@ -90,7 +1027,7 @@ def load_mobility_catalog() -> dict:
     id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/flight/bus),
     monthly_cost_eur (float), benefits (dict), eligibility (dict), qualifying_threshold (dict or null).
     """
-    raw = json.loads((_STATIC / "mobility_catalog.json").read_text())
+    raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
     return MobilityCatalog.model_validate(raw).model_dump()
 
 
@@ -126,7 +1063,7 @@ def load_relevant_mobility_catalog() -> dict:
         t["mode"] for t in trips if t.get("mode")  # trips stay a messier data source, unchanged
     }
 
-    persona = json.loads((_DATA / "persona.json").read_text())
+    persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
     age = persona.get("profileData", {}).get("personal", {}).get("age")
 
     def eligible(option: dict) -> bool:
@@ -180,7 +1117,7 @@ def load_travel_history() -> dict:
     If any trips have data quality issues, a 'data_quality_warnings' key is included
     listing each problem so downstream agents can surface them to the user.
     """
-    raw = json.loads((_DATA / "travel_history_raw.json").read_text())
+    raw = json.loads((_DATA / "travel_history_raw.json").read_text(encoding="utf-8"))
     history = TravelHistory.model_validate(raw)
     return _travel_history_result(history.trips)
 
@@ -193,7 +1130,7 @@ def load_annual_travel_history() -> dict:
     report's stated period must only ever reflect data actually filtered to that year,
     not the full unfiltered history.
     """
-    raw = json.loads((_DATA / "travel_history_raw.json").read_text())
+    raw = json.loads((_DATA / "travel_history_raw.json").read_text(encoding="utf-8"))
     history = TravelHistory.model_validate(raw)
     year_trips = [t for t in history.trips if t.date.startswith(str(REVIEW_YEAR))]
     return _travel_history_result(year_trips)
@@ -207,7 +1144,7 @@ def load_calendar_events() -> dict:
     location (str or null), signals (list[str] — demand or life-change indicators).
     """
     if USE_MOCK_DATA:
-        raw = json.loads((_DATA / "calendar_events_live.json").read_text())
+        raw = json.loads((_DATA / "calendar_events_live.json").read_text(encoding="utf-8"))
     else:
         from .outlook_calendar import fetch_calendar_events
         raw = fetch_calendar_events()
@@ -545,8 +1482,8 @@ def _atomic_write_json(path: Path, data: dict) -> None:
     """Write data as JSON to path atomically (temp file + os.replace); never leaves a partial file."""
     fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
             f.write("\n")
         os.replace(tmp_path, path)
     except Exception:
@@ -610,7 +1547,7 @@ def apply_subscription_change(
         return _error(f"new_product is required for action={action!r}")
 
     # Load raw dicts to preserve all fields beyond the Pydantic model.
-    raw_file = json.loads((_DATA / "current_subscriptions.json").read_text())
+    raw_file = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
     subs_list = raw_file["subscriptions"]
     before_count = len(subs_list)
 
