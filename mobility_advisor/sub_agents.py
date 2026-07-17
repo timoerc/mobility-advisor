@@ -40,7 +40,15 @@ _SHORT_REPORT_TOKENS = 2048   # analyst / forecaster: concise bullet-point summa
 # tool calls could exhaust it before any visible text was written, producing an empty
 # response — confirmed empirically against Stefan's larger dataset (3 subscriptions):
 # 1024 tokens -> 1/4 successful runs, 2048 tokens -> 4/4.
-_MEDIUM_REPORT_TOKENS = 2048  # optimizer / communicator: structured recommendation with numeric derivations
+_MEDIUM_REPORT_TOKENS = 4096  # optimizer / communicator: structured recommendation with numeric
+# derivations. Bumped from 2048 — the optimizer picked up the same kind of extra load
+# (load_optimizer_context's 3-way bundle, plus 1-2 compute_co2_impact_kg calls per candidate,
+# plus the new PREFERENCE WEIGHTING/CONTINUITY reasoning) that motivated the _SHORT_REPORT_TOKENS
+# bump above, but was left at the old budget. Reproduced directly: a live run against Maja's
+# data had the optimizer make 3 tool-call rounds (~70s of reasoning) and then return an empty
+# final response, which crashed the pipeline with `KeyError: Context variable not found:
+# 'recommendation'` when the communicator tried to read {recommendation} from session state —
+# the same failure mode, just previously undersized for a different agent.
 _LONG_REPORT_TOKENS = 4096    # annual_communicator: full multi-section annual review
 
 

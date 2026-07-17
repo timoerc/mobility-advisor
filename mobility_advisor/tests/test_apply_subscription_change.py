@@ -87,7 +87,6 @@ def test_remove_nonexistent_target_is_error_no_write(isolated_data_dir):
     result = tools.apply_subscription_change(action="remove", target_subscription="Nonexistent")
     assert result["status"] == "error"
     assert "no match" in result["error"]
-    assert result["backup_path"] is None
     after = (isolated_data_dir / "current_subscriptions.json").read_bytes()
     assert before == after
 
@@ -139,13 +138,14 @@ def test_catalog_file_untouched_after_every_operation(isolated_data_dir, action,
     assert before == after
 
 
-def test_backup_file_created_on_successful_write(isolated_data_dir):
-    original = (isolated_data_dir / "current_subscriptions.json").read_bytes()
+def test_no_backup_file_created_on_successful_write(isolated_data_dir):
+    # The backup mechanism was intentionally dropped (see c497f17) — a successful write
+    # must not leave a current_subscriptions.json.bak_* file behind, and the result dict
+    # has no backup_path key.
     result = tools.apply_subscription_change(action="remove", target_subscription="Enterprise Silver")
-    backups = list(isolated_data_dir.glob("current_subscriptions.json.bak_*"))
-    assert len(backups) == 1
-    assert backups[0].read_bytes() == original
-    assert result["backup_path"] == str(backups[0])
+    assert result["status"] == "applied"
+    assert "backup_path" not in result
+    assert not list(isolated_data_dir.glob("current_subscriptions.json.bak_*"))
 
 
 def test_no_stray_temp_file_after_success_or_error(isolated_data_dir):
