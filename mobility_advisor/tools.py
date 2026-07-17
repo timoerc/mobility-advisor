@@ -297,6 +297,128 @@ def load_calendar_events() -> dict:
     return CalendarEvents.model_validate(raw).model_dump()
 
 
+def load_analyst_context() -> dict:
+    """Load all fixed-context data the Analyst agent needs, in one call: travel history,
+    current subscriptions, and car usage.
+
+    Internally calls load_travel_history(), load_current_subscriptions(), and
+    load_car_usage() and returns their results together under one dict. This exists
+    purely to save two tool-call round-trips versus calling the three individually — it
+    changes zero fields and zero values versus calling them separately.
+
+    Returns a dict with keys:
+      - travel_history: exactly load_travel_history()'s return value (key 'trips', list
+        of trip dicts; optional 'data_quality_warnings' list).
+      - current_subscriptions: exactly load_current_subscriptions()'s return value (key
+        'subscriptions', list of subscription dicts).
+      - car_usage: exactly load_car_usage()'s return value (owns_car, mode, type, size,
+        monthly_km_estimate).
+    """
+    return {
+        "travel_history": load_travel_history(),
+        "current_subscriptions": load_current_subscriptions(),
+        "car_usage": load_car_usage(),
+    }
+
+
+def load_annual_analyst_context() -> dict:
+    """Load all fixed-context data the Annual Analyst agent needs, in one call: travel
+    history scoped to REVIEW_YEAR, current subscriptions, and car usage.
+
+    Same shape and purpose as load_analyst_context(), with one difference: travel_history
+    comes from load_annual_travel_history() (trips outside REVIEW_YEAR excluded) rather
+    than load_travel_history() (full unfiltered history) — current_subscriptions and
+    car_usage reflect the user's present-day state either way, so they are not
+    year-scoped.
+
+    Returns a dict with keys:
+      - travel_history: exactly load_annual_travel_history()'s return value (key 'trips',
+        list of trip dicts limited to REVIEW_YEAR; optional 'data_quality_warnings' list).
+      - current_subscriptions: exactly load_current_subscriptions()'s return value.
+      - car_usage: exactly load_car_usage()'s return value.
+    """
+    return {
+        "travel_history": load_annual_travel_history(),
+        "current_subscriptions": load_current_subscriptions(),
+        "car_usage": load_car_usage(),
+    }
+
+
+def load_forecaster_context() -> dict:
+    """Load all fixed-context data the Forecaster agent needs, in one call: upcoming
+    calendar events and life-event signals.
+
+    Internally calls load_calendar_events() and load_life_events() and returns their
+    results together — saves one tool-call round-trip versus calling them individually;
+    changes zero fields and zero values. Shared verbatim by forecaster_agent and
+    annual_forecaster_agent — both need identical, forward-looking (not year-scoped) data.
+
+    Returns a dict with keys:
+      - calendar_events: exactly load_calendar_events()'s return value (key 'events').
+      - life_events: exactly load_life_events()'s return value (key 'events'; an empty
+        list is a legitimate result, not a loading failure).
+    """
+    return {
+        "calendar_events": load_calendar_events(),
+        "life_events": load_life_events(),
+    }
+
+
+def load_optimizer_context() -> dict:
+    """Load all fixed-context data the Optimizer agent needs up front, in one call: user
+    preferences, the user-relevant mobility catalog, and recent recommendation history.
+
+    Internally calls load_user_preferences(), load_relevant_mobility_catalog(), and
+    load_recommendation_history() and returns their results together — saves two
+    tool-call round-trips versus calling them individually; changes zero fields and zero
+    values.
+
+    Does NOT include compute_co2_impact_kg — that tool stays a separate, on-demand call
+    invoked once per candidate action in Step 3 (with different target_subscription/
+    new_product arguments each time), not once up front like the three loaders bundled
+    here.
+
+    Returns a dict with keys:
+      - user_preferences: exactly load_user_preferences()'s return value.
+      - relevant_mobility_catalog: exactly load_relevant_mobility_catalog()'s return
+        value (key 'options').
+      - recommendation_history: exactly load_recommendation_history()'s return value
+        (key 'history', up to the 3 most recent entries).
+    """
+    return {
+        "user_preferences": load_user_preferences(),
+        "relevant_mobility_catalog": load_relevant_mobility_catalog(),
+        "recommendation_history": load_recommendation_history(),
+    }
+
+
+def load_annual_optimizer_context() -> dict:
+    """Load all fixed-context data the Annual Optimizer agent needs up front, in one
+    call: user preferences and the user-relevant mobility catalog.
+
+    Internally calls load_user_preferences() and load_relevant_mobility_catalog() and
+    returns their results together — saves one tool-call round-trip versus calling them
+    individually; changes zero fields and zero values.
+
+    Deliberately excludes recommendation_history (unlike load_optimizer_context, the
+    regular Optimizer's equivalent): the annual report's instruction has no CONTINUITY
+    section referencing past recommendations, so recent-history data stays out of this
+    agent's tool surface, matching annual_optimizer_agent's existing tools=[...] scoping.
+
+    Does NOT include compute_co2_impact_kg — same reasoning as load_optimizer_context:
+    stays a separate, on-demand per-candidate call.
+
+    Returns a dict with keys:
+      - user_preferences: exactly load_user_preferences()'s return value.
+      - relevant_mobility_catalog: exactly load_relevant_mobility_catalog()'s return
+        value (key 'options').
+    """
+    return {
+        "user_preferences": load_user_preferences(),
+        "relevant_mobility_catalog": load_relevant_mobility_catalog(),
+    }
+
+
 def compute_travel_stats(
     subscription_or_provider: str | None = None,
     mode: str | None = None,

@@ -17,15 +17,11 @@ from .tools import (
     REVIEW_YEAR,
     _rail_and_carshare_co2_factors,
     compute_co2_impact_kg,
-    load_annual_travel_history,
-    load_calendar_events,
-    load_car_usage,
-    load_current_subscriptions,
-    load_life_events,
-    load_recommendation_history,
-    load_relevant_mobility_catalog,
-    load_travel_history,
-    load_user_preferences,
+    load_analyst_context,
+    load_annual_analyst_context,
+    load_annual_optimizer_context,
+    load_forecaster_context,
+    load_optimizer_context,
 )
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
@@ -79,11 +75,11 @@ analyst_agent = LlmAgent(
 You are the Analyst agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-You MUST call load_travel_history and load_current_subscriptions first. Use ONLY the exact figures returned by the tools — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
+You MUST call load_analyst_context() first. Use ONLY the exact figures returned by the tool — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
 
 Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
 
-Step 1 — call load_travel_history(), load_current_subscriptions(), and load_car_usage(). Do this before writing anything.
+Step 1 — call load_analyst_context(). This returns travel history (key 'travel_history'), current subscriptions (key 'current_subscriptions'), and car usage (key 'car_usage') together in one call. Do this before writing anything.
 
 Step 2 — for each subscription, report:
 - **Subscription name** and monthly cost (verbatim from tool)
@@ -92,13 +88,13 @@ Step 2 — for each subscription, report:
 - **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
 - **Duration/ticket type**: where a trip's duration_min and ticket_type fields are present in the travel history data, mention them alongside the trip count — this surfaces travel time, not just cost, for later steps that weigh time
 
-Step 3 — report private car ownership from load_car_usage(): if owns_car is true, state "Holds a private <type> <size> car, ~<monthly_km_estimate> km/month"; if false, state "No private car."
+Step 3 — report private car ownership from load_analyst_context()'s car_usage field: if owns_car is true, state "Holds a private <type> <size> car, ~<monthly_km_estimate> km/month"; if false, state "No private car."
 
 Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-    tools=[load_travel_history, load_current_subscriptions, load_car_usage],
+    tools=[load_analyst_context],
     output_key="analysis",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
 )
@@ -114,12 +110,12 @@ Today's date: {_TODAY}.
 Your job: summarize forward mobility demand for the next 3–6 months from today.
 The user's current home base is {_HOME_CITY}.
 
-Step 1 — call load_calendar_events() and load_life_events(). Do this before writing anything.
+Step 1 — call load_forecaster_context(). This returns calendar events (key 'calendar_events') and life-event signals (key 'life_events') together in one call. Do this before writing anything.
 
 Step 2 — produce a brief forward-demand summary (3–5 bullet points):
 - Expected dominant modes (rail, local transit, car-share, etc.)
 - Approximate long-distance trip volume
-- Life-event signals from load_life_events(): if any events are returned, state each one's
+- Life-event signals from load_forecaster_context()'s life_events field: if any events are returned, state each one's
   category and summary plus its concrete portfolio implication (e.g. a relocation signal away
   from {_HOME_CITY} means the current commute-based subscription mix may no longer fit once it
   takes effect); if the events list is empty, state plainly "No life-event signals detected."
@@ -129,7 +125,7 @@ Be factual and brief. Do not recommend actions — that is the Optimizer's job.
 
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
-    tools=[load_calendar_events, load_life_events],
+    tools=[load_forecaster_context],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
     include_contents="none",
@@ -152,11 +148,11 @@ Context from upstream agents:
 Your job: propose exactly ONE concrete contract change that maximizes value for the user.
 Address the user directly as "you"/"your" throughout your output — not by name.
 
-Step 1 — call load_user_preferences() and load_relevant_mobility_catalog(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call load_annual_optimizer_context(). This returns user preferences (key 'user_preferences') and the user-relevant mobility catalog (key 'relevant_mobility_catalog') together in one call. Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the single highest-impact change.
 
-PREFERENCE WEIGHTING — load_user_preferences() returns priority_weights (raw cost/time/
+PREFERENCE WEIGHTING — load_annual_optimizer_context()'s user_preferences field returns priority_weights (raw cost/time/
 sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
 values_time_over_money, to decide WHICH change is your pick, not merely how you phrase it:
 - Weigh the €-saving, time/convenience impact, and CO2 impact by these three weights before
@@ -181,10 +177,10 @@ For each candidate BahnCard tier, compute:
 Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
 Include the net_saving figures for both tiers in your output.
 
-NAMING — always use the exact, full product name as it appears in load_relevant_mobility_catalog's
-"product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)") or in the Analyst
-finding's subscription names — never a short form like "BahnCard 25" alone. The catalog has
-several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
+NAMING — always use the exact, full product name as it appears in load_annual_optimizer_context()'s
+relevant_mobility_catalog field's "product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)")
+or in the Analyst finding's subscription names — never a short form like "BahnCard 25" alone. The
+catalog has several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
 name cannot distinguish, and this name is what gets executed later — an underspecified name
 cannot be applied. This applies everywhere you name a specific product: the proposed change,
 cost breakdown, and "what stays" section.
@@ -236,17 +232,17 @@ comparable in value to the first AND materially different in kind — never as p
 CANDIDATE CAP rule in Step 3 for the exact bar a second candidate must clear.
 Address the user directly as "you"/"your" throughout your output — not by name.
 
-Step 1 — call load_user_preferences(), load_relevant_mobility_catalog(), and load_recommendation_history(). Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call load_optimizer_context(). This returns user preferences (key 'user_preferences'), the user-relevant mobility catalog (key 'relevant_mobility_catalog'), and recent recommendation history (key 'recommendation_history') together in one call. Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
 
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the highest-impact change(s), applying the CANDIDATE CAP rule below to decide whether one or two candidates are warranted.
 
-CONTINUITY — check load_recommendation_history()'s past entries. If a prior review already
+CONTINUITY — check load_optimizer_context()'s recommendation_history field's past entries. If a prior review already
 flagged the same subscription with the same (or an equivalent) recommended_action, acknowledge
 that continuity explicitly instead of re-stating the finding as if it were new, e.g. "This is
 the Nth review flagging <subscription> — you kept it before; here's the updated picture." If
 the history is empty or unrelated to this review's finding, say nothing about it.
 
-PREFERENCE WEIGHTING — load_user_preferences() returns priority_weights (raw cost/time/
+PREFERENCE WEIGHTING — load_optimizer_context()'s user_preferences field returns priority_weights (raw cost/time/
 sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
 values_time_over_money, to decide WHICH candidate is your Recommended pick, not merely how you
 phrase it:
@@ -274,10 +270,10 @@ For each candidate BahnCard tier, compute:
 Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
 Include the net_saving figures for both tiers in your output.
 
-NAMING — always use the exact, full product name as it appears in load_relevant_mobility_catalog's
-"product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)") or in the Analyst
-finding's subscription names — never a short form like "BahnCard 25" alone. The catalog has
-several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
+NAMING — always use the exact, full product name as it appears in load_optimizer_context()'s
+relevant_mobility_catalog field's "product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)")
+or in the Analyst finding's subscription names — never a short form like "BahnCard 25" alone. The
+catalog has several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
 name cannot distinguish, and this name is what gets executed later — an underspecified name
 cannot be applied. This applies everywhere you name a specific product, in every candidate block.
 
@@ -315,12 +311,7 @@ do not include it — one strong recommendation beats a padded list.
 
 Show real numbers from the data.
 """,
-    tools=[
-        load_user_preferences,
-        load_relevant_mobility_catalog,
-        compute_co2_impact_kg,
-        load_recommendation_history,
-    ],
+    tools=[load_optimizer_context, compute_co2_impact_kg],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
@@ -406,18 +397,19 @@ annual_analyst_agent = LlmAgent(
             f"Today's date: {_TODAY}. This report covers only calendar year {_REVIEW_YEAR} "
             f"— every figure must be scoped to {_REVIEW_YEAR} only.",
         )
-        .replace("load_travel_history", "load_annual_travel_history")
+        .replace("load_analyst_context", "load_annual_analyst_context")
         .replace("in the past 12 months", f"in {_REVIEW_YEAR}")
         + f"""
 
 Step 4 — after the subscription summary, output a "Trips considered ({_REVIEW_YEAR})" table listing
-EVERY trip returned by load_annual_travel_history(), one row per trip, verbatim — do not omit,
-summarize, or round any trip. Columns: date | mode | origin → destination | distance_km | cost_eur | provider.
-This table exists so the report's figures can be manually cross-checked against the raw data — completeness
-matters more than brevity here.
+EVERY trip in load_annual_analyst_context()'s travel_history.trips list, one row per trip,
+verbatim — do not omit, summarize, or round any trip. Columns: date | mode | origin →
+destination | distance_km | cost_eur | provider. This table exists so the report's figures
+can be manually cross-checked against the raw data — completeness matters more than brevity
+here.
 """
     ),
-    tools=[load_annual_travel_history, load_current_subscriptions, load_car_usage],
+    tools=[load_annual_analyst_context],
     output_key="analysis",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
 )
@@ -427,7 +419,7 @@ annual_forecaster_agent = LlmAgent(
     model=_MODEL,
     description=forecaster_agent.description,
     instruction=forecaster_agent.instruction,
-    tools=[load_calendar_events, load_life_events],
+    tools=[load_forecaster_context],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
     include_contents="none",
@@ -440,7 +432,7 @@ annual_optimizer_agent = LlmAgent(
     instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE.replace(
         "over the past 12 months", f"in {_REVIEW_YEAR}"
     ),
-    tools=[load_user_preferences, load_relevant_mobility_catalog, compute_co2_impact_kg],
+    tools=[load_annual_optimizer_context, compute_co2_impact_kg],
     output_key="recommendation",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
