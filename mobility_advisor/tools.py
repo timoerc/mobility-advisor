@@ -673,6 +673,28 @@ def _rail_and_carshare_co2_factors() -> tuple[float, float]:
     return round(rail_kg_per_km * 1000, 2), round(car_share_kg_per_km * 1000, 2)
 
 
+def _rail_coverage_kind(sub: dict) -> str:
+    """Classify a rail subscription's catalog benefits by how it covers trips.
+
+    A persona can hold both a long-distance discount card (BahnCard) and a flat-fee
+    regional pass (Deutschlandticket) at once — both are mode="rail", provider=
+    "Deutsche Bahn", so a plain (mode, provider) match would attribute every rail
+    trip to both. The catalog's benefits flags tell them apart:
+      - "unlimited_all": unlimited_long_distance AND unlimited_regional (e.g.
+        BahnCard 100) — every rail trip is already included, nothing to discount.
+      - "unlimited_regional": unlimited_regional only (e.g. Deutschlandticket) — a
+        flat monthly fee covering regional trips only.
+      - "discount": neither flag set, just discount_sparpreis_pct/discount_
+        flexpreis_pct (e.g. BahnCard 25/50) — a % off a fare that was still paid.
+    """
+    benefits = sub.get("benefits") or {}
+    if benefits.get("unlimited_long_distance") and benefits.get("unlimited_regional"):
+        return "unlimited_all"
+    if benefits.get("unlimited_regional"):
+        return "unlimited_regional"
+    return "discount"
+
+
 def compute_annual_report_stats() -> dict:
     """Deterministic, code-computed figures for the annual report.
 
@@ -708,11 +730,14 @@ def compute_annual_report_stats() -> dict:
         figure above, for the report's methodology section
       - subscriptions (list[dict]): one per active subscription, each
         {product, provider, mode, monthly_cost_eur, billing_cycle, annual_fee_eur,
-         is_paid_subscription, trips_attributed, discount_value_eur, net_eur,
-         qualifying_activity}. discount_value_eur/net_eur are None for €0 loyalty
-        tiers — a break-even verdict is meaningless when there's no fee to break even
-        against. qualifying_activity is None unless the subscription carries a usage
-        threshold (e.g. Enterprise Silver's rentals_per_year).
+         is_paid_subscription, has_discount_value, trips_attributed,
+         discount_value_eur, net_eur, qualifying_activity}. discount_value_eur/
+        net_eur are populated only when has_discount_value is True — False (and
+        both fields None) for €0 loyalty tiers (no fee to break even against) and
+        for paid flat-fee unlimited-access rail passes like Deutschlandticket or
+        BahnCard 100 (no discrete per-trip fare to discount; see
+        _rail_coverage_kind). qualifying_activity is None unless the subscription
+        carries a usage threshold (e.g. Enterprise Silver's rentals_per_year).
       - data_quality_warnings (list[str])
     """
     history = load_annual_travel_history()
@@ -762,13 +787,34 @@ def compute_annual_report_stats() -> dict:
             t for t in trips
             if t["mode"] == sub["mode"] and sub["provider"].lower() in (t["provider"] or "").lower()
         ]
+
+        is_paid = sub["monthly_cost_eur"] > 0
+        has_discount_value = is_paid
+
+        if sub["mode"] == "rail":
+            coverage_kind = _rail_coverage_kind(sub)
+            if coverage_kind == "unlimited_regional":
+                # A flat monthly fee for unlimited *regional* travel (e.g.
+                # Deutschlandticket) only covers trips priced at 0 in this mock data
+                # — there's no separate per-trip charge once you hold the pass. A
+                # long-distance trip on the same provider is a different product
+                # (e.g. BahnCard) and must not be claimed here too, or a persona
+                # holding both ends up with every rail trip double-attributed.
+                matched = [t for t in matched if (t["cost_eur"] or 0) == 0]
+                has_discount_value = False
+            elif coverage_kind == "unlimited_all":
+                # e.g. BahnCard 100 — every rail trip is already included, so there's
+                # no discrete "amount paid" to treat as a discount either.
+                has_discount_value = False
+            else:  # "discount" (e.g. BahnCard 25/50) — a % off a fare you still paid
+                matched = [t for t in matched if t["cost_eur"] not in (None, 0)]
+
         trips_attributed = len(matched)
         annual_fee_eur = round(sub["monthly_cost_eur"] * 12, 2)
-        is_paid = sub["monthly_cost_eur"] > 0
 
         discount_value_eur = None
         net_eur = None
-        if is_paid:
+        if has_discount_value:
             discount_value_eur = round(
                 sum(t["cost_eur"] for t in matched if t["cost_eur"] is not None), 2
             )
@@ -787,6 +833,7 @@ def compute_annual_report_stats() -> dict:
             "billing_cycle": sub["billing_cycle"],
             "annual_fee_eur": annual_fee_eur,
             "is_paid_subscription": is_paid,
+            "has_discount_value": has_discount_value,
             "trips_attributed": trips_attributed,
             "discount_value_eur": discount_value_eur,
             "net_eur": net_eur,

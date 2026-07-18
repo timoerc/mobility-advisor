@@ -1,5 +1,9 @@
 # Scenario 05 — Forward-Looking: A Mail Overturns What History Says
 
+**Persona:** Tobias Wolf — Frankfurt, BahnCard 50 + Deutschland-Ticket, weekly Frankfurt–Munich commuter.
+**Tests:** Whether a forward signal (staffing email) overrides a strong historical ROI.
+**Expected result:** Recommend downgrading/cancelling BahnCard 50 ahead of renewal, despite history alone saying "keep."
+
 ## Summary
 
 Tobias Wolf holds a **BahnCard 50** that his past 12 months of travel clearly justify —

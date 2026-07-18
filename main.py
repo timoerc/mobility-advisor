@@ -957,15 +957,22 @@ def _render_by_mode_table(stats: dict) -> str:
 def _render_subscription_value(stats: dict) -> str:
     """Render Section 4 "Subscription Value" — one block per active subscription.
 
-    Paid subscriptions (monthly_cost_eur > 0) get a discount-vs-fee net figure and a
-    break-even verdict. €0 loyalty/status tiers (e.g. a car-rental loyalty program)
-    get a plain activity status line instead — there is no fee to break even against,
-    so a break-even verdict for them would be meaningless (the bug this replaces).
+    Three cases, keyed off compute_annual_report_stats()'s has_discount_value /
+    is_paid_subscription flags:
+      - has_discount_value: a paid subscription with a real per-trip discount (e.g.
+        BahnCard) — gets a discount-vs-fee net figure and a break-even verdict.
+      - is_paid_subscription but not has_discount_value: a paid flat-fee
+        unlimited-access pass (e.g. Deutschlandticket, BahnCard 100) — there's no
+        discrete per-trip fare to discount, so it gets a usage line instead of a
+        fabricated €0.00 "discount value" / break-even verdict.
+      - neither: a €0 loyalty/status tier (e.g. a car-rental loyalty program) — gets
+        a plain activity status line; there is no fee to break even against, so a
+        break-even verdict for it would be meaningless (the bug this replaces).
     """
     blocks = []
     for sub in stats["subscriptions"]:
         header = f"**{sub['product']}**"
-        if sub["is_paid_subscription"]:
+        if sub["has_discount_value"]:
             header += f" — €{sub['monthly_cost_eur']:.2f}/mo (€{sub['annual_fee_eur']:.2f}/yr)"
             net = sub["net_eur"]
             if net >= 0:
@@ -986,6 +993,13 @@ def _render_subscription_value(stats: dict) -> str:
                 f"- Discount value delivered: €{sub['discount_value_eur']:.2f}\n"
                 f"- Net vs. annual fee: {sign}€{abs(net):.2f}\n"
                 f"- Verdict: {verdict}"
+            )
+        elif sub["is_paid_subscription"]:
+            header += f" — €{sub['monthly_cost_eur']:.2f}/mo (€{sub['annual_fee_eur']:.2f}/yr, flat fee)"
+            blocks.append(
+                f"{header}\n\n"
+                f"- Trips covered this year: {sub['trips_attributed']}\n"
+                f"- Flat-fee unlimited-access pass — no per-trip discount to break even against."
             )
         else:
             header += " — no monthly fee (loyalty tier)"

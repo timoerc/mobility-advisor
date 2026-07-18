@@ -1,5 +1,9 @@
 # Scenario 04 — Preference-Decisive: Break-Even Travel, Preference Breaks the Tie
 
+**Persona:** Katrin Berger — Düsseldorf, BahnCard 25 + Deutschland-Ticket.
+**Tests:** Preference-weighting — cost math is a near-wash, so priorities must decide.
+**Expected result:** Recommend upgrading BC25 → BC50, driven by her time/flexibility weight, not cost.
+
 ## Summary
 
 Katrin Berger holds a **BahnCard 25** and a Deutschland-Ticket. Her long-distance rail

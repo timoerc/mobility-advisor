@@ -6,66 +6,65 @@ Built for a joint course at **University of Cologne × BCG Platinion**. The syst
 
 ---
 
-## What it does (Tier 1)
+## Architecture
 
-Two pipelines share the same four AI agents:
+A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming message and routes it to one of five tools:
 
-**`mobility_advisor_pipeline`** — single-run recommendation:
+- **`reject_agent`** — fixed refusal for out-of-scope or instruction-override messages
+- **`optimization_pipeline`** — the core 4-stage review: Analyst → Forecaster → Optimizer → Communicator
+- **`qa_agent`** — factual lookups (spend, counts, renewal dates) without a full review
+- **`execution_agent`** — applies an explicitly-instructed subscription change, single-confirmation human-in-the-loop
+- **`annual_report_pipeline`** — same 4 stages, ending in an Annual Communicator that renders a structured year-in-review PDF
 
-1. **Analyst** — reviews 12 months of travel history against active subscriptions; flags under-used contracts
-2. **Forecaster** — reads upcoming calendar events; summarizes forward demand and life-event signals
-3. **Optimizer** — combines findings with the market catalog; proposes one concrete change with €/mo savings and CO₂ delta
-4. **Communicator** — formats a scannable recommendation for the user; explicitly notes that no change has been made and approval is required
+The Communicator only ever *drafts* a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
 
-**`annual_report_pipeline`** — full year-in-review:
+The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/sub_agents.py::build_model()`.
 
-Runs the same analyst → forecaster → optimizer stages, then an **Annual Communicator** renders a structured 6-section report:
-1. Year at a Glance (total spend, savings, CO₂ avoided, dominant mode)
-2. Subscription ROI (break-even verdict per product)
-3. CO₂ Report (rail vs. car-share baseline, mode split)
-4. Recommendations Taken This Year
-5. Forward Outlook
-6. Assumptions & Data Quality
+---
 
-Reference persona: **Maja Hoffmann**, Product Manager, Frankfurt — hybrid worker with BahnCard 50, Deutschland-Ticket, and MILES car-sharing.
+## Personas
+
+Six self-contained fixture sets live under `mobility_advisor/scenarios/`, each isolating a different pipeline behavior:
+
+| Persona | Holds | Tests | Expected result |
+|---|---|---|---|
+| `maja` | BahnCard 50 + Enterprise Silver | Basic over-subscription detection | Recommend cancelling BC50, no hedging |
+| `katrin` | BahnCard 25 + Deutschland-Ticket | Preference-weighting tiebreak on a cost near-wash | Upgrade BC25 → BC50, driven by time preference |
+| `sofia` | Deutschland-Ticket + MILES Basis | The "add/upgrade a product" case | Upgrade MILES Basis → Silber, right tier |
+| `tobias` | BahnCard 50 + Deutschland-Ticket | Forward signal overriding a strong historical ROI | Downgrade/cancel BC50 ahead of renewal |
+| `stefan` | Car + BC50 + Deutschland-Ticket + MILES Silber | Hedging under genuine ambiguity (possible relocation) | Conditional recommendation, not a single confident action |
+| `lena` | BahnCard 50 Young + Deutschland-Ticket | Graceful degradation on corrupted trip data | Completes with a Data Quality Warnings section, never crashes |
+
+Each scenario's `SCENARIO.md` has the full rationale. Switch the active dataset with:
+
+```bash
+./mobility_advisor/scenarios/activate_scenario.sh <name>
+```
+
+This backs up `mobility_advisor/data/` to a timestamped folder before overwriting it — restore with `cp data_backup_<timestamp>/*.json data/`.
 
 ---
 
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
-- Python 3.12+
-- A [Google AI Studio](https://aistudio.google.com/) API key (required by the ADK runtime)
-- A KIConnect API key (used for the LLM agents via the KIConnect proxy)
+- Python 3.14+
+- A KIConnect API key (`KICONNECT_API_KEY`) — used by the LLM agents
+- A Google AI Studio API key (`GOOGLE_API_KEY`) — required by the ADK runtime itself
+- Optional: `OUTLOOK_CLIENT_ID`/`OUTLOOK_TENANT_ID` for live Outlook calendar ingestion, `ORS_API_KEY` for distance enrichment — see `sample.env` for the full list
 
 ---
 
 ## Setup
 
 1. Clone the repo and enter the directory.
-
-2. Install backend dependencies:
-   ```bash
-   uv sync
-   ```
-
-3. Copy `sample.env` to `.env` and fill in your keys:
-   ```
-   GOOGLE_GENAI_USE_VERTEXAI=FALSE
-   GOOGLE_API_KEY=<your_google_ai_studio_key>
-   KICONNECT_API_KEY=<your_kiconnect_key>
-   ```
-
-4. Install frontend dependencies:
-   ```bash
-   cd frontend && npm install
-   ```
+2. Install backend dependencies: `uv sync`
+3. Copy `sample.env` to `.env` and fill in your keys.
+4. Install frontend dependencies: `cd frontend && npm install`
 
 ---
 
 ## Running the full stack
-
-The React frontend talks to a FastAPI backend (`main.py`), which wraps the ADK agent pipeline. Run both processes in separate terminals:
 
 **Terminal 1 — backend** (from the repo root):
 ```bash
@@ -74,42 +73,29 @@ uv run uvicorn main:app --reload --port 8000
 
 **Terminal 2 — frontend**:
 ```bash
-cd frontend
-npm run dev
+cd frontend && npm run dev
 ```
 
-Open **http://localhost:5173**. Vite proxies any `/api/*` request to `localhost:8000` (see `frontend/vite.config.ts`), so no CORS setup is needed in dev.
+Open **http://localhost:5173**. Vite proxies `/api/*` to `localhost:8000` — if the backend isn't running, the frontend still loads and falls back to canned mock recommendations.
 
-If the backend isn't running, the frontend still loads and falls back to canned mock data for the analysis screen — but live analysis (`/api/analyze`) and chat (`/api/chat`) won't work. See `frontend/README.md` for details on that fallback behaviour.
-
-### Backend API endpoints
+### Key API endpoints
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/profile` | Save onboarding answers for a persona and make them the active dataset |
-| `POST /api/activate` | Switch the active dataset to a previously saved persona |
-| `POST /api/analyze` | Run the full 4-agent pipeline and return a structured `Recommendation` (takes ~60–90s) |
-| `POST /api/chat` | Send a chat message to the coordinator agent, session-scoped by `session_id` |
+| `POST /api/chat` | Send a message to the Coordinator (routes to whichever tool fits) |
+| `POST /api/analyze` | Run the full 4-agent pipeline directly, returns a structured `Recommendation` |
+| `POST /api/annual-report` | Run the annual pipeline and return a rendered PDF |
+| `POST /api/execute` | Apply an explicitly-approved subscription change |
+| `POST /api/activate` | Switch the active persona/scenario |
+
+See `main.py` for the complete list (profile onboarding, history, catalog, etc.).
 
 ### Agent-only debugging (no frontend)
-
-> **Important:** `adk web` and `adk api_server` both bind to port 8000. Stop them before starting `uvicorn main:app`, or the frontend will hit the wrong server and receive 403 errors.
-
-To interact with the agents directly via the ADK web UI, without the FastAPI/React layer:
 
 ```bash
 uv run adk web
 ```
-
-Open the URL shown in the terminal. Two pipelines are available:
-
-**Single-run recommendation** — select **mobility_advisor_pipeline** and send:
-> Is my mobility setup optimal right now?
-
-**Annual report** — select **annual_report_pipeline** and send:
-> Generate my annual mobility report.
-
-The four agents run in sequence. The final output includes savings, CO₂ impact, and a clear "awaiting your approval" note.
+> `adk web`/`adk api_server` bind to port 8000 too — stop them before running `uvicorn main:app`.
 
 ---
 
@@ -117,59 +103,24 @@ The four agents run in sequence. The final output includes savings, CO₂ impact
 
 ```
 mobility_advisor/
-├── __init__.py          # ADK package entry point
-├── agent.py             # root_agent + annual_report_agent (SequentialAgents)
-├── sub_agents.py        # analyst, forecaster, optimizer, communicator, annual_communicator
-├── tools.py             # loader functions (mock data)
-├── models.py            # Pydantic models for all fixtures
-├── static/              # shared, persona-independent fixtures
-│   └── mobility_catalog.json
-├── data/                # active data files (replaced by scenario activation)
-│   ├── persona.json
-│   ├── car_usage.json
-│   ├── current_subscriptions.json
-│   ├── travel_history_raw.json
-│   ├── calendar_events_live.json
-│   └── mail_raw.json
-└── scenarios/           # self-contained fixture sets for testing
-    ├── activate_scenario.sh
-    ├── maja/
-    ├── stefan/
-    └── lena/
+├── agent.py              # Coordinator (root_agent) — routes to the 5 tools below
+├── pipeline.py            # optimization_pipeline, annual_report_pipeline (SequentialAgents)
+├── sub_agents.py          # analyst, forecaster, optimizer, communicator, annual_communicator
+├── qa_agent.py / execution_agent.py / reject_agent.py
+├── tools.py                # loader + compute functions over the mock data
+├── models.py                # Pydantic models for all fixtures
+├── report_pdf.py            # Markdown -> PDF for the annual report (WeasyPrint)
+├── templates/                # annual_report.html / .css
+├── static/mobility_catalog.json   # market catalog (shared across all personas)
+├── data/                     # active dataset (swapped by activate_scenario.sh)
+└── scenarios/                 # 6 persona fixture sets — see Personas above
 ```
 
 ---
 
-## Scenario testing
+## Tier status
 
-Three pre-built scenarios let you exercise different pipeline behaviours without modifying `data/` by hand. Run the activation script from the `mobility_advisor/` directory:
+- **Tier 1** (basic linear pipeline, all-mocked, reactive single run) — done, frozen as the baseline.
+- **Tier 2 + Tier 3** — in progress together, not strictly sequential. The Coordinator routing layer, `execution_agent`, and real Outlook calendar ingestion are already Tier-3-shaped pieces that have landed ahead of full Tier 2 completion. Still open: a dedicated Validation agent, disk-persisted orchestrator state, continuous life-event-triggered evaluation, and execution against real provider APIs.
 
-```bash
-./scenarios/activate_scenario.sh maja
-```
-
-The script backs up the current `data/` with a timestamp before overwriting, so switching is non-destructive.
-
-Both pipelines work with all three scenarios.
-
-| Scenario | Signal | Single-run outcome | Annual report outcome |
-|---|---|---|---|
-| `maja` | BC50 savings far below card cost; no upcoming long-distance travel | Unambiguous recommendation to cancel BC50 | Clean report; strong CO₂ saving from rail; BC50 clearly did not break even |
-| `stefan` | Car owner who also holds a full rail/carsharing stack he uses irregularly; BC50 borderline break-even; possible relocation | Hedged conditional recommendation | Borderline BC50 verdict; hedged forward outlook; relocation flagged |
-| `lena` | 6 of 20 travel history entries malformed (null costs, empty/unknown mode) | Pipeline completes with partial result and data quality warnings | Data quality warnings populated in Section 6; totals marked as partial |
-
-To restore the original `data/` after testing:
-
-```bash
-cp data_backup_<timestamp>/*.json data/
-```
-
----
-
-## Tier roadmap
-
-| Tier | Status | Features |
-|------|--------|----------|
-| **Tier 1 — Basic** | ✅ Current | Mocked data, linear pipeline, single run, no persistence |
-| Tier 2 — Intermediate | Planned | Persistent user state, RAG over contracts DB, calendar-driven forecasting, constraint capture |
-| Tier 3 — Advanced | Planned | Multi-agent with context isolation, execution agent, life-event triggers, Docker, ADRs |
+See `.claude/TIERS_CONTEXT.md` for the full tier definitions and gap list.

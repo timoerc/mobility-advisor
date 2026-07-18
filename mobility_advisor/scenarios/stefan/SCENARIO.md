@@ -1,5 +1,9 @@
 # Scenario 02 — Edge Case: Contradictory Signals
 
+**Persona:** Stefan Kurz — München, car owner + BahnCard 50 + Deutschland-Ticket + MILES Silber, possible Hamburg relocation.
+**Tests:** Whether the pipeline hedges correctly under genuine ambiguity instead of forcing a confident answer.
+**Expected result:** A conditional/hedged recommendation branching on the relocation decision — not a single confident action.
+
 ## Summary
 
 Stefan Kurz owns a car and drives to work in München five days a week — yet he also

@@ -12,6 +12,21 @@ def maja(monkeypatch):
     monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "maja")
 
 
+@pytest.fixture
+def katrin(monkeypatch):
+    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "katrin")
+
+
+@pytest.fixture
+def sofia(monkeypatch):
+    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "sofia")
+
+
+@pytest.fixture
+def stefan(monkeypatch):
+    monkeypatch.setattr(tools, "_DATA", _SCENARIOS / "stefan")
+
+
 def test_totals(maja):
     # Sanity totals for the annual report's "Year at a Glance" section — trip costs
     # (all modes) plus every active subscription's annualized fee.
@@ -74,3 +89,46 @@ def test_no_data_quality_warnings(maja):
     # Maja's one previously-null-cost trip (FlixTrain) now carries a real fare.
     result = tools.compute_annual_report_stats()
     assert result["data_quality_warnings"] == []
+
+
+def test_bahncard_and_deutschlandticket_trips_dont_overlap(katrin):
+    # Katrin holds both a BahnCard 25 (long-distance discount) and a
+    # Deutschlandticket (flat-fee unlimited regional) — both mode="rail",
+    # provider="Deutsche Bahn". Before the coverage-kind split, a plain
+    # (mode, provider) match attributed every rail trip to both at once.
+    result = tools.compute_annual_report_stats()
+    bc25 = next(s for s in result["subscriptions"] if "BahnCard" in s["product"])
+    dticket = next(s for s in result["subscriptions"] if s["product"] == "Deutschland-Ticket")
+
+    assert bc25["has_discount_value"] is True
+    assert bc25["trips_attributed"] == 8  # paid long-distance legs only
+    assert bc25["discount_value_eur"] == pytest.approx(217.00)
+
+    assert dticket["is_paid_subscription"] is True
+    assert dticket["has_discount_value"] is False  # flat fee, no per-trip discount
+    assert dticket["discount_value_eur"] is None
+    assert dticket["net_eur"] is None
+    assert dticket["trips_attributed"] == 1  # the one 0-cost regional leg
+
+    # No trip is claimed by both subscriptions at once.
+    assert bc25["trips_attributed"] + dticket["trips_attributed"] == 9  # total 2025 rail trips
+
+
+def test_deutschlandticket_excludes_long_distance_trips_without_a_discount_card(sofia):
+    # Sofia holds a Deutschlandticket but no BahnCard. Her 2 long-distance Hamburg
+    # trips are real DB fares the Deutschlandticket does not cover — they must not
+    # be counted as "trips covered" by a flat-fee regional-only pass.
+    result = tools.compute_annual_report_stats()
+    dticket = next(s for s in result["subscriptions"] if s["product"] == "Deutschland-Ticket")
+    assert dticket["trips_attributed"] == 2  # only the 0-cost regional legs
+
+
+def test_three_subscriptions_split_independently(stefan):
+    # Stefan holds BahnCard 50, Deutschlandticket, and MILES Silber Pass at once —
+    # the rail split must not affect the unrelated car_share subscription's own
+    # (unrelated-mode) discount math.
+    result = tools.compute_annual_report_stats()
+    by_product = {s["product"]: s for s in result["subscriptions"]}
+    assert by_product["BahnCard 50 (2. Klasse, Standard, Jahresabo)"]["has_discount_value"] is True
+    assert by_product["Deutschland-Ticket"]["has_discount_value"] is False
+    assert by_product["MILES Silber Pass"]["has_discount_value"] is True

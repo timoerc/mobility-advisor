@@ -1,5 +1,9 @@
 # Scenario 03 — Failure Recovery: Broken Tool Data Mid-Pipeline
 
+**Persona:** Lena — student, BahnCard 50 Young + Deutschland-Ticket; trip data deliberately corrupted.
+**Tests:** Graceful degradation on malformed data (null costs, empty/invalid modes).
+**Expected result:** Pipeline completes with a Data Quality Warnings section — never crashes, never treats null as €0.
+
 ## Summary
 
 The `travel_history.json` fixture contains intentionally malformed entries — valid JSON that passes `python -m json.tool` but carries semantic breakage: null costs, empty mode strings, and unrecognized mode values. The expected agent outcome is **graceful degradation**: the pipeline completes with a partial result and an explicit data quality warning section. It must not crash, and must not silently treat null costs as €0.

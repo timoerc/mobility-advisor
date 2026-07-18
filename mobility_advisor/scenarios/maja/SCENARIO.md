@@ -1,5 +1,9 @@
 # Scenario 01 — Happy Path: Clear Over-Subscription
 
+**Persona:** Maja Hoffmann — Köln consultant, BahnCard 50 + Enterprise Silver.
+**Tests:** Basic over-subscription detection — the simple, unambiguous case.
+**Expected result:** Recommend cancelling/downgrading BahnCard 50, no hedging.
+
 ## Summary
 
 Maja holds BahnCard 50 but rarely uses it enough to justify the card. Five DB-provider rail trips (six rail-mode entries total, one a FlixTrain leg with unrecorded cost) produce a total discounted DB spend of €111.70 — far below what is needed to justify the €244/year card cost. These are genuinely long-distance Intercity trips (Köln↔Ulm 451 km, Köln↔Freiburg 429 km) — the issue is low *frequency*, not short distance. The expected agent outcome is an unambiguous recommendation to cancel BC50 or downgrade to BC25.

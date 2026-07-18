@@ -1,5 +1,9 @@
 # Scenario 06 — Under-Subscribed: Add the Membership That Pays for Itself
 
+**Persona:** Sofia Ricci — Berlin, Deutschland-Ticket + MILES Basis (pay-per-use).
+**Tests:** The "add/upgrade a product" case, and picking the right tier (not the biggest).
+**Expected result:** Recommend upgrading MILES Basis → MILES Silber; keep the Deutschland-Ticket.
+
 ## Summary
 
 Sofia Ricci gets around Berlin on her Deutschland-Ticket plus **frequent MILES car-share** —
