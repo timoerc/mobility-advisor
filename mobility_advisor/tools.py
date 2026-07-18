@@ -673,6 +673,144 @@ def _rail_and_carshare_co2_factors() -> tuple[float, float]:
     return round(rail_kg_per_km * 1000, 2), round(car_share_kg_per_km * 1000, 2)
 
 
+def compute_annual_report_stats() -> dict:
+    """Deterministic, code-computed figures for the annual report.
+
+    Spend, CO2, and per-subscription value are calculated here in Python rather than
+    left to the LLM, so the report's headline numbers can never silently contradict
+    each other the way free-text arithmetic spread across three separate agent stages
+    could (e.g. a "savings" figure in one section disagreeing with a "net loss" verdict
+    for the same subscription in another). annual_communicator_agent narrates around
+    these figures instead of computing them itself; main.py's /api/annual-report
+    endpoint substitutes the rendered tables into the report's placeholder sections.
+
+    Trip-to-subscription attribution is done here by (mode, provider) match against
+    load_annual_travel_history()'s year-scoped trips — not by the trip data's
+    'booked_under' field, which is null for every mock trip and would otherwise make
+    every subscription look completely unused.
+
+    Returns a dict with keys:
+      - review_year (int)
+      - total_spend_eur (float): year-scoped trip costs (cost_eur present only) plus
+        every active subscription's annualized fee
+      - total_trips (int), trips_missing_cost (int)
+      - dominant_mode (str): the mode with the most trips this year ("" if none)
+      - by_mode (list[dict]): one row per mode present this year, each
+        {mode, trips, distance_km, spend_eur, co2_kg}, sorted by co2_kg descending,
+        followed by a final {mode: "Total", ...} row
+      - total_co2_kg (float): sum of co2_emission_kg across every trip this year,
+        all modes included — the honest total footprint
+      - rail_vs_car_saving_kg (float): CO2 avoided by taking rail instead of a generic
+        car-share for the same distance, computed over rail trips only. This is a
+        secondary "smart regional choice" figure — it is NOT subtracted from
+        total_co2_kg, which already reflects what was actually emitted.
+      - rail_co2_g_per_km / carshare_co2_g_per_km (float): the factors behind the
+        figure above, for the report's methodology section
+      - subscriptions (list[dict]): one per active subscription, each
+        {product, provider, mode, monthly_cost_eur, billing_cycle, annual_fee_eur,
+         is_paid_subscription, trips_attributed, discount_value_eur, net_eur,
+         qualifying_activity}. discount_value_eur/net_eur are None for €0 loyalty
+        tiers — a break-even verdict is meaningless when there's no fee to break even
+        against. qualifying_activity is None unless the subscription carries a usage
+        threshold (e.g. Enterprise Silver's rentals_per_year).
+      - data_quality_warnings (list[str])
+    """
+    history = load_annual_travel_history()
+    trips = history["trips"]
+    warnings = list(history.get("data_quality_warnings", []))
+
+    total_trips = len(trips)
+    trips_missing_cost = sum(1 for t in trips if t["cost_eur"] is None)
+
+    by_mode_acc: dict[str, dict] = {}
+    for t in trips:
+        mode = t["mode"] or "unknown"
+        row = by_mode_acc.setdefault(
+            mode, {"mode": mode, "trips": 0, "distance_km": 0.0, "spend_eur": 0.0, "co2_kg": 0.0}
+        )
+        row["trips"] += 1
+        row["distance_km"] += t["distance_km"] or 0.0
+        row["spend_eur"] += t["cost_eur"] or 0.0
+        row["co2_kg"] += t["co2_emission_kg"] or 0.0
+
+    by_mode = sorted(by_mode_acc.values(), key=lambda r: r["co2_kg"], reverse=True)
+    for row in by_mode:
+        row["distance_km"] = round(row["distance_km"], 1)
+        row["spend_eur"] = round(row["spend_eur"], 2)
+        row["co2_kg"] = round(row["co2_kg"], 2)
+
+    total_co2_kg = round(sum(r["co2_kg"] for r in by_mode), 2)
+    trip_spend_eur = round(sum(r["spend_eur"] for r in by_mode), 2)
+    dominant_mode = max(by_mode_acc.values(), key=lambda r: r["trips"])["mode"] if by_mode_acc else ""
+
+    by_mode_with_total = by_mode + [{
+        "mode": "Total",
+        "trips": total_trips,
+        "distance_km": round(sum(r["distance_km"] for r in by_mode), 1),
+        "spend_eur": trip_spend_eur,
+        "co2_kg": total_co2_kg,
+    }]
+
+    rail_g_per_km, carshare_g_per_km = _rail_and_carshare_co2_factors()
+    rail_km = sum(t["distance_km"] or 0.0 for t in trips if t["mode"] == "rail")
+    rail_vs_car_saving_kg = round(rail_km * (carshare_g_per_km - rail_g_per_km) / 1000, 2)
+
+    subscriptions_raw = load_current_subscriptions()["subscriptions"]
+    subscriptions = []
+    for sub in subscriptions_raw:
+        matched = [
+            t for t in trips
+            if t["mode"] == sub["mode"] and sub["provider"].lower() in (t["provider"] or "").lower()
+        ]
+        trips_attributed = len(matched)
+        annual_fee_eur = round(sub["monthly_cost_eur"] * 12, 2)
+        is_paid = sub["monthly_cost_eur"] > 0
+
+        discount_value_eur = None
+        net_eur = None
+        if is_paid:
+            discount_value_eur = round(
+                sum(t["cost_eur"] for t in matched if t["cost_eur"] is not None), 2
+            )
+            net_eur = round(discount_value_eur - annual_fee_eur, 2)
+
+        qualifying_activity = None
+        threshold = sub.get("qualifying_threshold")
+        if threshold and threshold.get("rentals_per_year") is not None:
+            qualifying_activity = {"count": trips_attributed, "threshold": threshold["rentals_per_year"]}
+
+        subscriptions.append({
+            "product": sub["product"],
+            "provider": sub["provider"],
+            "mode": sub["mode"],
+            "monthly_cost_eur": sub["monthly_cost_eur"],
+            "billing_cycle": sub["billing_cycle"],
+            "annual_fee_eur": annual_fee_eur,
+            "is_paid_subscription": is_paid,
+            "trips_attributed": trips_attributed,
+            "discount_value_eur": discount_value_eur,
+            "net_eur": net_eur,
+            "qualifying_activity": qualifying_activity,
+        })
+
+    total_spend_eur = round(trip_spend_eur + sum(s["annual_fee_eur"] for s in subscriptions), 2)
+
+    return {
+        "review_year": REVIEW_YEAR,
+        "total_spend_eur": total_spend_eur,
+        "total_trips": total_trips,
+        "trips_missing_cost": trips_missing_cost,
+        "dominant_mode": dominant_mode,
+        "by_mode": by_mode_with_total,
+        "total_co2_kg": total_co2_kg,
+        "rail_vs_car_saving_kg": rail_vs_car_saving_kg,
+        "rail_co2_g_per_km": rail_g_per_km,
+        "carshare_co2_g_per_km": carshare_g_per_km,
+        "subscriptions": subscriptions,
+        "data_quality_warnings": warnings,
+    }
+
+
 def compute_co2_impact_kg(
     target_subscription: str | None = None,
     new_product: str | None = None,

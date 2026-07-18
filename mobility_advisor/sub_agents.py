@@ -16,7 +16,7 @@ from google.genai import types
 from .tools import (
     MOCK_TODAY,
     REVIEW_YEAR,
-    _rail_and_carshare_co2_factors,
+    compute_annual_report_stats,
     compute_co2_impact_kg,
     load_analyst_context,
     load_annual_analyst_context,
@@ -70,7 +70,6 @@ def build_content_config(max_output_tokens: int) -> types.GenerateContentConfig:
 _TODAY = MOCK_TODAY.isoformat()
 _REVIEW_YEAR = REVIEW_YEAR
 _DATA_DIR = Path(__file__).parent / "data"
-_RAIL_CO2_G_PER_KM, _CARSHARE_CO2_G_PER_KM = _rail_and_carshare_co2_factors()
 
 
 def _load_home_city() -> str:
@@ -459,6 +458,12 @@ execution for whichever option the user ends up choosing, not just the recommend
 # non-annual counterparts via targeted replacement so both the tool call and the wording are
 # scoped to REVIEW_YEAR — without this, the report's stated period and its actual figures could
 # silently diverge (the analyst would report on the full unfiltered history again).
+#
+# No raw per-trip table is requested here (unlike an earlier version): the annual report's
+# headline spend/CO2/subscription-value figures are now computed deterministically by
+# compute_annual_report_stats() and rendered by main.py, and a by-mode summary table replaces
+# what used to be a full trip-by-trip dump — a raw ledger a reader can't act on isn't
+# professional annual-report content. See annual_communicator_agent below.
 annual_analyst_agent = LlmAgent(
     name="annual_analyst",
     model=_MODEL,
@@ -472,15 +477,6 @@ annual_analyst_agent = LlmAgent(
         )
         .replace("load_analyst_context", "load_annual_analyst_context")
         .replace("in the past 12 months", f"in {_REVIEW_YEAR}")
-        + f"""
-
-Step 4 — after the subscription summary, output a "Trips considered ({_REVIEW_YEAR})" table listing
-EVERY trip in load_annual_analyst_context()'s travel_history.trips list, one row per trip,
-verbatim — do not omit, summarize, or round any trip. Columns: date | mode | origin →
-destination | distance_km | cost_eur | provider. This table exists so the report's figures
-can be manually cross-checked against the raw data — completeness matters more than brevity
-here.
-"""
     ),
     tools=[load_annual_analyst_context],
     output_key="analysis",
@@ -511,11 +507,33 @@ annual_optimizer_agent = LlmAgent(
     include_contents="none",
 )
 
-annual_communicator_agent = LlmAgent(
-    name="annual_communicator",
-    model=_MODEL,
-    description="Formats a full annual mobility review for the user from the optimizer's findings.",
-    instruction=f"""\
+def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
+    """Built fresh per invocation (not a module-level constant) because it embeds
+    compute_annual_report_stats() figures, which are persona-specific — the same
+    staleness hazard _load_home_city() guards against above: a persona switch via
+    POST /api/activate swaps data/*.json on disk without restarting the process, so
+    a value baked in at import time would silently keep reporting the previous
+    persona's numbers.
+
+    The three headline tables (Year at a Glance, Spend & Emissions by Mode,
+    Subscription Value) are NOT computed by the LLM at all — they are rendered
+    verbatim in Python by main.py from this same compute_annual_report_stats() call
+    and swapped in for the <!-- ..._PLACEHOLDER --> markers below, the same
+    mechanism the trips-table used previously. This is deliberate: letting the LLM
+    re-derive spend/CO2/ROI arithmetic from free text is exactly what produced the
+    contradictions in earlier reports (a "savings" figure in one section disagreeing
+    with a "net loss" verdict for the same subscription in another). The LLM's job
+    here is narration grounded in numbers it is handed, not computation.
+    """
+    stats = compute_annual_report_stats()
+    by_mode_rows = [r for r in stats["by_mode"] if r["mode"] != "Total"]
+    top_emitter = max(by_mode_rows, key=lambda r: r["co2_kg"]) if by_mode_rows else None
+    top_emitter_share_pct = (
+        round(100 * top_emitter["co2_kg"] / stats["total_co2_kg"]) if top_emitter and stats["total_co2_kg"] else 0
+    )
+    warnings_text = "; ".join(stats["data_quality_warnings"]) if stats["data_quality_warnings"] else "None."
+
+    return f"""\
 You are the Annual Report agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -528,10 +546,18 @@ The Analyst produced this usage report:
 The Forecaster produced this outlook:
 {{forecast}}
 
+Authoritative figures for {_REVIEW_YEAR}, computed in code (use these exact numbers in your
+prose below — never recompute, re-derive, or contradict them):
+- Total trips: {stats['total_trips']}, dominant mode by trip count: {stats['dominant_mode']}
+- Total CO₂ footprint, ALL modes: {stats['total_co2_kg']} kg
+- Largest emission source: {top_emitter['mode'] if top_emitter else 'n/a'} ({top_emitter['co2_kg'] if top_emitter else 0} kg, ~{top_emitter_share_pct}% of the total footprint)
+- CO₂ avoided on regional trips by choosing rail over a generic car-share for the same
+  distance: {stats['rail_vs_car_saving_kg']} kg (rail: {stats['rail_co2_g_per_km']} g/km vs. car-share: {stats['carshare_co2_g_per_km']} g/km) — this is a secondary, rail-only figure and is NOT subtracted from the total footprint above.
+
 Your job: produce a full annual mobility review that speaks directly to
 the user as "you"/"your" throughout — not by name.
 
-Structure your output EXACTLY as follows. Use all figures verbatim from the upstream context — do not invent numbers.
+Structure your output EXACTLY as follows.
 
 ---
 # Your Annual Mobility Review
@@ -542,83 +568,79 @@ Structure your output EXACTLY as follows. Use all figures verbatim from the upst
 
 ## 1. Year at a Glance
 
-| Metric | Value |
-|--------|-------|
-| Total mobility spend | €X (sum of all subscription costs + trip costs from {{analysis}}) |
-| Estimated savings vs. full price | €X (BC50 discount savings from {{analysis}}) |
-| CO₂ avoided vs. car-share baseline | X kg |
-| Dominant transport mode | [mode with highest trip count] |
-| Total trips logged | X |
-
-IMPORTANT: output ONLY that 5-row table for this section, nothing else. Each "Value" cell must be a
-single computed number/label you derived — never paste, quote, or reproduce raw text, bullet points,
-or the trips table from {{analysis}} here. The full trip-by-trip data belongs only in Section 7 below.
+Output exactly this line for this section, verbatim, and nothing else — the table is inserted
+automatically afterward:
+<!-- GLANCE_TABLE -->
 
 ---
 
-## 2. Subscription ROI
+## 2. Spend & Emissions by Mode
 
-For each active subscription, report whether it broke even over the year.
-
-Use this format for each:
-
-**[Product name]** — €X.XX/mo (€X.XX/yr)
-- Trips attributed: X
-- Value delivered: €X in discounts / unlimited regional travel used X times / etc.
-- Verdict: ✅ Paid off / ⚠️ Borderline / ❌ Did not break even
-- Key figure: [the single number that determines the verdict]
+Output exactly this line for this section, verbatim, and nothing else — the table is inserted
+automatically afterward:
+<!-- BY_MODE_TABLE -->
 
 ---
 
-## 3. CO₂ Report
+## 3. Sustainability
 
-Compute from {{analysis}} using these exact formulas:
-- Rail trips: distance_km × {_RAIL_CO2_G_PER_KM} g/km ÷ 1000 = kg CO₂
-- Car-share baseline: same distance × {_CARSHARE_CO2_G_PER_KM} g/km ÷ 1000 = kg CO₂
-- CO₂ avoided = car-share baseline − rail actual
-
-Write:
-> You traveled X km by rail, emitting X kg CO₂. Choosing rail over car avoided X kg CO₂ (rail: {_RAIL_CO2_G_PER_KM} g/km vs. car-share: {_CARSHARE_CO2_G_PER_KM} g/km).
-
-Then list mode split: X% rail, X% regional, X% car-share, etc. by trip count.
+Write 2–4 sentences of honest, plain-language narrative using ONLY the authoritative figures
+given above. Explicitly name the largest emission source and its approximate share of the
+total footprint — do not lead with or imply a "green year" framing if flights or another
+high-emission mode dominate. You may separately mention the rail-vs-car-share saving as a
+smaller, secondary positive, clearly distinguished from the total footprint.
 
 ---
 
-## 4. Recommendations Taken This Year
+## 4. Subscription Value
 
-List any optimizer recommendations from {{recommendation}} that were noted as approved. If execution is mocked/pending, write:
-
-> ⚠️ No contract changes have been executed yet. The recommendation below is awaiting approval.
-
-Then include the optimizer's proposed change as a single bullet.
+Output exactly this line for this section, verbatim, and nothing else — the content is inserted
+automatically afterward:
+<!-- SUBSCRIPTION_VALUE -->
 
 ---
 
-## 5. Forward Outlook
+## 5. Recommendations & Actions
+
+State plainly, as a labeled line, whether any contract changes were executed this year. If
+execution is mocked/pending (the normal case), write exactly:
+
+> **Actions taken this year:** None.
+> **Pending proposal:** awaiting your approval (see below).
+
+Then include the optimizer's proposed change from {{recommendation}} as a single bullet. If
+{{recommendation}} indicates a change was actually approved/executed, state that instead under
+"Actions taken this year" and only list remaining open proposals under "Pending proposal".
+
+---
+
+## 6. Forward Outlook
 
 Summarise {{forecast}} in 2–3 sentences: what demand signals suggest about the next quarter and whether the current portfolio still fits.
 
 ---
 
-## 6. Assumptions & Data Quality
+## 7. Methodology & Assumptions
 
-- State which data is mock/synthetic.
-- State that all figures in this report are limited to trips dated in {_REVIEW_YEAR} — trips outside this year are excluded.
-- List any data quality warnings from {{analysis}} (null costs, unknown modes, etc.).
-- State that all rail trip costs are assumed to reflect the BC50 50% discount, so full price = cost × 2.
-
----
-
-## 7. Trips Considered (Verification)
-
-Output exactly this line for this section, verbatim, and nothing else — do not reproduce, summarize,
-or add any trip data yourself here; the real trip table is inserted automatically afterward:
-<!-- TRIPS_TABLE_PLACEHOLDER -->
+- State that all data used is mock/synthetic, for demonstration purposes.
+- State that every figure in this report is scoped to trips dated in {_REVIEW_YEAR} only —
+  trips outside this year are excluded.
+- State that BahnCard 50's discount value is computed only from Deutsche Bahn rail trips (fares
+  already reflect the ~50% BahnCard discount, so the discount value equals the amount paid);
+  other rail providers (e.g. FlixTrain) are not BahnCard fares and are excluded from that figure.
+- Data quality notes: {warnings_text}
 
 ---
 ⚠️ **This report is informational. No changes have been made to your subscriptions.**
 ---
-""",
+"""
+
+
+annual_communicator_agent = LlmAgent(
+    name="annual_communicator",
+    model=_MODEL,
+    description="Formats a full annual mobility review for the user from the optimizer's findings.",
+    instruction=_annual_communicator_instruction,
     tools=[],
     generate_content_config=build_content_config(_LONG_REPORT_TOKENS),
     include_contents="none",

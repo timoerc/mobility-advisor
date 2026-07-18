@@ -39,7 +39,7 @@ from mobility_advisor.models import (
 )
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
-from mobility_advisor.tools import MOCK_TODAY, detect_pending_portfolio_decision
+from mobility_advisor.tools import MOCK_TODAY, compute_annual_report_stats, detect_pending_portfolio_decision
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
@@ -714,7 +714,7 @@ async def annual_report(req: AnalyzeRequest):
         return report_text, sid
 
     try:
-        report_text, sid = await _with_pipeline_retry(attempt)
+        report_text, _sid = await _with_pipeline_retry(attempt)
     except HTTPException:
         raise
     except Exception as exc:
@@ -723,14 +723,19 @@ async def annual_report(req: AnalyzeRequest):
             detail=f"The annual report pipeline failed before producing a report: {exc}",
         ) from exc
 
-    if "<!-- TRIPS_TABLE_PLACEHOLDER -->" in report_text:
-        session = await runner.session_service.get_session(
-            app_name="mobility_advisor_annual", user_id="user", session_id=sid
-        )
-        analysis_text = (session.state.get("analysis") or "") if session else ""
-        report_text = report_text.replace(
-            "<!-- TRIPS_TABLE_PLACEHOLDER -->", _extract_trips_table(analysis_text)
-        )
+    # The three data-heavy sections (Year at a Glance, Spend & Emissions by Mode,
+    # Subscription Value) are rendered here in Python from the same deterministic
+    # compute_annual_report_stats() the communicator's prompt was built from, and
+    # substituted for the placeholder markers the communicator was instructed to
+    # emit verbatim — the LLM never formats these numbers itself, so they can't
+    # drift from what the report's narrative sections say about them.
+    stats = compute_annual_report_stats()
+    report_text = (
+        report_text
+        .replace("<!-- GLANCE_TABLE -->", _render_glance_table(stats))
+        .replace("<!-- BY_MODE_TABLE -->", _render_by_mode_table(stats))
+        .replace("<!-- SUBSCRIPTION_VALUE -->", _render_subscription_value(stats))
+    )
 
     try:
         pdf_bytes = render_annual_report_pdf(report_text)
@@ -898,19 +903,104 @@ async def revert_analysis(entry_id: str):
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────
 
-def _extract_trips_table(analysis_text: str) -> str:
-    """Slice out the analyst's 'Trips considered (...)' section, verbatim.
+_MODE_DISPLAY_NAMES = {
+    "rail": "Rail",
+    "flight": "Flight",
+    "car_rental": "Car rental",
+    "car_share": "Car share",
+    "bus": "Bus",
+    "unknown": "Unknown",
+}
 
-    annual_analyst_agent's instruction always emits this table as the last thing
-    in its report, after the subscription summary, so once the heading is found
-    everything after it IS the table. Degrades to a plain note (not a crash) if
-    the heading is missing, e.g. because the analyst stage's own output was
-    truncated or failed.
+
+def _render_glance_table(stats: dict) -> str:
+    """Render annual_communicator_agent's "Year at a Glance" section (Section 1) as a
+    fixed 5-row Markdown table from compute_annual_report_stats() — pure data, no LLM
+    formatting involved, so it can't drift from what Section 4 says about the same
+    subscriptions."""
+    discount_total = sum(
+        s["discount_value_eur"] for s in stats["subscriptions"] if s["discount_value_eur"] is not None
+    )
+    rows = [
+        ("Total mobility spend", f"€{stats['total_spend_eur']:,.2f}"),
+        ("Estimated savings from subscription discounts", f"€{discount_total:,.2f}"),
+        ("Total CO₂ footprint (all modes)", f"{stats['total_co2_kg']:,.1f} kg"),
+        ("CO₂ avoided on regional trips (rail vs. car-share)", f"{stats['rail_vs_car_saving_kg']:,.1f} kg"),
+        ("Trips logged", str(stats["total_trips"])),
+    ]
+    lines = ["| Metric | Value |", "|--------|-------|"]
+    lines += [f"| {label} | {value} |" for label, value in rows]
+    return "\n".join(lines)
+
+
+def _render_by_mode_table(stats: dict) -> str:
+    """Render Section 2 "Spend & Emissions by Mode" — an aggregated-by-mode table that
+    replaces what used to be a raw per-trip dump. Still fully cross-checkable (every
+    trip that fed compute_annual_report_stats() is accounted for in some row) but
+    scannable, the way a professional annual report should be."""
+    lines = [
+        "| Mode | Trips | Distance | Spend | CO₂ |",
+        "|------|-------|----------|-------|-----|",
+    ]
+    for row in stats["by_mode"]:
+        is_total = row["mode"] == "Total"
+        label = "**Total**" if is_total else _MODE_DISPLAY_NAMES.get(
+            row["mode"], row["mode"].replace("_", " ").title()
+        )
+        lines.append(
+            f"| {label} | {row['trips']} | {row['distance_km']:,.0f} km | "
+            f"€{row['spend_eur']:,.2f} | {row['co2_kg']:,.1f} kg |"
+        )
+    return "\n".join(lines)
+
+
+def _render_subscription_value(stats: dict) -> str:
+    """Render Section 4 "Subscription Value" — one block per active subscription.
+
+    Paid subscriptions (monthly_cost_eur > 0) get a discount-vs-fee net figure and a
+    break-even verdict. €0 loyalty/status tiers (e.g. a car-rental loyalty program)
+    get a plain activity status line instead — there is no fee to break even against,
+    so a break-even verdict for them would be meaningless (the bug this replaces).
     """
-    idx = analysis_text.lower().find("trips considered")
-    if idx == -1:
-        return "_(Trip-level detail unavailable for this run.)_"
-    return analysis_text[idx:]
+    blocks = []
+    for sub in stats["subscriptions"]:
+        header = f"**{sub['product']}**"
+        if sub["is_paid_subscription"]:
+            header += f" — €{sub['monthly_cost_eur']:.2f}/mo (€{sub['annual_fee_eur']:.2f}/yr)"
+            net = sub["net_eur"]
+            if net >= 0:
+                verdict = "✅ Paid off"
+            elif net >= -0.1 * sub["annual_fee_eur"]:
+                verdict = "⚠️ Borderline"
+            else:
+                verdict = "❌ Did not break even"
+            sign = "+" if net >= 0 else "−"
+            # Blank line between the header paragraph and the bullet list below is
+            # required — python-markdown (unlike CommonMark) treats a list that
+            # directly follows a paragraph with no blank line as a lazy continuation
+            # of that paragraph, flattening the bullets into running prose.
+            blocks.append(
+                f"{header}\n\n"
+                f"- Trips attributed: {sub['trips_attributed']} {sub['provider']} "
+                f"{sub['mode'].replace('_', ' ')} trips\n"
+                f"- Discount value delivered: €{sub['discount_value_eur']:.2f}\n"
+                f"- Net vs. annual fee: {sign}€{abs(net):.2f}\n"
+                f"- Verdict: {verdict}"
+            )
+        else:
+            header += " — no monthly fee (loyalty tier)"
+            qa = sub["qualifying_activity"]
+            activity_line = (
+                f"- Activity this year: {qa['count']} of {qa['threshold']} needed to reach the next tier"
+                if qa
+                else f"- Trips attributed: {sub['trips_attributed']}"
+            )
+            blocks.append(
+                f"{header}\n\n"
+                f"{activity_line}\n"
+                f"- No break-even applies — this membership has no fee to offset."
+            )
+    return "\n\n".join(blocks)
 
 
 def _collect_text(event) -> str:

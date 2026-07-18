@@ -25,7 +25,10 @@ def test_total_trip_count(happy_path):
 def test_filter_by_mode(happy_path):
     result = tools.compute_travel_stats(mode="rail")
     assert result["trip_count"] == 6
-    assert result["total_spend_eur"] == pytest.approx(111.70)
+    # 111.70 across the 5 Deutsche Bahn trips + 34.99 for the FlixTrain trip, which
+    # used to have a null cost_eur (excluded from the sum) before it was filled in
+    # with a realistic fare.
+    assert result["total_spend_eur"] == pytest.approx(146.69)
     assert result["total_distance_km"] == pytest.approx(2703.2)
 
 
@@ -48,10 +51,13 @@ def test_filter_by_provider(happy_path):
 
 
 def test_filter_by_date_range(happy_path):
-    result = tools.compute_travel_stats(date_from="2026-04-01", date_to="2026-06-30")
+    # Covers the two Greece-holiday flights plus the FlixTrain, Köln->Karlsruhe rail,
+    # and Enterprise car-rental trips — all of Maja's trips now fall in H2 2025 (see
+    # scenarios/maja/travel_history_raw.json), so trips outside 2025 are excluded here.
+    result = tools.compute_travel_stats(date_from="2025-09-01", date_to="2025-11-30")
     assert result["trip_count"] == 5
-    assert result["total_spend_eur"] == pytest.approx(276.13)
-    assert result["total_distance_km"] == pytest.approx(1606.3)
+    assert result["total_spend_eur"] == pytest.approx(659.40)
+    assert result["total_distance_km"] == pytest.approx(4641.5)
 
 
 def test_no_match_returns_null_renewal(happy_path):
@@ -76,7 +82,7 @@ def test_filter_by_destination(happy_path):
 
 def test_filter_by_subscription_and_origin(happy_path):
     # Acceptance case: of Maja's 5 Deutsche Bahn trips, 3 originate in Köln
-    # (2026-04-22 Köln->Ulm, 2026-05-07 Köln Messe->Freiburg, 2026-06-03 Köln->Karlsruhe).
+    # (2025-07-14 Köln->Ulm, 2025-08-05 Köln Messe->Freiburg, 2025-11-18 Köln->Karlsruhe).
     result = tools.compute_travel_stats(
         subscription_or_provider="Deutsche Bahn", origin_filter="Köln"
     )
