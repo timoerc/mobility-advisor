@@ -20,6 +20,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
   const [report, setReport] = useState<Blob | null>(cachedReport);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const calledRef = useRef(false);
 
   useEffect(() => {
@@ -28,8 +29,12 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
 
     runAnnualReport(sessionId)
       .then((pdf) => {
-        setReport(pdf);
-        onReportReady(pdf);
+        setDone(true);
+        // Brief pause so the progress bar visually completes before showing the PDF
+        window.setTimeout(() => {
+          setReport(pdf);
+          onReportReady(pdf);
+        }, 600);
       })
       .catch((err) => {
         console.warn("Annual report failed:", err);
@@ -68,6 +73,25 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
           <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">Building your annual report…</h2>
           <StatusMessage messages={STATUS_MESSAGES} intervalMs={4200} />
         </div>
+
+        <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-brand-red rounded-full transition-all duration-700"
+            style={{
+              width: done ? "100%" : undefined,
+              animation: done ? "none" : "annualReportProgress 40s ease-out forwards",
+            }}
+          />
+        </div>
+
+        <style>{`
+          @keyframes annualReportProgress {
+            0%   { width: 0% }
+            30%  { width: 40% }
+            70%  { width: 72% }
+            100% { width: 85% }
+          }
+        `}</style>
       </div>
     );
   }
