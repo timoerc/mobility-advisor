@@ -29,6 +29,7 @@ from .tools import (
     load_travel_history,
     load_user_preferences,
     merge_projected_trip_sets,
+    optimize_all_categories,
     simulate_portfolio,
 )
 
@@ -223,7 +224,7 @@ Show real numbers from the data. Do not propose more than one change.
 optimizer_agent = LlmAgent(
     name="optimizer",
     model=_MODEL,
-    description="Simulates subscription portfolios and finds the mathematically optimal one via scoring.",
+    description="Runs deterministic portfolio optimization across all subscription categories.",
     instruction=f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -232,34 +233,20 @@ Context from upstream agents:
 - Analyst finding: {{analysis}}
 - Forecaster outlook: {{forecast}}
 
-Your job: simulate candidate subscription portfolios against the merged projected trips
-and find the optimal portfolio using mathematical scoring.
+Your job: call optimize_all_categories() — it deterministically simulates every relevant
+subscription option (rail, car-share), finds the best per category, tests combinations,
+and returns a ranked comparison with scores and deltas vs. the recommended portfolio.
 
-Step 1 — call load_user_preferences() and load_simulation_candidates().
+Step 1 — call optimize_all_categories(). This is the ONLY tool you need to call.
 
-Step 2 — generate 5–10 candidate portfolios to simulate. Always include:
-- [] (empty list = "Do Nothing" / no subscriptions baseline)
-- Each single chooseable subscription alone (e.g. ["db_bc25_2nd_annual_standard"])
-- The user's current subscriptions (from {{analysis}})
-- 2–3 sensible combinations (e.g. BahnCard + Deutschlandticket, BahnCard + MILES tier)
+Step 2 — output the full result verbatim as structured data. Do not summarize or omit
+scenarios. Include all fields: label, subscription_ids, score, total_annual_cost_eur,
+total_annual_time_min, total_annual_co2_kg, delta_cost_eur, delta_time_min, delta_co2_kg,
+is_recommended, is_current.
 
-Do NOT include subscriptions filtered out by load_simulation_candidates (1st class BahnCards,
-BC100, automatic tiers like Enterprise/Miles&More).
-
-Step 3 — for each candidate portfolio, call simulate_portfolio(subscription_ids).
-Collect all simulation results.
-
-Step 4 — call compute_portfolio_score(simulation_results, weights) with the user's
-preference weights from Step 1. This returns a ranked list with normalized scores.
-
-Step 5 — output a structured report with the scoring weights from load_user_preferences,
-the ranked portfolios from compute_portfolio_score, and a recommended portfolio.
-Include the score, annual cost, travel time, and CO2 for each portfolio.
-If "Do Nothing" ranks #1, say so clearly.
-Show real numbers from simulation results. Do not invent figures.
-Your output is consumed by downstream agents. Do not include questions or conversational phrases.
+Do not invent figures. Do not add commentary or questions.
 """,
-    tools=[load_user_preferences, load_simulation_candidates, simulate_portfolio, compute_portfolio_score],
+    tools=[optimize_all_categories],
     output_key="recommendation",
     generate_content_config=build_content_config(_OPTIMIZER_TOKENS),
     include_contents="none",
@@ -273,50 +260,33 @@ communicator_agent = LlmAgent(
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-The Optimizer has produced a portfolio ranking with simulation results:
+The Optimizer has produced a deterministic portfolio comparison:
 {{recommendation}}
 
-Your job: present the results as a friendly, scannable report that speaks directly to
-the user as "you"/"your" throughout — not by name.
+Your job: write a concise verdict and reasoning. The frontend will display the scenario
+table and deltas directly from stored data — you do NOT need to reproduce the full table.
 
-Structure your output exactly as follows:
+Output exactly this structure:
 
----
-**Your Mobility Portfolio Optimization**
+**Verdict:** [8-12 word headline for the recommended option, e.g. "Switch to BahnCard 25 saves €725 per year annually"]
 
-**Recommended portfolio:** [name of the #1 ranked portfolio]
-[one-sentence summary of why it wins]
+**Confidence:** [high / medium / low — high if the cost gap is clear, medium if borderline]
 
-**Scoring breakdown** (weights from your preferences):
+**Summary:** [1-2 sentences summarising the key finding and saving]
 
-| Portfolio | Score | Annual Cost | Travel Time | CO₂ |
-|-----------|-------|-------------|-------------|-----|
-| [#1 name] | [score] | €[cost] | [time] min | [co2] kg |
-| [#2 name] | [score] | €[cost] | [time] min | [co2] kg |
-| ... | ... | ... | ... | ... |
+**Reasoning:**
+- [bullet 1: why the recommended portfolio wins]
+- [bullet 2: key tradeoff acknowledged]
+- [bullet 3: optional — cross-mode insight if interesting]
 
-**What the recommended portfolio means for you:**
-- Subscriptions: [list subscriptions in the portfolio, or "None" for Do Nothing]
-- Annual subscription cost: €[amount]
-- Annual trip cost (after discounts): €[amount]
-- Total annual mobility cost: €[amount]
-- How you'd travel: [describe the dominant modes for your trips]
+**Assumptions:**
+- All rail trips priced at Sparpreis level (both BahnCard 25 and 50 give 25% discount on Sparpreis)
+- Trip frequencies extrapolated from historical data and calendar events
+- [any other relevant assumption from the data]
 
-**Compared to doing nothing:**
-- Cost difference: €[amount saved or extra] per year
-- Time difference: [minutes saved or extra] per year
-- CO₂ difference: [kg saved or extra] per year
-
-**Cross-mode highlights:**
-[If the simulation shows interesting mode switches — e.g. rail beating car-share on certain
-routes, or flight being optimal for long distances — call them out in 2–3 bullets]
-
----
-⚠️ **No change has been made to your subscriptions. This recommendation awaits your approval.**
----
-
-Keep the tone direct and professional. Use all numbers verbatim from the Optimizer's output.
-Do not invent numbers. If "Do Nothing" is the best option, say so clearly — do not spin it.
+Use all numbers from the Optimizer's output. Do not invent figures.
+Speak directly to the user as "you"/"your" — not by name.
+If "No subscriptions" is the best option, say so clearly.
 """,
     tools=[],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),

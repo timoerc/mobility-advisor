@@ -279,6 +279,10 @@ class Alternative(BaseModel):
     co2ImpactKg: float = 0.0
     tradeoff: str
     isRecommended: bool
+    # Deltas vs. the recommended portfolio (0 for the recommended itself).
+    deltaCostVsRecommendedEur: float = 0.0
+    deltaTimeVsRecommendedMin: float = 0.0
+    deltaCo2VsRecommendedKg: float = 0.0
     # None only for the always-present "Keep current setup" row. Every other
     # alternative must carry its own action so it can be executed if the user
     # selects it — see /api/execute in main.py.
@@ -303,12 +307,6 @@ class Recommendation(BaseModel):
         if len(recommended) != 1:
             raise ValueError(
                 f"expected exactly one isRecommended alternative, got {len(recommended)}"
-            )
-        if recommended[0].action is None:
-            raise ValueError("the recommended alternative must have a non-null action")
-        if not any(a.action is None for a in self.alternatives):
-            raise ValueError(
-                "expected at least one 'Keep current setup' alternative (action: null)"
             )
         return self
 

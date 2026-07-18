@@ -10,12 +10,32 @@ type AlternativeRowProps = {
   readOnly?: boolean;
 };
 
+function DeltaBadge({ value, unit, invert }: { value: number; unit: string; invert?: boolean }) {
+  if (Math.abs(value) < 0.5) return null;
+  const rounded = Math.round(value);
+  const isGood = invert ? rounded > 0 : rounded < 0;
+  const isBad = invert ? rounded < 0 : rounded > 0;
+  const color = isGood ? "text-green-700 bg-green-50" : isBad ? "text-red-600 bg-red-50" : "text-gray-500 bg-gray-50";
+  const sign = rounded > 0 ? "+" : "";
+  return (
+    <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${color}`}>
+      {sign}{rounded} {unit}
+    </span>
+  );
+}
+
 export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: AlternativeRowProps) {
   const savingsPositive = alt.savingsVsCurrentEur > 0;
   const savingsNeutral = alt.savingsVsCurrentEur === 0;
   const co2Kg = alt.co2ImpactKg ?? 0;
-  const co2Positive = co2Kg > 0; // saves CO2 vs. current
-  const co2Negative = co2Kg < 0; // emits more CO2 vs. current
+  const co2Positive = co2Kg > 0;
+  const co2Negative = co2Kg < 0;
+
+  const hasDelta = !alt.isRecommended && (
+    (alt.deltaCostVsRecommendedEur != null && Math.abs(alt.deltaCostVsRecommendedEur) >= 1) ||
+    (alt.deltaTimeVsRecommendedMin != null && Math.abs(alt.deltaTimeVsRecommendedMin) >= 10) ||
+    (alt.deltaCo2VsRecommendedKg != null && Math.abs(alt.deltaCo2VsRecommendedKg) >= 1)
+  );
 
   const borderClass = readOnly
     ? selected
@@ -64,6 +84,16 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
           )}
         </div>
       </div>
+
+      {hasDelta && (
+        <div className="flex flex-wrap gap-1.5 mt-0.5">
+          <span className="text-[11px] text-gray-400">vs. recommended:</span>
+          <DeltaBadge value={alt.deltaCostVsRecommendedEur ?? 0} unit="€" />
+          <DeltaBadge value={alt.deltaTimeVsRecommendedMin ?? 0} unit="min" />
+          <DeltaBadge value={alt.deltaCo2VsRecommendedKg ?? 0} unit="kg CO₂" />
+        </div>
+      )}
+
       <p className="text-xs text-gray-500 m-0 leading-relaxed">{alt.tradeoff}</p>
       {(co2Kg !== 0 || alt.co2Impact) && (
         <p

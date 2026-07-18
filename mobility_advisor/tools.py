@@ -1000,6 +1000,236 @@ def load_simulation_candidates() -> dict:
     }
 
 
+def optimize_all_categories() -> dict:
+    """Deterministic portfolio optimization across all subscription categories.
+
+    Systematically simulates every relevant subscription option (filtered by age,
+    excluding 1st class and BC100), finds the best tier per category (rail, car-share),
+    tests key combinations, and ranks all scenarios using the user's priority weights.
+
+    Writes full results to _optimization_results.json for main.py to build
+    frontend alternatives from. Returns a summary for the agent.
+    """
+    merged_path = _DATA / "_projected_trips_merged.json"
+    if not merged_path.exists():
+        return {"status": "error", "error": "Run merge_projected_trip_sets first"}
+
+    catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
+    catalog_by_id = {opt["id"]: opt for opt in catalog_raw["options"]}
+
+    prefs = load_user_preferences()
+    age = prefs.get("age")
+    weights = {
+        "cost_weight": prefs.get("cost_weight", 0.34),
+        "time_weight": prefs.get("time_weight", 0.33),
+        "sustainability_weight": prefs.get("sustainability_weight", 0.33),
+    }
+
+    current_raw = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
+    current_ids = sorted(
+        s["id"] for s in current_raw.get("subscriptions", []) if s["id"] in catalog_by_id
+    )
+    current_key = tuple(current_ids)
+
+    SKIP_IDS = {
+        "enterprise_plus", "enterprise_silver", "enterprise_gold", "enterprise_platinum",
+        "lh_miles_member", "lh_miles_frequent_traveller", "lh_miles_senator", "lh_miles_hon_circle",
+        "db_bc25_1st_annual_standard", "db_bc50_1st_annual_standard",
+        "db_bc100_1st_annual", "db_bc100_2nd_annual",
+        "flixbus_payperuse",
+    }
+
+    def _age_ok(opt):
+        if age is None:
+            return True
+        elig = opt.get("eligibility", {})
+        lo, hi = elig.get("min_age"), elig.get("max_age")
+        return (lo is None or age >= lo) and (hi is None or age <= hi)
+
+    chooseable = [o for o in catalog_raw["options"] if o["id"] not in SKIP_IDS and _age_ok(o)]
+
+    rail = [o for o in chooseable if o["mode"] == "rail"]
+    miles_opts = [o for o in chooseable if o["mode"] == "car_share"]
+    dt_opts = [o for o in rail if o.get("benefits", {}).get("unlimited_regional")]
+    bc_opts = [o for o in rail if not o.get("benefits", {}).get("unlimited_regional")]
+
+    # --- Build candidate list: (label, category, ids) ---
+    cands: list[tuple[str, str, list[str]]] = []
+    cands.append(("No subscriptions", "baseline", []))
+
+    for o in rail:
+        cands.append((o["product"], "rail", [o["id"]]))
+    for bc in bc_opts:
+        for dt in dt_opts:
+            cands.append((f"{bc['product']} + Deutschlandticket", "rail_combo", [bc["id"], dt["id"]]))
+    for o in miles_opts:
+        cands.append((o["product"], "car_share", [o["id"]]))
+
+    # --- Simulate all (deduplicate by sorted ids) ---
+    sim_cache: dict[tuple, dict] = {}
+    entries: list[dict] = []
+    seen_keys: set[tuple] = set()
+
+    for label, cat, ids in cands:
+        key = tuple(sorted(ids))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        if key not in sim_cache:
+            sim = simulate_portfolio(list(ids))
+            if sim.get("status") != "ok":
+                continue
+            sim_cache[key] = sim
+        sim = sim_cache[key]
+        entries.append({
+            "status": "ok",
+            "label": label, "category": cat, "subscription_ids": list(ids),
+            "total_subscription_cost_eur": sim["total_subscription_cost_eur"],
+            "total_trip_cost_eur": sim["total_trip_cost_eur"],
+            "total_annual_cost_eur": sim["total_annual_cost_eur"],
+            "total_annual_time_min": sim["total_annual_time_min"],
+            "total_annual_co2_kg": sim["total_annual_co2_kg"],
+            "trip_breakdown": sim["trip_breakdown"],
+        })
+
+    # Add current portfolio if not already covered
+    if current_key not in seen_keys and current_ids:
+        sim = simulate_portfolio(current_ids)
+        if sim.get("status") == "ok":
+            sim_cache[current_key] = sim
+            current_label = " + ".join(
+                catalog_by_id[sid]["product"] for sid in current_ids if sid in catalog_by_id
+            )
+            entries.append({
+                "status": "ok",
+                "label": current_label, "category": "current",
+                "subscription_ids": current_ids,
+                "total_subscription_cost_eur": sim["total_subscription_cost_eur"],
+                "total_trip_cost_eur": sim["total_trip_cost_eur"],
+                "total_annual_cost_eur": sim["total_annual_cost_eur"],
+                "total_annual_time_min": sim["total_annual_time_min"],
+                "total_annual_co2_kg": sim["total_annual_co2_kg"],
+                "trip_breakdown": sim["trip_breakdown"],
+            })
+
+    if not entries:
+        return {"status": "error", "error": "No valid simulations produced"}
+
+    # --- Find best per category, then try best-rail + best-miles combo ---
+    best_rail_entry = min(
+        (e for e in entries if e["category"] in ("rail", "rail_combo")),
+        key=lambda e: e["total_annual_cost_eur"], default=None,
+    )
+    best_miles_entry = min(
+        (e for e in entries if e["category"] == "car_share"),
+        key=lambda e: e["total_annual_cost_eur"], default=None,
+    )
+
+    if best_rail_entry and best_miles_entry:
+        combo_ids = best_rail_entry["subscription_ids"] + best_miles_entry["subscription_ids"]
+        combo_key = tuple(sorted(combo_ids))
+        if combo_key not in seen_keys:
+            seen_keys.add(combo_key)
+            sim = simulate_portfolio(combo_ids)
+            if sim.get("status") == "ok":
+                sim_cache[combo_key] = sim
+                entries.append({
+                    "status": "ok",
+                    "label": f"{best_rail_entry['label']} + {best_miles_entry['label']}",
+                    "category": "combo",
+                    "subscription_ids": combo_ids,
+                    "total_subscription_cost_eur": sim["total_subscription_cost_eur"],
+                    "total_trip_cost_eur": sim["total_trip_cost_eur"],
+                    "total_annual_cost_eur": sim["total_annual_cost_eur"],
+                    "total_annual_time_min": sim["total_annual_time_min"],
+                    "total_annual_co2_kg": sim["total_annual_co2_kg"],
+                    "trip_breakdown": sim["trip_breakdown"],
+                })
+
+    # --- Score all ---
+    scoring = compute_portfolio_score(entries, weights)
+    rank_map = {
+        tuple(sorted(r["subscription_ids"])): r["score"]
+        for r in scoring["ranked_portfolios"]
+    }
+    for e in entries:
+        e["score"] = rank_map.get(tuple(sorted(e["subscription_ids"])), 999)
+    entries.sort(key=lambda e: e["score"])
+
+    # --- Compute deltas vs recommended (#1) ---
+    rec = entries[0]
+    for e in entries:
+        e["is_recommended"] = (e is rec)
+        e["is_current"] = (tuple(sorted(e["subscription_ids"])) == current_key)
+        e["delta_cost_eur"] = round(e["total_annual_cost_eur"] - rec["total_annual_cost_eur"], 2)
+        e["delta_time_min"] = round(e["total_annual_time_min"] - rec["total_annual_time_min"], 1)
+        e["delta_co2_kg"] = round(e["total_annual_co2_kg"] - rec["total_annual_co2_kg"], 3)
+
+    # --- Select up to 5 scenarios to show ---
+    # Guaranteed slots: recommended (#1) and current portfolio (always shown).
+    shown: list[dict] = []
+    shown_keys: set[tuple] = set()
+
+    def _add(entry, force: bool = False):
+        k = tuple(sorted(entry["subscription_ids"]))
+        if k in shown_keys:
+            return
+        if not force:
+            if len(shown) >= 5:
+                return
+            for s in shown:
+                if abs(s["total_annual_cost_eur"] - entry["total_annual_cost_eur"]) < 1:
+                    e_set = set(entry["subscription_ids"])
+                    s_set = set(s["subscription_ids"])
+                    if e_set != s_set and (e_set > s_set or e_set < s_set):
+                        return
+        shown.append(entry)
+        shown_keys.add(k)
+
+    _add(rec)
+
+    current_entry = next((e for e in entries if e.get("is_current")), None)
+    if current_entry and not current_entry.get("is_recommended"):
+        _add(current_entry, force=True)
+
+    best_per_cat: dict[str, dict] = {}
+    for e in entries:
+        best_per_cat.setdefault(e["category"], e)
+
+    for cat in ["rail", "rail_combo", "car_share", "combo"]:
+        if cat in best_per_cat:
+            _add(best_per_cat[cat])
+
+    if rec["category"] in ("rail", "rail_combo"):
+        for e in entries:
+            if e["category"] in ("rail", "rail_combo"):
+                _add(e)
+
+    for e in entries:
+        _add(e)
+
+    # --- Persist and return ---
+    def _slim(e):
+        return {k: v for k, v in e.items() if k != "trip_breakdown"}
+
+    output = {
+        "status": "ok",
+        "weights": weights,
+        "current_subscription_ids": current_ids,
+        "scenarios": [_slim(e) for e in shown],
+        "all_ranked": [_slim(e) for e in entries],
+    }
+    _atomic_write_json(_DATA / "_optimization_results.json", output)
+
+    return {
+        "status": "ok",
+        "scenarios_count": len(shown),
+        "total_simulated": len(entries),
+        "weights": weights,
+        "scenarios": [_slim(e) for e in shown],
+    }
+
+
 def load_current_subscriptions() -> dict:
     """Load the active user's currently held mobility subscriptions from the mock data store.
 
