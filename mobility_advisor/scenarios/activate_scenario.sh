@@ -4,7 +4,7 @@
 #
 # Backs up the current data/ directory, then copies the chosen scenario's
 # JSON fixtures into data/, making it the active scenario.
-# Available scenarios: maja, stefan, lena
+# Available scenarios: maja, stefan, lena, katrin, tobias, sofia
 
 set -euo pipefail
 

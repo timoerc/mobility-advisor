@@ -1,0 +1,49 @@
+{
+  "emails": [
+    {
+      "id": "mail_001",
+      "received_datetime": "2025-07-05T19:36",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 05.07.2025",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Sofia,\n\nhier ist deine Quittung für deine Fahrt am 05.07.2025.\n\nStartort: Berlin Kreuzberg\nZielort: Berlin Mitte\nStrecke: 5,4 km\nDauer: 14 Minuten\nBetrag: 12,80 €\nInkl. Startgebühr: 1,00 €\n\nTipp: Mit dem MILES Silber Pass sparst du 10% auf den km-Tarif und bekommst 10 € Fahrguthaben pro Monat.\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_002",
+      "received_datetime": "2026-02-21T20:55",
+      "sender_email": "noreply@miles-mobility.com",
+      "subject": "Deine MILES Fahrtquittung – 21.02.2026",
+      "body_text": "Deine MILES Fahrt ist abgeschlossen!\n\nHallo Sofia,\n\nhier ist deine Quittung für deine Fahrt am 21.02.2026.\n\nStartort: Berlin Charlottenburg\nZielort: Berlin Kreuzberg\nStrecke: 8,7 km\nDauer: 21 Minuten\nBetrag: 17,10 €\nInkl. Startgebühr: 1,00 €\n\nDanke, dass du MILES nutzt!\n\nDein MILES Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_003",
+      "received_datetime": "2023-09-01T08:30",
+      "sender_email": "abo@bvg.de",
+      "subject": "Ihr Deutschlandticket ist aktiviert – BVG",
+      "body_text": "Hallo Sofia Ricci,\n\nIhr Deutschlandticket ist ab sofort aktiv.\n\nAbo-Beginn: 01.09.2023\nMonatlicher Betrag: 63,00 €\nGültigkeitsbereich: Deutschlandweit im gesamten ÖPNV (Nahverkehr)\n\nSie können jederzeit zum Monatsende kündigen.\n\nMit freundlichen Grüßen\nIhr BVG-Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_004",
+      "received_datetime": "2026-04-20T13:12",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 884512309476)",
+      "body_text": "Hallo Frau Sofia Ricci,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nLeistungen\n\nSparpreis, 2. Klasse\nvon Berlin Hbf, 25.04.2026 09:34 Uhr\nnach Hamburg Hbf, 25.04.2026 11:22 Uhr\n\nGesamtpreis: 39,90 EUR (ohne BahnCard).\n\nMit freundlichen Grüßen\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_005",
+      "received_datetime": "2026-06-11T10:05",
+      "sender_email": "newsletter@dribbble.com",
+      "subject": "Weekly design inspiration — 24 shots you'll love",
+      "body_text": "Hi Sofia,\n\nHere are this week's most popular design shots from the community.\n\nBrowse the full list on Dribbble.\n\nThe Dribbble Team",
+      "has_attachment": false,
+      "attachments": []
+    }
+  ]
+}

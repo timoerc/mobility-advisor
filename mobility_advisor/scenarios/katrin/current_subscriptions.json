@@ -1,0 +1,50 @@
+{
+  "subscriptions": [
+    {
+      "id": "db_bc25_2nd_annual_standard",
+      "next_renewal_date": "2026-11-30",
+      "started": "2023-12-01",
+      "provider": "Deutsche Bahn",
+      "product": "BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+      "mode": "rail",
+      "monthly_cost_eur": 9.25,
+      "billing_cycle": "annual",
+      "minimum_months": 12,
+      "eligibility": {
+        "min_age": 27,
+        "max_age": 64
+      },
+      "benefits": {
+        "discount_sparpreis_pct": 25,
+        "discount_flexpreis_pct": 25,
+        "unlimited_long_distance": false,
+        "unlimited_regional": false
+      },
+      "qualifying_threshold": null,
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise. 111 €/Jahr."
+    },
+    {
+      "id": "db_deutschlandticket",
+      "next_renewal_date": "2026-07-01",
+      "started": "2023-05-01",
+      "provider": "Deutsche Bahn",
+      "product": "Deutschland-Ticket",
+      "mode": "rail",
+      "monthly_cost_eur": 63.0,
+      "billing_cycle": "monthly",
+      "minimum_months": 1,
+      "eligibility": {
+        "min_age": null,
+        "max_age": null
+      },
+      "benefits": {
+        "discount_sparpreis_pct": null,
+        "discount_flexpreis_pct": null,
+        "unlimited_long_distance": false,
+        "unlimited_regional": true
+      },
+      "qualifying_threshold": null,
+      "notes": "Unbegrenzte Nutzung aller Nahverkehrsmittel (S-Bahn, U-Bahn, Bus, RegionalBahn) deutschlandweit. Monatlich kündbar."
+    }
+  ]
+}

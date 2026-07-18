@@ -1,0 +1,128 @@
+{
+  "entries": [
+    {
+      "id": "hist_tobias_0001",
+      "date": "2026-03-20",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Card is clearly paying for itself while the Munich project runs — no change.",
+      "resolvedAt": "2026-03-20",
+      "recommendation": {
+        "verdict": "BahnCard 50 is comfortably paying for itself",
+        "confidence": "high",
+        "summaryText": "Your weekly Frankfurt–Munich project trips put your discounted DB spend well above BahnCard 50's break-even threshold. The card is clearly worth keeping at your current travel level.",
+        "metrics": [
+          { "value": 165, "unit": "€/year", "direction": "save", "label": "Net benefit of BahnCard 50 vs. full price" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "Frankfurt–Munich long-distance trips imply a full-price equivalent around €800/year, well above the €488 BahnCard 50 break-even",
+          "Net benefit from holding BahnCard 50 is roughly €165/year at this usage",
+          "Deutschland-Ticket separately covers your local Frankfurt travel"
+        ],
+        "assumptions": [
+          "Assumes the Munich project travel pattern continues at its current pace",
+          "CO2 impact is neutral — this only concerns discount tier, not transport mode"
+        ],
+        "alternatives": [
+          {
+            "id": "reaffirm_bc50",
+            "name": "Keep BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "No change — usage comfortably justifies the card while the Munich project runs.",
+            "isRecommended": true,
+            "action": {
+              "title": "Keep BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "No change needed — your Frankfurt–Munich travel clears the break-even threshold with room to spare.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) stays active with no change to your subscription stack."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Equivalent to reaffirming the card — no action needed either way.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_tobias_0002",
+      "date": "2026-06-10",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "recommendation": {
+        "verdict": "BahnCard 50 paid off this year — but your travel is about to fall off a cliff",
+        "confidence": "high",
+        "summaryText": "Your Munich project wraps at the end of August and your next staffing is a local Frankfurt engagement with no regular long-distance travel. Past usage justified BahnCard 50, but from September the card would sit idle — downgrading to BahnCard 25 before the January renewal keeps a discount for occasional trips at less than half the cost.",
+        "metrics": [
+          { "value": 133, "unit": "€/year", "direction": "save", "label": "Saving from downgrading to BahnCard 25" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "Historic usage clears BahnCard 50 comfortably (~€165/year net benefit) — the card was the right call while the Munich project ran",
+          "A staffing email (12 June) confirms the Munich project ends 31 August and the next engagement is local Frankfurt work — no regular Fernverkehr travel forecast",
+          "With long-distance demand dropping to near zero from September, neither BahnCard 50 nor even BahnCard 25 is likely to break even next year — but BahnCard 25 costs €133/year less and keeps a 25% discount as a cheap hedge for residual trips",
+          "Next renewal is 10 January 2027 — the decision should be made before then"
+        ],
+        "assumptions": [
+          "Assumes the staffing change holds and the local Frankfurt engagement generates no regular long-distance rail travel",
+          "If occasional long-distance trips continue, BahnCard 25 still covers them at 25% off; full cancellation is the more aggressive option if they stop entirely"
+        ],
+        "alternatives": [
+          {
+            "id": "downgrade_bc25",
+            "name": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 111,
+            "savingsVsCurrentEur": 133,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Keeps a 25% discount for any residual trips at €133/year less — a hedge against the forecast being slightly off.",
+            "isRecommended": true,
+            "action": {
+              "title": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+              "description": "Replace your BahnCard 50 with a BahnCard 25 before the 10 January 2027 renewal, ahead of your travel dropping off in September.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
+            }
+          },
+          {
+            "id": "cancel_bc50",
+            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 244,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Saves the most, but leaves no rail discount if an occasional long-distance trip does come up — best only if long-distance travel stops entirely.",
+            "isRecommended": false,
+            "action": {
+              "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Cancel before the 10 January 2027 renewal to avoid another year of card fees once your travel drops off.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep current setup",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Only worth it if the staffing change falls through and heavy long-distance travel continues.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "events": [
+    {
+      "category": "other",
+      "summary": "Munich client project (Helios) ends 31 Aug 2026; next staffing is a Frankfurt-local engagement with no regular long-distance travel",
+      "event_date": "2026-09-01",
+      "signals": [
+        "travel_reduction",
+        "rail_card_relevance_change"
+      ],
+      "source_mail_id": "mail_005",
+      "detected_on": "2026-06-15"
+    }
+  ]
+}

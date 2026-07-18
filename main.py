@@ -43,7 +43,7 @@ from mobility_advisor.tools import MOCK_TODAY, detect_pending_portfolio_decision
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
 _SCENARIOS = Path(__file__).parent / "mobility_advisor" / "scenarios"
-_KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena"})
+_KNOWN_PERSONAS = frozenset({"maja", "stefan", "lena", "katrin", "tobias", "sofia"})
 _SCENARIO_FILES = [
     "persona.json",
     "current_subscriptions.json",

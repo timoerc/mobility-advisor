@@ -1,0 +1,114 @@
+{
+  "entries": [
+    {
+      "id": "hist_sofia_0001",
+      "date": "2026-03-10",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Wanted to see whether my car-share habit sticks before committing to a pass.",
+      "resolvedAt": "2026-03-10",
+      "recommendation": {
+        "verdict": "You're paying full pay-per-use for MILES — a Silber pass would basically pay for itself",
+        "confidence": "high",
+        "summaryText": "You take MILES roughly once a month, always €10+ a ride, all on the pay-per-use tariff. The MILES Silber Pass gives €10/month credit — enough to cover its own €9.99 fee at your cadence — plus 10% off the km-tariff, so it is effectively a free membership that also saves a bit.",
+        "metrics": [
+          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "You are on MILES Basis (pay-per-use) and pay the full km-tariff plus a €1 unlock on every trip",
+          "MILES Silber's €10/month credit offsets its €9.99/month fee at your monthly usage, so the membership is effectively free",
+          "Silber also discounts the km-tariff by 10% (and time by 5%), which nets a small ongoing saving on top",
+          "Higher tiers (Gold/Platin, €50+/month) would leave most of their credit unused at your volume — Silber is the right tier"
+        ],
+        "assumptions": [
+          "Assumes your roughly monthly MILES usage continues at €10+ per ride so the monthly credit is fully used",
+          "CO2 impact is neutral — this changes membership tier, not that you use car-share"
+        ],
+        "alternatives": [
+          {
+            "id": "upgrade_miles_silber",
+            "name": "Upgrade to MILES Silber Pass",
+            "annualCostEur": 120,
+            "savingsVsCurrentEur": 20,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "The €10/month credit offsets the fee at your usage, so it is effectively free and adds a 10% km discount. If you stopped using MILES for a few months, the unused credit would be wasted.",
+            "isRecommended": true,
+            "action": {
+              "title": "Upgrade to the MILES Silber Pass",
+              "description": "Switch from MILES Basis (pay-per-use) to the MILES Silber Pass — the €10/month credit covers the fee at your usage and you gain a 10% km discount.",
+              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep MILES Basis (Pay-per-use)",
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "No monthly fee, but you keep paying the full km-tariff with no credit — you leave a small saving on the table each month you ride.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_sofia_0002",
+      "date": "2026-06-09",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "recommendation": {
+        "verdict": "Your car-share habit held up — the MILES Silber Pass is worth adding",
+        "confidence": "high",
+        "summaryText": "Three more months confirm the pattern: about one MILES ride a month, always above €10. The Silber Pass's €10/month credit covers its fee at that cadence and the 10% km discount saves ~€20/year — an effectively free upgrade. Your Deutschland-Ticket continues to cover local rail.",
+        "metrics": [
+          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+        ],
+        "reasoning": [
+          "This is the 2nd review flagging the same opportunity — last time you kept pay-per-use to see if the habit stuck; it has",
+          "14 MILES rides over the last 12 months (~€200), spread almost one per month and always €10+",
+          "Silber's €10/month credit offsets the €9.99 fee at that usage, and its 10% km discount nets ~€20/year",
+          "Deutschland-Ticket stays — it covers your local U-/S-Bahn travel, which car-share and BahnCards do not"
+        ],
+        "assumptions": [
+          "Assumes your monthly MILES cadence continues so the credit is fully used each month",
+          "CO2 impact is neutral — you already use car-share; only the tariff tier changes"
+        ],
+        "alternatives": [
+          {
+            "id": "upgrade_miles_silber",
+            "name": "Upgrade to MILES Silber Pass",
+            "annualCostEur": 120,
+            "savingsVsCurrentEur": 20,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Effectively free at your usage (credit ≈ fee) plus a 10% km discount. Only wasteful if your car-share use drops for months at a time.",
+            "isRecommended": true,
+            "action": {
+              "title": "Upgrade to the MILES Silber Pass",
+              "description": "Switch from MILES Basis (pay-per-use) to the MILES Silber Pass — the €10/month credit covers the fee at your usage and you gain a 10% km discount.",
+              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep MILES Basis (Pay-per-use)",
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "No fee, but you keep paying full price per ride and forgo the monthly credit and km discount.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    }
+  ]
+}

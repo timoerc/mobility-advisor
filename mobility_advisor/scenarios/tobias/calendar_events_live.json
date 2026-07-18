@@ -1,0 +1,77 @@
+{
+  "events": [
+    {
+      "start_date": "2026-06-22",
+      "end_date": "2026-06-25",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Helios project week on-site in Munich",
+      "location": "München",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-07-13",
+      "end_date": "2026-07-16",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Helios project week on-site in Munich",
+      "location": "München",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-08-24",
+      "end_date": "2026-08-28",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Helios final steering + closeout presentation in Munich (last project week)",
+      "location": "München",
+      "signals": [
+        "long_distance_rail_likely",
+        "travel_reduction"
+      ]
+    },
+    {
+      "start_date": "2026-09-02",
+      "end_date": "2026-09-02",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Kickoff new Rhein-Main engagement — client site Frankfurt-Niederrad (local, ÖPNV)",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-09-09",
+      "end_date": "2026-09-09",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Client workshop Frankfurt-Niederrad",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-09-16",
+      "end_date": "2026-09-16",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Client workshop Frankfurt-Niederrad",
+      "location": "Frankfurt",
+      "signals": [
+        "local_transit_regular"
+      ]
+    }
+  ]
+}

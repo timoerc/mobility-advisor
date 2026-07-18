@@ -1,0 +1,114 @@
+{
+  "entries": [
+    {
+      "id": "hist_katrin_0001",
+      "date": "2026-02-15",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "On money it's a wash, so I left it for now — will revisit after a few more trips.",
+      "resolvedAt": "2026-02-15",
+      "recommendation": {
+        "verdict": "Your rail usage sits right on the BahnCard 25 / BahnCard 50 break-even line",
+        "confidence": "medium",
+        "summaryText": "Your long-distance spend puts you almost exactly on the crossover between BahnCard 25 and BahnCard 50 — on cost alone the two are within a couple of euros a year. Because you book late and value flexibility, BahnCard 50 is the better fit, but it is close enough that keeping BahnCard 25 is defensible too.",
+        "metrics": [
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash" },
+          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)" }
+        ],
+        "reasoning": [
+          "Your long-distance rail spend implies a full-price equivalent around €536/year — almost exactly the €532 point where BahnCard 50 starts to out-save BahnCard 25",
+          "At this level the two cards are within about €1–2/year of each other, so cost does not decide it",
+          "Your fares are flexible Flexpreis tickets: BahnCard 50 discounts those by 50% versus only 25% on BahnCard 25 — the extra card fee is almost entirely recovered by the deeper flex-fare discount",
+          "Time is your highest-weighted priority (0.50) and you value time over money, so the near-tie breaks toward the more flexible card"
+        ],
+        "assumptions": [
+          "Assumes your late-booking / flexible-fare pattern continues — if you switched to advance Sparpreis fares, BahnCard 25 would be the cleaner pick, since Sparpreis discounts are identical (25%) on both cards",
+          "CO2 impact is neutral — this only changes discount tier, not which transport mode you use"
+        ],
+        "alternatives": [
+          {
+            "id": "upgrade_bc50",
+            "name": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Costs about the same overall — the deeper Flexpreis discount offsets the higher card fee. You gain full-flex 50% fares, which protects your time when plans change.",
+            "isRecommended": true,
+            "action": {
+              "title": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Replace your BahnCard 25 with a BahnCard 50 before the 30 November 2026 renewal — it is cost-neutral at your usage and covers your flexible fares at 50%.",
+              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 111,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Defensible only if you shift to booking cheaper advance Sparpreis fares — you would lose the deeper flex discount that suits your last-minute style.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "hist_katrin_0002",
+      "date": "2026-06-05",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
+      "recommendation": {
+        "verdict": "Still a cost coin-flip — your preference for flexibility tips it to BahnCard 50",
+        "confidence": "medium",
+        "summaryText": "Another five months of trips confirm the picture: on price, BahnCard 25 and BahnCard 50 are a dead heat for you. What breaks the tie is that you book late and reschedule often — BahnCard 50's 50% flex-fare discount is worth more to you than the marginal saving of staying on BahnCard 25.",
+        "metrics": [
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash" },
+          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)" }
+        ],
+        "reasoning": [
+          "This is the 2nd review flagging the same BahnCard tier decision — last time you kept BahnCard 25 while the picture settled; it has settled at a near-tie",
+          "Full-price-equivalent long-distance spend is about €536/year, right at the €532 BahnCard 25↔50 crossover",
+          "All your long-distance fares are flexible Flexpreis tickets, which BahnCard 50 halves (50%) versus BahnCard 25's 25% — that deeper discount recovers almost all of the higher card fee",
+          "Your priorities weight time at 0.50 (your highest) and you value time over money, so the flexibility of BahnCard 50 is the deciding factor"
+        ],
+        "assumptions": [
+          "Assumes you keep booking flexible, late-changeable fares rather than locking into advance Sparpreis tickets",
+          "CO2 impact is neutral — this changes discount tier only, not transport mode"
+        ],
+        "alternatives": [
+          {
+            "id": "upgrade_bc50",
+            "name": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Cost-neutral at your usage; the win is time and flexibility, not money. If your travel dropped sharply, BahnCard 25 would become the cheaper hedge.",
+            "isRecommended": true,
+            "action": {
+              "title": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "description": "Replace your BahnCard 25 with a BahnCard 50 before the 30 November 2026 renewal — same overall cost, but your flexible fares are discounted at 50%.",
+              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place."
+            }
+          },
+          {
+            "id": "keep",
+            "name": "Keep BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "annualCostEur": 111,
+            "savingsVsCurrentEur": 0,
+            "co2Impact": "Neutral",
+            "co2ImpactKg": 0,
+            "tradeoff": "Only the better choice if you start booking cheaper advance Sparpreis fares — at odds with your last-minute travel style.",
+            "isRecommended": false,
+            "action": null
+          }
+        ]
+      }
+    }
+  ]
+}

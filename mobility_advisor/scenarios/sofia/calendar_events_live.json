@@ -1,0 +1,64 @@
+{
+  "events": [
+    {
+      "start_date": "2026-06-17",
+      "end_date": "2026-06-17",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Studio day — design review, Berlin Mitte",
+      "location": "Berlin",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-06-24",
+      "end_date": "2026-06-24",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Client workshop — Berlin Kreuzberg",
+      "location": "Berlin",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-04",
+      "end_date": "2026-07-04",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Furniture pickup + friend's move — evening, likely car-share",
+      "location": "Berlin",
+      "signals": [
+        "car_share_likely"
+      ]
+    },
+    {
+      "start_date": "2026-07-18",
+      "end_date": "2026-07-18",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Team offsite — Berlin Prenzlauer Berg",
+      "location": "Berlin",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-08-08",
+      "end_date": "2026-08-08",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Weekend visit to a friend in Hamburg — long-distance rail",
+      "location": "Hamburg",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    }
+  ]
+}

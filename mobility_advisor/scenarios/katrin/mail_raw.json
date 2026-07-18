@@ -1,0 +1,49 @@
+{
+  "emails": [
+    {
+      "id": "mail_001",
+      "received_datetime": "2025-09-15T06:40",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 481920573641)",
+      "body_text": "Hallo Frau Katrin Berger,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nLeistungen\n\nFlexpreis, 2. Klasse\nvon Düsseldorf Hbf, 15.09.2025 07:34 Uhr\nnach Berlin Hbf, 15.09.2025 11:54 Uhr\n\nGesamtpreis: 32,00 EUR (BahnCard 25 Rabatt berücksichtigt).\n\nDiese E-Mail stellt keinen gültigen Fahrausweis dar.\n\nMit freundlichen Grüßen\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_002",
+      "received_datetime": "2025-11-04T06:22",
+      "sender_email": "buchungsbestaetigung@bahn.de",
+      "subject": "Buchungsbestätigung Deutsche Bahn (Auftrag: 592031684752)",
+      "body_text": "Hallo Frau Katrin Berger,\n\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\n\nLeistungen\n\nFlexpreis, 2. Klasse\nvon Düsseldorf Hbf, 04.11.2025 08:12 Uhr\nnach München Hbf, 04.11.2025 12:52 Uhr\n\nGesamtpreis: 30,00 EUR (BahnCard 25 Rabatt berücksichtigt).\n\nHinweis: Flexpreis-Tickets sind ohne Zugbindung — freie Umbuchung und volle Erstattung möglich.\n\nMit freundlichen Grüßen\nIhre Deutsche Bahn",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_003",
+      "received_datetime": "2025-05-01T09:05",
+      "sender_email": "abo@vrr.de",
+      "subject": "Ihr Deutschlandticket – Abo-Bestätigung VRR",
+      "body_text": "Sehr geehrte Frau Berger,\n\nIhr Deutschlandticket ist aktiv.\n\nAbo-Beginn: 01.05.2023\nMonatlicher Betrag: 63,00 €\nGültigkeitsbereich: Deutschlandweit im gesamten ÖPNV (Nahverkehr)\n\nSie können Ihr Abo jederzeit zum Monatsende kündigen.\n\nMit freundlichen Grüßen\nIhr VRR-Team",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_004",
+      "received_datetime": "2026-06-10T18:44",
+      "sender_email": "outlook_A31FF20C7B119E44@outlook.com",
+      "subject": "Angenommen: Kundentermin Stuttgart (Angebotspräsentation)",
+      "body_text": "",
+      "has_attachment": false,
+      "attachments": []
+    },
+    {
+      "id": "mail_005",
+      "received_datetime": "2026-06-11T11:12",
+      "sender_email": "noreply@amazon.de",
+      "subject": "Zugestellt: 1 Artikel | Bestellung # 305-1123456-7890123",
+      "body_text": "Dein Paket wurde zugestellt!\n\nHallo Katrin,\n\ndein Paket wurde heute an der Haustür hinterlegt.\n\nBestellnummer: 305-1123456-7890123\n\nMit freundlichen Grüßen\nAmazon",
+      "has_attachment": false,
+      "attachments": []
+    }
+  ]
+}

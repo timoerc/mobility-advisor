@@ -1,0 +1,76 @@
+{
+  "events": [
+    {
+      "start_date": "2026-06-18",
+      "end_date": "2026-06-18",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Office day Düsseldorf — account reviews",
+      "location": "Düsseldorf",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-06-25",
+      "end_date": "2026-06-25",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Office day Düsseldorf",
+      "location": "Düsseldorf",
+      "signals": [
+        "local_transit_regular"
+      ]
+    },
+    {
+      "start_date": "2026-07-08",
+      "end_date": "2026-07-08",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Client pitch Berlin — date may still move, booking kept flexible",
+      "location": "Berlin",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-07-21",
+      "end_date": "2026-07-21",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Key account workshop München — half-day, tight schedule",
+      "location": "München",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-08-05",
+      "end_date": "2026-08-05",
+      "time_start": null,
+      "time_end": null,
+      "type": "trip",
+      "description": "Contract negotiation Stuttgart — likely to be rescheduled once",
+      "location": "Stuttgart",
+      "signals": [
+        "long_distance_rail_likely"
+      ]
+    },
+    {
+      "start_date": "2026-08-19",
+      "end_date": "2026-08-19",
+      "time_start": null,
+      "time_end": null,
+      "type": "meeting",
+      "description": "Team lunch Düsseldorf Innenstadt",
+      "location": "Düsseldorf",
+      "signals": [
+        "local_transit_regular"
+      ]
+    }
+  ]
+}

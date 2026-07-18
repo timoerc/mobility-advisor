@@ -1,6 +1,6 @@
 # Scenario Testing Framework
 
-Each subdirectory is a self-contained set of fixture files that replaces `data/` for a specific demo or evaluation run. Scenarios are fully isolated — every directory contains all seven required JSON files (`persona.json`, `current_subscriptions.json`, `travel_history_raw.json`, `mail_raw.json`, `calendar_events_live.json`, `car_usage.json`, `analysis_history.json`) so that no shared state exists between scenarios. The mobility catalog is not part of this set — it's a single shared file at `mobility_advisor/static/mobility_catalog.json`, identical for every persona.
+Each subdirectory is a self-contained set of fixture files that replaces `data/` for a specific demo or evaluation run. Scenarios are fully isolated — every directory contains all eight required JSON files (`persona.json`, `current_subscriptions.json`, `travel_history_raw.json`, `mail_raw.json`, `calendar_events_live.json`, `car_usage.json`, `analysis_history.json`, `life_events.json`) so that no shared state exists between scenarios. The mobility catalog is not part of this set — it's a single shared file at `mobility_advisor/static/mobility_catalog.json`, identical for every persona.
 
 Use `activate_scenario.sh` to switch scenarios. The script creates a timestamped backup of `data/` before overwriting it, so the previous state is always recoverable.
 
@@ -15,6 +15,9 @@ Scenario folder names match the frontend persona IDs. Selecting a persona in the
 | `maja` | Maja Hoffmann | BC50 savings (€36) far below card cost (€244); no upcoming long-distance travel | Unambiguous recommendation to cancel BC50 | `./scenarios/activate_scenario.sh maja` |
 | `stefan` | Stefan Kurz | Car owner who also holds a full rail/carsharing stack (BC50 + D-Ticket + MILES) he uses irregularly; BC50 near breakeven; Hamburg relocation uncertainty affects all three subscriptions at once; time priority conflicts with cost savings | Hedged conditional recommendation — no single dominant action | `./scenarios/activate_scenario.sh stefan` |
 | `lena` | Lena Brandt | Several of 20 travel history entries are semantically malformed (null costs, empty mode, unknown mode value) | Pipeline completes with partial result and explicit data quality warnings | `./scenarios/activate_scenario.sh lena` |
+| `katrin` | Katrin Berger | Long-distance rail spend lands almost exactly on the BahnCard 25↔50 crossover (~€536 full-price) — cost is a wash. Fares are flexible Flexpreis; time is the dominant priority (0.50) and `values_time_over_money` is true | **Preference-decisive:** upgrade BC25→BC50, driven by the time/flexibility weight, not a euro saving | `./scenarios/activate_scenario.sh katrin` |
+| `tobias` | Tobias Wolf | Weekly Frankfurt–Munich trips clearly justify BC50 on history (~€165/yr net benefit), but a staffing mail signals long-distance travel collapses from September (project ends, local re-staffing) | **Forward-looking:** downgrade (or cancel) BC50 before the Jan renewal — the mail/forecast overrides the positive history | `./scenarios/activate_scenario.sh tobias` |
+| `sofia` | Sofia Ricci | Frequent MILES car-share (~monthly, ≥€10/ride) on pay-per-use with no membership; occasional local rail on D-Ticket | **Under-subscribed (add):** add/upgrade to MILES Silber (credit offsets fee → effectively free + ~€20/yr), pick Silber over higher tiers, keep D-Ticket | `./scenarios/activate_scenario.sh sofia` |
 
 ---
 
@@ -43,7 +46,7 @@ cp data_backup_<timestamp>/*.json data/
 ## Notes
 
 - Each scenario folder also contains a `persona.json` file with the full persona profile (name, display metadata, onboarding preferences). This is served by `GET /api/personas` (merged with `current_subscriptions.json` and `car_usage.json`) and used by the frontend to load persona data from a single authoritative source.
-- `mobility_advisor/static/mobility_catalog.json` is shared by all three scenarios — it is not part of any scenario directory and is never copied by activation.
+- `mobility_advisor/static/mobility_catalog.json` is shared by all scenarios — it is not part of any scenario directory and is never copied by activation.
 - All JSON files are valid and pass `python -m json.tool`. In scenario `lena`, the breakage in `travel_history_raw.json` is **semantic** (null values, unrecognized mode strings), not syntactic.
 - Do not modify files directly inside `scenarios/` subdirectories during a demo run — activate the scenario first, then let the agent read from `data/`.
 - The `activate_scenario.sh` script always creates a timestamped backup before switching, so switching between scenarios is non-destructive.

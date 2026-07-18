@@ -1,0 +1,49 @@
+{
+  "id": "sofia",
+  "name": "Sofia Ricci",
+  "tagline": "UX designer · Deutschlandticket + frequent car-share",
+  "avatar": "SR",
+  "avatarBg": "#db2777",
+  "reference_date": "2026-06-15",
+  "profileData": {
+    "personal": {
+      "full_name": "Sofia Ricci",
+      "age": 29,
+      "employment_status": "employed",
+      "profession": "UX Designer",
+      "household_context": "single"
+    },
+    "location": {
+      "home_city": "Berlin"
+    },
+    "commute": {
+      "office_days": [
+        "mon",
+        "tue",
+        "wed"
+      ],
+      "wfh_days": [
+        "thu",
+        "fri"
+      ]
+    },
+    "priorities": {
+      "cost": 0.4,
+      "time": 0.3,
+      "sustainability": 0.3
+    },
+    "integrations": {
+      "outlook_connected": false,
+      "gmail_connected": true,
+      "calendar_connected": true,
+      "db_connected": true,
+      "miles_connected": true,
+      "deutschlandticket_connected": true,
+      "additional_connections": [
+        "BVG",
+        "Nextbike"
+      ]
+    },
+    "notes": "Get around Berlin by U-/S-Bahn and MILES car-share for evenings and errands. No membership — I just book MILES pay-as-you-go."
+  }
+}
