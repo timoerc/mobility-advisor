@@ -162,8 +162,33 @@ function WeightBar({ label, pct, color }: { label: string; pct: number; color: s
 
 const DEFAULT_ANSWERS = { q1: 4, q2: 4, q3: 4 };
 
-export function PrioritiesPage({ onChange }: PrioritiesPageProps) {
-  const [answers, setAnswers] = useState(DEFAULT_ANSWERS);
+// AHP weight derivation isn't invertible in closed form (3 answers → 3 weights,
+// but the mapping isn't 1:1), so to pre-fill the sliders for an existing persona's
+// weights we brute-force the 7×7×7 answer grid for the combination whose resulting
+// weights are closest (least-squares) to the persona's stored priorities.
+function bestFitAnswers(target: PriorityWeights): { q1: number; q2: number; q3: number } {
+  let best = DEFAULT_ANSWERS;
+  let bestError = Infinity;
+  for (let q1 = 1; q1 <= 7; q1++) {
+    for (let q2 = 1; q2 <= 7; q2++) {
+      for (let q3 = 1; q3 <= 7; q3++) {
+        const w = computeWeights(q1, q2, q3);
+        const error =
+          (w.cost - target.cost) ** 2 +
+          (w.time - target.time) ** 2 +
+          (w.sustainability - target.sustainability) ** 2;
+        if (error < bestError) {
+          bestError = error;
+          best = { q1, q2, q3 };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+export function PrioritiesPage({ priorities, onChange }: PrioritiesPageProps) {
+  const [answers, setAnswers] = useState(() => bestFitAnswers(priorities));
 
   const weights = computeWeights(answers.q1, answers.q2, answers.q3);
   const cr = computeCR(answers.q1, answers.q2, answers.q3);
