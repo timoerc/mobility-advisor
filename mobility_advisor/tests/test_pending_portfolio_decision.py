@@ -1,8 +1,11 @@
+import json
+import shutil
 from datetime import date
 from pathlib import Path
 
 import pytest
 
+import main
 from mobility_advisor import tools
 
 _SCENARIOS = Path(__file__).parent.parent / "scenarios"
@@ -51,10 +54,62 @@ def test_pending_relocation_triggers_deferral(stefan):
     assert "2026-09-01" in result["reason"]
 
 
-def test_deferral_signal_rides_in_optimizer_bundle(stefan):
-    # The Optimizer reads this through load_optimizer_context, not a separate call.
-    bundle = tools.load_optimizer_context()
-    assert bundle["pending_portfolio_decision"] == tools.detect_pending_portfolio_decision()
+def test_hold_row_injected_and_promoted_for_stefan(tmp_path, monkeypatch):
+    # The regular (deterministic) pipeline no longer routes the pending-decision signal
+    # through an LLM context bundle (load_optimizer_context, which this test used to
+    # exercise, was removed with the deterministic optimizer) — the gate is now
+    # deterministic post-processing in main.py: _build_alternatives_from_optimization()
+    # injects a "Hold pending decision" row whenever detect_pending_portfolio_decision()
+    # fires, and _enforce_hold_when_decision_pending() promotes it over whatever
+    # optimize_all_categories() actually ranked #1. This seeds a synthetic
+    # _optimization_results.json (standing in for a real optimize_all_categories() run)
+    # against stefan's fixtures, whose life_events.json is known to trigger the gate
+    # (see test_pending_relocation_triggers_deferral above).
+    for f in (_SCENARIOS / "stefan").glob("*.json"):
+        shutil.copy(f, tmp_path / f.name)
+    monkeypatch.setattr(tools, "_DATA", tmp_path)
+    monkeypatch.setattr(main, "_DATA", tmp_path)
+
+    current_ids = ["db_bc50_2nd_annual_standard", "db_deutschlandticket", "miles_silber"]
+    opt_results = {
+        "status": "ok",
+        "current_subscription_ids": current_ids,
+        "scenarios": [
+            {
+                "status": "ok", "label": "Current", "category": "current",
+                "subscription_ids": current_ids,
+                "total_annual_cost_eur": 900.0, "total_annual_time_min": 1000.0,
+                "total_annual_co2_kg": 200.0, "is_current": True, "is_recommended": False,
+                "delta_cost_eur": 100.0, "delta_time_min": 0.0, "delta_co2_kg": 0.0,
+            },
+            {
+                "status": "ok", "label": "BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+                "category": "rail", "subscription_ids": ["db_bc25_2nd_annual_standard"],
+                "total_annual_cost_eur": 800.0, "total_annual_time_min": 1000.0,
+                "total_annual_co2_kg": 200.0, "is_current": False, "is_recommended": True,
+                "delta_cost_eur": 0.0, "delta_time_min": 0.0, "delta_co2_kg": 0.0,
+            },
+        ],
+    }
+    (tmp_path / "_optimization_results.json").write_text(json.dumps(opt_results), encoding="utf-8")
+
+    alts = main._build_alternatives_from_optimization()
+    hold_rows = [a for a in alts if a.id == "hold"]
+    assert len(hold_rows) == 1, "gate is active for stefan — a Hold row must be injected"
+    assert hold_rows[0].action is None
+    assert not hold_rows[0].isRecommended  # not promoted yet — that's the next step's job
+
+    rec = main.Recommendation(
+        verdict="placeholder", confidence="medium", summaryText="", metrics=[],
+        reasoning=[], alternatives=alts,
+    )
+    rec = main._enforce_hold_when_decision_pending(rec)
+
+    hold = next(a for a in rec.alternatives if a.id == "hold")
+    assert hold.isRecommended is True
+    assert sum(a.isRecommended for a in rec.alternatives) == 1
+    bc25 = next(a for a in rec.alternatives if a.id != "hold" and a.action is not None)
+    assert bc25.isRecommended is False
 
 
 def test_deferral_closes_once_events_are_in_the_past(stefan, monkeypatch):

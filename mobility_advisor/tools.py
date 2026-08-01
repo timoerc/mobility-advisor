@@ -880,6 +880,17 @@ def merge_projected_trip_sets() -> dict:
     deduped: dict[tuple[str, str], dict] = {}
     car_usage_trips: list[dict] = []
 
+    def _merge_fare_class(winner: dict, loser: dict) -> None:
+        # Only the history source ever derives a real fare_class (from ticket_type text —
+        # see _dominant_fare_class); calendar/car-usage trips always carry the model
+        # default ("spar"), not an absence-of-Flexpreis finding. So when a calendar trip
+        # wins a route dedup over a history trip that had detected "flex", the winner must
+        # inherit it — otherwise the same physical route silently reverts to "spar" pricing
+        # the moment it also appears on the calendar, undermining the whole fare-class
+        # mechanism for exactly the routes a user actually keeps traveling.
+        if loser.get("fare_class") == "flex":
+            winner["fare_class"] = "flex"
+
     for trip in raw_trips:
         if trip.get("origin") == "various":
             car_usage_trips.append(trip)
@@ -893,9 +904,13 @@ def merge_projected_trip_sets() -> dict:
                 warnings.append(
                     f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
                 )
+                _merge_fare_class(trip, existing)
                 deduped[key] = trip
             elif new_prio == existing_prio and trip["frequency_per_year"] > existing["frequency_per_year"]:
+                _merge_fare_class(trip, existing)
                 deduped[key] = trip
+            else:
+                _merge_fare_class(existing, trip)
         else:
             deduped[key] = trip
 
@@ -1655,39 +1670,17 @@ def load_calendar_events() -> dict:
     return CalendarEvents.model_validate(raw).model_dump()
 
 
-def load_analyst_context() -> dict:
-    """Load all fixed-context data the Analyst agent needs, in one call: travel history,
-    current subscriptions, and car usage.
-
-    Internally calls load_travel_history(), load_current_subscriptions(), and
-    load_car_usage() and returns their results together under one dict. This exists
-    purely to save two tool-call round-trips versus calling the three individually — it
-    changes zero fields and zero values versus calling them separately.
-
-    Returns a dict with keys:
-      - travel_history: exactly load_travel_history()'s return value (key 'trips', list
-        of trip dicts; optional 'data_quality_warnings' list).
-      - current_subscriptions: exactly load_current_subscriptions()'s return value (key
-        'subscriptions', list of subscription dicts).
-      - car_usage: exactly load_car_usage()'s return value (owns_car, mode, type, size,
-        monthly_km_estimate).
-    """
-    return {
-        "travel_history": load_travel_history(),
-        "current_subscriptions": load_current_subscriptions(),
-        "car_usage": load_car_usage(),
-    }
-
-
 def load_annual_analyst_context() -> dict:
     """Load all fixed-context data the Annual Analyst agent needs, in one call: travel
     history scoped to REVIEW_YEAR, current subscriptions, and car usage.
 
-    Same shape and purpose as load_analyst_context(), with one difference: travel_history
-    comes from load_annual_travel_history() (trips outside REVIEW_YEAR excluded) rather
-    than load_travel_history() (full unfiltered history) — current_subscriptions and
-    car_usage reflect the user's present-day state either way, so they are not
-    year-scoped.
+    Internally calls load_annual_travel_history(), load_current_subscriptions(), and
+    load_car_usage() and returns their results together under one dict. This exists
+    purely to save two tool-call round-trips versus calling the three individually — it
+    changes zero fields and zero values versus calling them separately. Unlike the
+    regular (non-annual) Analyst, which derives projected trips deterministically
+    instead of using a bundled context call like this one, the Annual Analyst stays on
+    the older, LLM-narrated design (see CLAUDE.md's Four-stage pipelines section).
 
     Returns a dict with keys:
       - travel_history: exactly load_annual_travel_history()'s return value (key 'trips',
@@ -1722,38 +1715,6 @@ def load_forecaster_context() -> dict:
     }
 
 
-def load_optimizer_context() -> dict:
-    """Load all fixed-context data the Optimizer agent needs up front, in one call: user
-    preferences, the user-relevant mobility catalog, and recent recommendation history.
-
-    Internally calls load_user_preferences(), load_relevant_mobility_catalog(),
-    load_recommendation_history(), and detect_pending_portfolio_decision() and returns
-    their results together — saves three tool-call round-trips versus calling them
-    individually; changes zero fields and zero values.
-
-    Does NOT include compute_co2_impact_kg — that tool stays a separate, on-demand call
-    invoked once per candidate action in Step 3 (with different target_subscription/
-    new_product arguments each time), not once up front like the loaders bundled here.
-
-    Returns a dict with keys:
-      - user_preferences: exactly load_user_preferences()'s return value.
-      - relevant_mobility_catalog: exactly load_relevant_mobility_catalog()'s return
-        value (key 'options').
-      - recommendation_history: exactly load_recommendation_history()'s return value
-        (key 'history', up to the 3 most recent entries).
-      - pending_portfolio_decision: exactly detect_pending_portfolio_decision()'s return
-        value (keys exists/reason/revisit_after/events) — the deterministic gate for the
-        Optimizer's "hold pending a decision" recommendation. exists=False for personas
-        with no near-term portfolio-resetting life event, which is the normal case.
-    """
-    return {
-        "user_preferences": load_user_preferences(),
-        "relevant_mobility_catalog": load_relevant_mobility_catalog(),
-        "recommendation_history": load_recommendation_history(),
-        "pending_portfolio_decision": detect_pending_portfolio_decision(),
-    }
-
-
 def load_annual_optimizer_context() -> dict:
     """Load all fixed-context data the Annual Optimizer agent needs up front, in one
     call: user preferences and the user-relevant mobility catalog.
@@ -1762,13 +1723,15 @@ def load_annual_optimizer_context() -> dict:
     returns their results together — saves one tool-call round-trip versus calling them
     individually; changes zero fields and zero values.
 
-    Deliberately excludes recommendation_history (unlike load_optimizer_context, the
-    regular Optimizer's equivalent): the annual report's instruction has no CONTINUITY
-    section referencing past recommendations, so recent-history data stays out of this
-    agent's tool surface, matching annual_optimizer_agent's existing tools=[...] scoping.
+    Deliberately excludes recommendation_history: the annual report's instruction has no
+    CONTINUITY section referencing past recommendations (unlike the regular Communicator,
+    which reads load_recommendation_history() directly — see CLAUDE.md's Four-stage
+    pipelines section), so recent-history data stays out of this agent's tool surface,
+    matching annual_optimizer_agent's existing tools=[...] scoping.
 
-    Does NOT include compute_co2_impact_kg — same reasoning as load_optimizer_context:
-    stays a separate, on-demand per-candidate call.
+    Does NOT include compute_co2_impact_kg — that tool stays a separate, on-demand call
+    invoked once per candidate action in Step 3 (with different target_subscription/
+    new_product arguments each time), not once up front like the loaders bundled here.
 
     Returns a dict with keys:
       - user_preferences: exactly load_user_preferences()'s return value.

@@ -506,6 +506,35 @@ def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
 
 _STATIC = Path(__file__).parent / "mobility_advisor" / "static"
 
+# Scratch files the deterministic trip-projection/optimization engine (tools.py) writes
+# during a pipeline run and _build_alternatives_from_optimization() below reads back.
+_OPTIMIZATION_SCRATCH_FILES = [
+    "_projected_trips_history.json",
+    "_projected_trips_calendar.json",
+    "_projected_trips_car_usage.json",
+    "_projected_trips_merged.json",
+    "_optimization_results.json",
+]
+
+
+def _clear_optimization_scratch_files() -> None:
+    """Delete this run's scratch files before the pipeline executes.
+
+    Without this, a stale _optimization_results.json from a previous run (a different
+    persona, or an earlier request in the same persona) stays on disk untouched by
+    persona activation (_activate_from_scenario only copies scenario JSON in, never
+    clears these) and by a failed run (optimize_all_categories()'s error paths return
+    before writing the file). _build_alternatives_from_optimization() would then
+    silently read that stale file — with no freshness check — and serve a previous
+    run's (possibly a different persona's) alternatives as if they were this run's,
+    including writing them into analysis_history.json as this run's outcome. Deleting
+    first makes "file absent" mean exactly what it should: this run's Optimizer agent
+    did not (yet, or at all) call optimize_all_categories(), which correctly triggers
+    the LLM-extraction fallback below instead of serving contaminated data.
+    """
+    for fname in _OPTIMIZATION_SCRATCH_FILES:
+        (_DATA / fname).unlink(missing_ok=True)
+
 
 def _build_alternatives_from_optimization() -> list[Alternative] | None:
     """Build Alternative objects deterministically from _optimization_results.json.
@@ -571,7 +600,6 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         removed_names = [catalog_by_id[sid]["product"] for sid in sorted(removed) if sid in catalog_by_id]
 
         if added_names and removed_names:
-            action_verb = "Switch to"
             action_title = f"Replace {', '.join(removed_names)} with {', '.join(added_names)}"
             name = f"Switch to {s['label']}"
             consequence = (
@@ -579,12 +607,10 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
                 f"{', '.join(added_names)} will start in its place."
             )
         elif added_names:
-            action_verb = "Add"
             action_title = f"Add {', '.join(added_names)}"
             name = f"Add {s['label']}"
             consequence = f"{', '.join(added_names)} will be added to your portfolio."
         elif removed_names:
-            action_verb = "Cancel"
             action_title = f"Cancel {', '.join(removed_names)}"
             name = f"Cancel {', '.join(removed_names)}"
             consequence = f"{', '.join(removed_names)} will be cancelled."
@@ -830,6 +856,7 @@ async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATT
 
 @app.post("/api/analyze", response_model=AnalysisRunResult)
 async def analyze(req: AnalyzeRequest):
+    _clear_optimization_scratch_files()
     runner = InMemoryRunner(agent=optimization_pipeline, app_name="mobility_advisor_analyze")
 
     async def attempt() -> str:

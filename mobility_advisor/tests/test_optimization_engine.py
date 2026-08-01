@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+import main
 from mobility_advisor import tools
 
 _SCENARIOS = Path(__file__).parent.parent / "scenarios"
@@ -220,3 +221,68 @@ def test_cached_geocode_uses_offline_fallback_when_ors_key_absent(monkeypatch):
     monkeypatch.setattr(tools, "geocode", _fail_if_called)
     result = tools._cached_geocode("Hamburg")
     assert result is not None
+
+
+# ── merge_projected_trip_sets: fare_class must survive a source dedup ─────────────
+
+
+@pytest.fixture
+def isolated_main_data_dir(tmp_path, monkeypatch):
+    for f in (_SCENARIOS / "maja").glob("*.json"):
+        shutil.copy(f, tmp_path / f.name)
+    monkeypatch.setattr(tools, "_DATA", tmp_path)
+    return tmp_path
+
+
+def _write_projected_trip_set(path, trips):
+    path.write_text(json.dumps({
+        "trips": trips, "generated_at": "2026-06-15T00:00:00", "warnings": [],
+    }), encoding="utf-8")
+
+
+def test_merge_preserves_flex_fare_class_when_calendar_overrides_history(isolated_main_data_dir):
+    # A route detected as Flexpreis from history must not silently revert to the "spar"
+    # default just because the same route also appears on the calendar — calendar-derived
+    # trips carry no fare-class signal of their own (see derive_projected_trips_from_
+    # calendar), so the merge must carry the history trip's "flex" finding forward across
+    # the calendar-wins-on-priority dedup, not discard it.
+    history_trip = {
+        "route": "Berlin → Düsseldorf", "origin": "Berlin", "destination": "Düsseldorf",
+        "frequency_per_year": 10, "source": "history", "distance_km": 500,
+        "alternatives": [], "fare_class": "flex",
+    }
+    calendar_trip = {
+        "route": "Düsseldorf → Berlin", "origin": "Düsseldorf", "destination": "Berlin",
+        "frequency_per_year": 12, "source": "calendar", "distance_km": 500,
+        "alternatives": [], "fare_class": "spar",
+    }
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_history.json", [history_trip])
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_calendar.json", [calendar_trip])
+
+    result = tools.merge_projected_trip_sets()
+    assert result["status"] == "ok"
+
+    merged = json.loads((isolated_main_data_dir / "_projected_trips_merged.json").read_text(encoding="utf-8"))
+    assert len(merged["trips"]) == 1
+    trip = merged["trips"][0]
+    assert trip["source"] == "calendar"  # calendar still wins on priority/frequency
+    assert trip["fare_class"] == "flex"  # but the flex signal is carried over, not lost
+
+
+# ── _clear_optimization_scratch_files: no stale cross-run/cross-persona results ────
+
+
+def test_clear_optimization_scratch_files_removes_everything(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "_DATA", tmp_path)
+    for fname in main._OPTIMIZATION_SCRATCH_FILES:
+        (tmp_path / fname).write_text("{}", encoding="utf-8")
+
+    main._clear_optimization_scratch_files()
+
+    for fname in main._OPTIMIZATION_SCRATCH_FILES:
+        assert not (tmp_path / fname).exists()
+
+
+def test_clear_optimization_scratch_files_is_a_noop_when_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "_DATA", tmp_path)
+    main._clear_optimization_scratch_files()  # must not raise when nothing exists yet
