@@ -17,6 +17,15 @@ __pycache__/
 # ADK / Google
 .adk/
 
+# Pipeline scratch files — regenerated on every analysis run by the trip-projection/
+# simulation engine (tools.py); not fixture data, never meant to be committed.
+mobility_advisor/data/_projected_trips_*.json
+mobility_advisor/data/_optimization_results.json
+
+# Timestamped data/ backups created by scenarios/activate_scenario.sh before it
+# overwrites data/ with a scenario's fixtures.
+mobility_advisor/data_backup_*/
+
 # Logs
 *.log
 

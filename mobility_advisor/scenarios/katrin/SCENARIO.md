@@ -1,5 +1,13 @@
 # Scenario 04 — Preference-Decisive: Break-Even Travel, Preference Breaks the Tie
 
+> **Note:** written against the earlier LLM-driven optimizer's prompt-embedded
+> PREFERENCE WEIGHTING reasoning. The regular pipeline now scores portfolios
+> deterministically instead — the tie-break this scenario tests is re-implemented as
+> per-route fare-class detection (BC50 discounts Flexpreis at 50% vs. BC25's 25%; see
+> `_dominant_fare_class`/`apply_subscription_discount` in `tools.py`), not a
+> preference-weight comparison. Not yet re-verified end-to-end against a live pipeline
+> run — see `scenarios/README.md`.
+
 **Persona:** Katrin Berger — Düsseldorf, BahnCard 25 + Deutschland-Ticket.
 **Tests:** Preference-weighting — cost math is a near-wash, so priorities must decide.
 **Expected result:** Recommend upgrading BC25 → BC50, driven by her time/flexibility weight, not cost.

@@ -2,8 +2,8 @@
   "subscriptions": [
     {
       "id": "db_bc50_2nd_annual_standard",
-      "next_renewal_date": "2027-01-15",
-      "started": "2024-01-15",
+      "next_renewal_date": "2026-12-31",
+      "started": "2024-01-01",
       "provider": "Deutsche Bahn",
       "product": "BahnCard 50 (2. Klasse, Standard, Jahresabo)",
       "mode": "rail",
@@ -24,51 +24,28 @@
       "notes": "50% auf Flexpreise, 25% auf Sparpreise. 244 €/Jahr."
     },
     {
-      "id": "db_deutschlandticket",
-      "next_renewal_date": "2026-07-01",
-      "started": "2023-05-01",
-      "provider": "Deutsche Bahn",
-      "product": "Deutschland-Ticket",
-      "mode": "rail",
-      "monthly_cost_eur": 63.0,
+      "id": "enterprise_silver",
+      "next_renewal_date": null,
+      "started": null,
+      "provider": "Enterprise",
+      "product": "Enterprise Silver",
+      "mode": "car_rental",
+      "monthly_cost_eur": 0.0,
       "billing_cycle": "monthly",
-      "minimum_months": 1,
+      "minimum_months": 0,
       "eligibility": {
-        "min_age": null,
+        "min_age": 21,
         "max_age": null
       },
       "benefits": {
-        "discount_sparpreis_pct": null,
-        "discount_flexpreis_pct": null,
-        "unlimited_long_distance": false,
-        "unlimited_regional": true
+        "bonus_points_pct": 10,
+        "point_value_eur": 0.046
       },
-      "qualifying_threshold": null,
-      "notes": "Unbegrenzte Nutzung aller Nahverkehrsmittel (S-Bahn, U-Bahn, Bus, RegionalBahn) deutschlandweit. Monatlich kündbar."
-    },
-    {
-      "id": "miles_silber",
-      "next_renewal_date": "2026-07-01",
-      "started": "2022-06-15",
-      "provider": "MILES Mobility",
-      "product": "MILES Silber Pass",
-      "mode": "car_share",
-      "monthly_cost_eur": 9.99,
-      "billing_cycle": "monthly",
-      "minimum_months": 1,
-      "eligibility": {
-        "min_age": 18,
-        "max_age": null
+      "qualifying_threshold": {
+        "rentals_per_year": 6,
+        "rental_days_per_year": null
       },
-      "benefits": {
-        "monthly_credit_eur": 10.0,
-        "discount_km_pct": 10,
-        "discount_time_pct": 5,
-        "unlock_fee_eur_per_trip": 1.0,
-        "protection_plus_eur_per_trip": 3.9
-      },
-      "qualifying_threshold": null,
-      "notes": "10 € Guthaben/Monat. 10% auf km-Tarif, 5% auf Zeitarife."
+      "notes": "Erreicht ab 6–11 Anmietungen/Jahr. 10% Bonuspunkte auf qualifizierende Ausgaben."
     }
   ]
 }

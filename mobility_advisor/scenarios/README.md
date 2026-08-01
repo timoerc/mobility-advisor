@@ -4,6 +4,8 @@ Each subdirectory is a self-contained set of fixture files that replaces `data/`
 
 Use `activate_scenario.sh` to switch scenarios. The script creates a timestamped backup of `data/` before overwriting it, so the previous state is always recoverable.
 
+**Note on the `katrin` and `tobias` rows below:** these two scenarios were authored against the earlier LLM-driven optimizer (prompt-embedded "PREFERENCE WEIGHTING" and forecast-override reasoning). The regular pipeline now scores portfolios deterministically instead (see CLAUDE.md's Four-stage pipelines section); the mechanisms these two scenarios exercise have been re-implemented as deterministic logic — `katrin` via per-route fare-class detection (`_dominant_fare_class`/`apply_subscription_discount` in `tools.py`), `tobias` via life-event-driven trip-frequency damping (`_travel_reduction_factor`) — but end-to-end reproduction against a live pipeline run has not yet been re-verified since that change; only the underlying functions are unit-tested (`tests/test_optimization_engine.py`). Treat these two rows' "Expected Outcome" as the design intent, not a confirmed-passing result, until re-run.
+
 ---
 
 ## Scenarios

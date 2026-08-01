@@ -1,5 +1,14 @@
 # Scenario 05 — Forward-Looking: A Mail Overturns What History Says
 
+> **Note:** written against the earlier LLM-driven optimizer, where the forecast's
+> mail-derived signal overrode history purely through prompt reasoning. The regular
+> pipeline now scores portfolios deterministically instead — this scenario's mechanism
+> is re-implemented as trip-frequency damping on the life event's `travel_reduction`
+> signal (pro-rated by days remaining before the event; see `_travel_reduction_factor`
+> in `tools.py`), applied to the *projected* frequency before scoring, not a
+> forecast-vs-history argument the LLM has to win. Not yet re-verified end-to-end
+> against a live pipeline run — see `scenarios/README.md`.
+
 **Persona:** Tobias Wolf — Frankfurt, BahnCard 50 + Deutschland-Ticket, weekly Frankfurt–Munich commuter.
 **Tests:** Whether a forward signal (staffing email) overrides a strong historical ROI.
 **Expected result:** Recommend downgrading/cancelling BahnCard 50 ahead of renewal, despite history alone saying "keep."

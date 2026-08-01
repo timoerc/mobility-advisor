@@ -27,6 +27,7 @@ from .models import (
     UserPreferences,
 )
 from .route_utils import (
+    ORS_API_KEY,
     clean_location,
     co2_kg_for_mode,
     driving_route,
@@ -256,17 +257,60 @@ _RAIL_DISTANCE_THRESHOLD_KM = 100
 _REQUEST_DELAY = 1.2
 
 _geocode_cache: dict[str, tuple[float, float] | None] = {}
+_CITY_COORDS_PATH = _STATIC / "city_coords.json"
+_city_coords_cache: dict[str, tuple[float, float]] | None = None
+
+
+def _load_city_coords() -> dict[str, tuple[float, float]]:
+    """Load and cache the static city-name -> (lat, lng) fallback table."""
+    global _city_coords_cache
+    if _city_coords_cache is None:
+        raw = json.loads(_CITY_COORDS_PATH.read_text(encoding="utf-8"))
+        _city_coords_cache = {city: tuple(latlng) for city, latlng in raw["cities"].items()}
+    return _city_coords_cache
+
+
+def _offline_geocode(place: str) -> tuple[float, float] | None:
+    """Static-table fallback for _cached_geocode(), returning (lng, lat) — same
+    convention as route_utils.geocode() — or None if the place isn't in the table.
+
+    Tries the raw string, then its normalized city name (_normalize_to_city()
+    collapses a raw station/airport/provider string like "Frankfurt (Main) Hbf" down
+    to "Frankfurt"), then a case-insensitive match against both, since callers pass
+    everything from LLM-supplied plain city names to raw travel-history station text.
+    """
+    coords = _load_city_coords()
+    for candidate in (place, _normalize_to_city(place)):
+        if candidate in coords:
+            lat, lng = coords[candidate]
+            return (lng, lat)
+    lowered = {candidate.lower() for candidate in (place, _normalize_to_city(place))}
+    for city, (lat, lng) in coords.items():
+        if city.lower() in lowered:
+            return (lng, lat)
+    return None
 
 
 def _cached_geocode(place: str) -> tuple[float, float] | None:
-    """Geocode with in-memory cache to avoid redundant API calls."""
+    """Geocode with in-memory cache to avoid redundant API calls.
+
+    Falls back to the static city-coordinate table (_offline_geocode) when
+    ORS_API_KEY is unset or the live ORS call fails/errors. ORS_API_KEY is not
+    configured in this deployment's .env, so the offline path is this pipeline's
+    normal route, not a rare edge case — the inter-request sleep only applies to
+    the live-API path, since there is no rate limit to respect offline.
+    """
     if place in _geocode_cache:
         return _geocode_cache[place]
-    time.sleep(_REQUEST_DELAY)
-    try:
-        result = geocode(place)
-    except Exception:
-        result = None
+    result = None
+    if ORS_API_KEY:
+        time.sleep(_REQUEST_DELAY)
+        try:
+            result = geocode(place)
+        except Exception:
+            result = None
+    if result is None:
+        result = _offline_geocode(place)
     _geocode_cache[place] = result
     return result
 
@@ -442,12 +486,67 @@ def _route_key(origin: str, destination: str) -> tuple[str, str]:
     return (min(a, b), max(a, b))
 
 
+def _dominant_fare_class(ticket_types: list[str | None]) -> str:
+    """Majority-vote a route's fare class from its contributing trips' ticket_type text.
+
+    "flex" wins only on a strict majority (e.g. "Flexpreis, 2. Klasse" contributing >50%
+    of the route's trips) — a mixed or Sparpreis-dominated route defaults to "spar", the
+    conservative choice (Sparpreis discount is <= Flexpreis discount on every catalog
+    BahnCard, so understating fare class never overstates a card's savings).
+    """
+    flex_count = sum(1 for t in ticket_types if t and "flex" in t.lower())
+    return "flex" if flex_count * 2 > len(ticket_types) else "spar"
+
+
+def _travel_reduction_factor() -> tuple[float, list[str]]:
+    """Damping factor for projected trip frequencies from a near-term travel_reduction
+    life-event signal (see load_life_events()) — e.g. a staffing/project-end mail that
+    means future long-distance travel will drop sharply, which historical trip counts
+    alone can't see since they only describe the past.
+
+    Pro-rates by how much of the next 12 months precedes the event: an event 78 days out
+    (out of the 365-day projection window) yields factor ~0.21, so a route projected at
+    48 trips/year from history drops to ~10/year — reflecting that only ~78 days of
+    business-as-usual travel remain before the reduction takes effect. Uses the nearest
+    qualifying event when more than one exists. Returns (1.0, []) — no damping — when no
+    travel_reduction signal falls within the next 12 months, which is the normal case.
+    """
+    qualifying: list[date] = []
+    for event in load_life_events()["events"]:
+        if "travel_reduction" not in event.get("signals", []):
+            continue
+        raw_date = event.get("event_date")
+        if not raw_date:
+            continue
+        try:
+            event_date = date.fromisoformat(raw_date)
+        except ValueError:
+            continue
+        if MOCK_TODAY <= event_date <= MOCK_TODAY + timedelta(days=365):
+            qualifying.append(event_date)
+
+    if not qualifying:
+        return 1.0, []
+
+    nearest = min(qualifying)
+    factor = max(0.0, min(1.0, (nearest - MOCK_TODAY).days / 365))
+    warning = (
+        f"Travel-reduction signal detected (event date {nearest.isoformat()}) — projected "
+        f"trip frequencies damped by a factor of {round(factor, 2)} to reflect reduced "
+        f"travel after this date, rather than extrapolating history unchanged."
+    )
+    return factor, [warning]
+
+
 def derive_projected_trips_from_history() -> dict:
     """Analyze travel history and derive projected recurring routes with annual frequencies.
 
     Groups historical trips by normalized city pair (direction-independent), counts
     occurrences, extrapolates to annual frequency, and computes per-mode alternatives
-    for routes with frequency >= 2/year.
+    for routes with frequency >= 2/year. Each route's dominant fare class (Sparpreis vs.
+    Flexpreis) is derived from its trips' ticket_type text, and the projected frequency is
+    damped when a near-term travel_reduction life-event signal exists (see
+    _travel_reduction_factor()).
 
     Writes results to data/_projected_trips_history.json and returns a summary.
     """
@@ -470,9 +569,13 @@ def derive_projected_trips_from_history() -> dict:
                 "dest_city": dest_city,
                 "count": 0,
                 "dates": [],
+                "ticket_types": [],
             }
         route_counts[key]["count"] += 1
         route_counts[key]["dates"].append(trip["date"])
+        route_counts[key]["ticket_types"].append(trip.get("ticket_type"))
+
+    reduction_factor, reduction_warnings = _travel_reduction_factor()
 
     if not trips:
         data_window_months = 12
@@ -483,17 +586,24 @@ def derive_projected_trips_from_history() -> dict:
         data_window_months = max(1, round((latest - earliest).days / 30.44))
 
     projected: list[dict] = []
-    warnings: list[str] = []
+    warnings: list[str] = list(reduction_warnings)
 
     for key, info in route_counts.items():
+        # Frequency threshold is checked on the raw historical rate — "is this actually a
+        # recurring route" — before any travel_reduction damping is applied below, so a
+        # damped-to-near-zero frequency never wrongly excludes a route the history clearly
+        # supports.
         annual_freq = round(info["count"] * 12 / data_window_months)
         if annual_freq < 2:
             continue
+        annual_freq = round(annual_freq * reduction_factor)
 
         origin = info["origin"]
         dest = info["destination"]
+        fare_class = _dominant_fare_class(info["ticket_types"])
 
-        time.sleep(_REQUEST_DELAY)
+        if ORS_API_KEY:
+            time.sleep(_REQUEST_DELAY)
         result = compute_route_alternatives(origin, dest)
         if result.get("warnings"):
             warnings.extend(result["warnings"])
@@ -510,6 +620,7 @@ def derive_projected_trips_from_history() -> dict:
             source="history",
             distance_km=round(dist_km, 1),
             alternatives=alternatives,
+            fare_class=fare_class,
         )
         projected.append(trip.model_dump())
 
@@ -861,8 +972,17 @@ def apply_subscription_discount(
     estimated_price_eur: float,
     distance_km: float,
     portfolio: list[dict],
+    fare_class: str = "spar",
 ) -> float:
     """Apply subscription discounts to a single trip's estimated price.
+
+    fare_class ("spar" or "flex") selects which catalog discount rate applies to a rail
+    trip — discount_sparpreis_pct or discount_flexpreis_pct. These differ per BahnCard
+    tier (e.g. BahnCard 50 gives 50% off Flexpreis but only 25% off Sparpreis), so a route
+    whose historical trips were mostly booked Flexpreis (see _dominant_fare_class() in
+    derive_projected_trips_from_history) must be scored against the Flexpreis rate, not
+    silently assumed to be Sparpreis — otherwise every BahnCard tier looks identical on
+    trips that were never actually priced that way.
 
     Returns the discounted price. The cheapest applicable discount wins.
     """
@@ -878,9 +998,12 @@ def apply_subscription_discount(
             if benefits.get("unlimited_long_distance") and mode == "rail_intercity":
                 best_price = min(best_price, 0.0)
 
-            spar_pct = benefits.get("discount_sparpreis_pct")
-            if spar_pct and not benefits.get("unlimited_long_distance"):
-                discounted = estimated_price_eur * (1 - spar_pct / 100)
+            if fare_class == "flex":
+                fare_pct = benefits.get("discount_flexpreis_pct")
+            else:
+                fare_pct = benefits.get("discount_sparpreis_pct")
+            if fare_pct and not benefits.get("unlimited_long_distance"):
+                discounted = estimated_price_eur * (1 - fare_pct / 100)
                 best_price = min(best_price, discounted)
 
         elif sub_mode == "car_share" and mode == "car_share":
@@ -952,6 +1075,7 @@ def simulate_portfolio(subscription_ids: list[str]) -> dict:
                 alt_dict["estimated_price_eur"],
                 alt_dict["distance_km"],
                 portfolio,
+                fare_class=trip.fare_class,
             )
             if discounted < best_cost:
                 best_cost = discounted
@@ -1165,10 +1289,14 @@ def optimize_all_categories() -> dict:
 
     prefs = load_user_preferences()
     age = prefs.get("age")
+    # priority_weights is nested (see UserPreferences in models.py) — compute_portfolio_score
+    # still takes the flat cost_weight/time_weight/sustainability_weight shape, so translate
+    # here rather than changing its signature.
+    pw = prefs.get("priority_weights", {})
     weights = {
-        "cost_weight": prefs.get("cost_weight", 0.34),
-        "time_weight": prefs.get("time_weight", 0.33),
-        "sustainability_weight": prefs.get("sustainability_weight", 0.33),
+        "cost_weight": pw.get("cost", 0.34),
+        "time_weight": pw.get("time", 0.33),
+        "sustainability_weight": pw.get("sustainability", 0.33),
     }
 
     current_raw = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))

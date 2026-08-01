@@ -1,48 +1,50 @@
 {
-  "id": "stefan",
-  "name": "Stefan Kurz",
-  "tagline": "Car owner · Occasional train traveller",
-  "avatar": "SK",
-  "avatarBg": "#1f6feb",
+  "id": "maja",
+  "name": "Maja Hoffmann",
+  "tagline": "Frequent business traveller · BahnCard 50",
+  "avatar": "MH",
+  "avatarBg": "#ec0016",
   "reference_date": "2026-06-15",
   "profileData": {
     "personal": {
-      "full_name": "Stefan Kurz",
-      "age": 41,
+      "full_name": "Maja Hoffmann",
+      "age": 33,
       "employment_status": "employed",
-      "profession": "Engineer",
-      "household_context": "partner"
+      "profession": "Consultant",
+      "household_context": "single"
     },
     "location": {
-      "home_city": "München"
+      "home_city": "Köln"
     },
     "commute": {
       "office_days": [
         "mon",
         "tue",
         "wed",
-        "thu",
-        "fri"
+        "thu"
       ],
-      "wfh_days": []
+      "wfh_days": [
+        "fri"
+      ]
     },
     "priorities": {
-      "cost": 0.3,
-      "time": 0.5,
-      "sustainability": 0.2
+      "cost": 0.54,
+      "time": 0.16,
+      "sustainability": 0.3
     },
     "integrations": {
-      "outlook_connected": false,
-      "gmail_connected": true,
-      "calendar_connected": true,
+      "outlook_connected": true,
+      "gmail_connected": false,
+      "calendar_connected": false,
       "db_connected": true,
       "miles_connected": true,
       "deutschlandticket_connected": true,
       "additional_connections": [
-        "MVV",
-        "Bolt"
+        "KVB",
+        "RMV",
+        "FreeNow"
       ]
     },
-    "notes": "Drive to work daily within Munich. Regular business trips to Frankfurt by train (company HQ is in Frankfurt-Sachsenhausen)."
+    "notes": "Mostly travel Cologne–Frankfurt, sometimes Hamburg."
   }
 }
