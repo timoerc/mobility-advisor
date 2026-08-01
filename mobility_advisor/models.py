@@ -22,15 +22,14 @@ class PriorityWeights(BaseModel):
 
 class UserPreferences(BaseModel):
     name: str
-    flexibility_need: str
-    sustainability_weight: float
+    home_city: str
+    age: int | None = None
+    owns_car: bool = False
     values_time_over_money: bool
-    notes: str
-    # Optional-safe additions (persona geography + raw priority weights) — existing
-    # callers validating a dict without these keys still pass via the defaults below.
-    home_city: str = ""
-    office_days: list[str] = []
-    wfh_days: list[str] = []
+    notes: str = ""
+    # The three priority-slider weights, nested (not flat cost_weight/time_weight/
+    # sustainability_weight) — this is the one representation every reader (prompt text
+    # and compute_portfolio_score()) is normalized onto; see PriorityWeights above.
     priority_weights: PriorityWeights = PriorityWeights()
 
 
@@ -50,6 +49,7 @@ class RailBenefits(BaseModel):
 
 class CarShareBenefits(BaseModel):
     model_config = {"extra": "forbid"}
+    base_km_rate_eur: float
     monthly_credit_eur: float
     discount_km_pct: float
     discount_time_pct: float
@@ -245,6 +245,39 @@ class LifeEvents(BaseModel):
     events: list[LifeEvent]
 
 
+# ── Projected trip models (used by the redesigned pipeline) ───────────────────
+
+
+class RouteAlternative(BaseModel):
+    mode: str
+    distance_km: float
+    duration_min: float
+    co2_kg: float
+    estimated_price_eur: float
+
+
+class ProjectedTrip(BaseModel):
+    route: str
+    origin: str
+    destination: str
+    frequency_per_year: int
+    source: Literal["history", "calendar", "car_usage"]
+    category: str | None = None
+    distance_km: float
+    alternatives: list[RouteAlternative]
+    # Dominant historical fare class for this route ("flex" if a majority of the
+    # contributing trips' ticket_type mentions Flexpreis, else "spar"). Lets
+    # apply_subscription_discount() pick discount_flexpreis_pct vs.
+    # discount_sparpreis_pct instead of assuming every trip is Sparpreis.
+    fare_class: Literal["spar", "flex"] = "spar"
+
+
+class ProjectedTripSet(BaseModel):
+    trips: list[ProjectedTrip]
+    generated_at: str
+    warnings: list[str] = []
+
+
 # ── Pipeline output / API response schemas ──────────────────────────────────────
 # Field names are camelCase (unlike the snake_case data-loading schemas above)
 # because these models ARE the wire contract with frontend/src/types/recommendation.ts —
@@ -274,6 +307,10 @@ class Alternative(BaseModel):
     co2ImpactKg: float = 0.0
     tradeoff: str
     isRecommended: bool
+    # Deltas vs. the recommended portfolio (0 for the recommended itself).
+    deltaCostVsRecommendedEur: float = 0.0
+    deltaTimeVsRecommendedMin: float = 0.0
+    deltaCo2VsRecommendedKg: float = 0.0
     # None only for the always-present "Keep current setup" row. Every other
     # alternative must carry its own action so it can be executed if the user
     # selects it — see /api/execute in main.py.

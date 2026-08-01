@@ -1,0 +1,42 @@
+{
+  "rail_intercity": {
+    "base_rate": 0.337,
+    "exponent": 0.82,
+    "notes": "Calibrated: ~€25 at 190km (Köln–Frankfurt), ~€40 at 450km (Köln–Ulm), ~€55 at 640km (Berlin–Stuttgart)"
+  },
+  "rail_regional": {
+    "base_rate": 0.40,
+    "exponent": 0.78,
+    "notes": "Single tickets without Deutschlandticket. ~€6 at 30km, ~€12 at 80km, ~€18 at 150km"
+  },
+  "bus": {
+    "base_rate": 0.18,
+    "exponent": 0.75,
+    "notes": "FlixBus-style coach. ~€8 at 200km, ~€15 at 500km, ~€20 at 800km"
+  },
+  "flight_short_haul": {
+    "base_rate": 1.20,
+    "exponent": 0.58,
+    "notes": "Economy intra-Europe. ~€80 at 500km, ~€120 at 1000km, ~€160 at 1700km"
+  },
+  "flight_domestic": {
+    "base_rate": 1.50,
+    "exponent": 0.55,
+    "notes": "Domestic German flights (shorter, proportionally more expensive). ~€90 at 400km, ~€110 at 600km"
+  },
+  "car_share": {
+    "base_rate": 0.35,
+    "exponent": 1.00,
+    "notes": "MILES-style per-km pricing (linear). Includes unlock fee amortized. ~€3.50 at 10km, ~€17.50 at 50km"
+  },
+  "car_rental": {
+    "base_rate": 0.45,
+    "exponent": 0.90,
+    "notes": "Daily rental + fuel, amortized per km. ~€80 at 200km, ~€140 at 400km"
+  },
+  "car_private": {
+    "base_rate": 0.30,
+    "exponent": 1.00,
+    "notes": "Fuel + wear (no purchase cost). Linear at ~€0.30/km"
+  }
+}

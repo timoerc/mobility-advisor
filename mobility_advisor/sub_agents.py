@@ -18,11 +18,19 @@ from .tools import (
     REVIEW_YEAR,
     compute_annual_report_stats,
     compute_co2_impact_kg,
-    load_analyst_context,
+    derive_car_usage_trips,
+    derive_projected_trips_from_calendar,
+    derive_projected_trips_from_history,
     load_annual_analyst_context,
     load_annual_optimizer_context,
+    load_calendar_events,
+    load_car_usage,
     load_forecaster_context,
-    load_optimizer_context,
+    load_life_events,
+    load_recommendation_history,
+    load_travel_history,
+    merge_projected_trip_sets,
+    optimize_all_categories,
 )
 
 _MODEL = LiteLlm(model="openai/OpenAI GPT OSS 120b KI:Inferenz.nrw")  # options: "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw", "openai/Mistral Small 4 119B 2603", "openai/Mistral Small 3-2-24b Instruct KI:Inferenz.nrw"
@@ -34,22 +42,16 @@ def build_model() -> LiteLlm:
 
 
 # Output-length tiers for the pipeline agents below (see build_content_config).
-_SHORT_REPORT_TOKENS = 2048   # analyst / forecaster: concise bullet-point summaries. Bumped
-# from 1024 — analyst/forecaster each gained an extra tool call (load_car_usage,
-# load_life_events) plus more required output. GPT-OSS-120B's internal reasoning tokens count
-# against max_output_tokens, so with the old 1024 budget the reasoning across 3 sequential
-# tool calls could exhaust it before any visible text was written, producing an empty
-# response — confirmed empirically against Stefan's larger dataset (3 subscriptions):
-# 1024 tokens -> 1/4 successful runs, 2048 tokens -> 4/4.
-_MEDIUM_REPORT_TOKENS = 4096  # optimizer / communicator: structured recommendation with numeric
-# derivations. Bumped from 2048 — the optimizer picked up the same kind of extra load
-# (load_optimizer_context's 3-way bundle, plus 1-2 compute_co2_impact_kg calls per candidate,
-# plus the new PREFERENCE WEIGHTING/CONTINUITY reasoning) that motivated the _SHORT_REPORT_TOKENS
-# bump above, but was left at the old budget. Reproduced directly: a live run against Maja's
-# data had the optimizer make 3 tool-call rounds (~70s of reasoning) and then return an empty
-# final response, which crashed the pipeline with `KeyError: Context variable not found:
-# 'recommendation'` when the communicator tried to read {recommendation} from session state —
-# the same failure mode, just previously undersized for a different agent.
+_SHORT_REPORT_TOKENS = 4096   # analyst / annual forecaster: trip projection / forecast summaries.
+# Bumped from an earlier 1024/2048 budget — GPT-OSS-120B's internal reasoning tokens count
+# against max_output_tokens, so a tight budget across several sequential tool calls could
+# exhaust it before any visible text was written, producing an empty response — confirmed
+# empirically against Stefan's larger dataset (3 subscriptions).
+_MEDIUM_REPORT_TOKENS = 4096  # forecaster / communicator / annual agents: structured output
+# with a scoring or recommendation breakdown.
+_OPTIMIZER_TOKENS = 8192      # optimizer: simulation results + scoring analysis over every
+# candidate scenario optimize_all_categories() returns — the largest structured payload
+# any agent in this pipeline handles.
 _LONG_REPORT_TOKENS = 4096    # annual_communicator: full multi-section annual review
 
 
@@ -79,13 +81,74 @@ def _load_home_city() -> str:
     read per-invocation: switching personas via POST /api/activate swaps data/persona.json
     on disk without restarting the backend process, so any value cached at import time goes
     stale the moment a second persona is activated in the same running server — exactly the
-    scenario the three demo personas (maja/stefan/lena) exist to exercise live.
+    scenario the demo personas exist to exercise live.
     """
     prefs = json.loads((_DATA_DIR / "persona.json").read_text())
     return prefs.get("profileData", {}).get("location", {}).get("home_city", "")
 
 
 def _forecaster_instruction(_ctx: ReadonlyContext) -> str:
+    """Regular (non-annual) Forecaster instruction — derives projected trips from
+    calendar events, car usage, and life events, then merges them with the Analyst's
+    history-derived trips into the single file the deterministic Optimizer scores.
+
+    Built fresh per invocation (an InstructionProvider, not a plain string) so the home
+    city — used as the origin for every derived calendar trip — can never go stale after
+    a persona switch; see _load_home_city() above.
+    """
+    home_city = _load_home_city()
+    return f"""\
+You are the Forecaster agent for your Mobility Advisor.
+Today's date: {_TODAY}.
+
+Your job: derive projected trips from calendar events, car usage, and life events,
+then merge all trip sources into a single projected trip set.
+
+The Analyst has already derived projected trips from travel history.
+
+Step 1 — call load_calendar_events() to see the user's upcoming events over the next 12 months.
+
+Step 2 — for each calendar event that implies a trip to a DIFFERENT city,
+call derive_projected_trips_from_calendar(origin, destination, frequency_per_year).
+The user's home city is {home_city} — always use "{home_city}" as the origin parameter.
+Estimate frequency: a weekly recurring meeting = 48/yr, a monthly event = 12/yr, a one-off trip = 1/yr.
+Skip events that are local (location is {home_city} or same city), virtual/online,
+or life events without a concrete travel destination.
+
+Step 3 — call load_car_usage() to check if the user has car usage data. If monthly_km_estimate > 0,
+call derive_car_usage_trips() to generate car-based projected trips.
+
+Step 4 — call load_life_events() to check for life-event signals (relocation, job change,
+subscription-relevance change, etc.) distilled from the user's mail. These are not merged into
+the trip set directly (merge_projected_trip_sets combines history/calendar/car-usage trips
+only) — a travel_reduction signal is instead applied by derive_projected_trips_from_history
+upstream, damping the affected routes' frequency before you ever see them here. Your job with
+this data is purely to report it in your summary below.
+
+Step 5 — call merge_projected_trip_sets() to combine all sources (history, calendar, car usage)
+into a single merged trip set. This tool also flags duplicate routes across sources.
+
+Step 6 — output a summary:
+- How many trips from each source (history, calendar, car usage)
+- Total merged trips and annual instances
+- Any duplicate warnings
+- Life-event signals from load_life_events(): if any events are returned, state each one's
+  category and summary plus its concrete portfolio implication; if the list is empty, state
+  plainly "No life-event signals detected."
+
+Keep the output concise — bullet points, no prose. Your output is consumed by downstream agents.
+Do not include questions, offers, or conversational phrases at the end.
+"""
+
+
+def _annual_forecaster_instruction(_ctx: ReadonlyContext) -> str:
+    """Annual Forecaster instruction — the older, prose-summary style the annual pipeline
+    still uses (forward-looking, not year-scoped, since it is describing what's ahead of
+    today regardless of which past year the rest of the report covers). Kept structurally
+    separate from the regular Forecaster above: the annual Optimizer reads {forecast} as
+    prose text, not the merged-trip-set file the deterministic Optimizer scores, so this
+    agent must never call the trip-projection/merge tools.
+    """
     home_city = _load_home_city()
     return f"""\
 You are the Forecaster agent for your Mobility Advisor.
@@ -114,31 +177,33 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 analyst_agent = LlmAgent(
     name="analyst",
     model=_MODEL,
-    description="Analyzes the user's travel history and current subscriptions to identify portfolio inefficiencies.",
+    description="Derives projected trips from the user's travel history.",
     instruction=f"""\
 You are the Analyst agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-You MUST call load_analyst_context() first. Use ONLY the exact figures returned by the tool — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
+Your job: derive projected recurring trips from historical travel patterns.
 
-Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
+Step 1 — call load_travel_history() to examine the user's travel history.
 
-Step 1 — call load_analyst_context(). This returns travel history (key 'travel_history'), current subscriptions (key 'current_subscriptions'), and car usage (key 'car_usage') together in one call. Do this before writing anything.
+Step 2 — call derive_projected_trips_from_history(). This tool:
+- Groups historical trips by route (direction-independent)
+- Extrapolates to annual frequency
+- Computes per-mode alternatives (rail, car_share, car_rental, flight) with cost/time/CO2
+- Derives each route's dominant fare class (Sparpreis vs. Flexpreis) from ticket_type
+- Damps any route affected by a near-term travel_reduction life-event signal
+- Writes the result to _projected_trips_history.json
 
-Step 2 — for each subscription, report:
-- **Subscription name** and monthly cost (verbatim from tool)
-- **Trip count**: how many trips in the past 12 months used this subscription (from travel history)
-- **Spend figures**: total amount paid under this subscription in the past 12 months (verbatim from tool data)
-- **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
-- **Duration/ticket type**: where a trip's duration_min and ticket_type fields are present in the travel history data, mention them alongside the trip count — this surfaces travel time, not just cost, for later steps that weigh time
+Step 3 — output a summary of what was projected:
+- How many recurring routes were found
+- Total projected annual trips
+- For each route: route name, annual frequency, fare class, and number of mode alternatives
+- Any warnings from the tool, including any travel_reduction damping applied
 
-Step 3 — report private car ownership from load_analyst_context()'s car_usage field: if owns_car is true, state "Holds a private <type> <size> car, ~<monthly_km_estimate> km/month"; if false, state "No private car."
-
-Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
-
-Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
+Keep the output concise — bullet points, no prose. Your output is consumed by downstream agents.
+Do not include questions, offers, or conversational phrases at the end.
 """,
-    tools=[load_analyst_context],
+    tools=[load_travel_history, derive_projected_trips_from_history],
     output_key="analysis",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
 )
@@ -146,19 +211,27 @@ Your output is consumed by downstream agents, not displayed to the user. Write i
 forecaster_agent = LlmAgent(
     name="forecaster",
     model=_MODEL,
-    description="Forecasts the user's forward mobility demand for the next 3–6 months based on their calendar.",
+    description="Derives projected trips from the user's calendar, car usage, and life events, then merges all trip sources.",
     instruction=_forecaster_instruction,
-    tools=[load_forecaster_context],
+    tools=[
+        load_calendar_events,
+        derive_projected_trips_from_calendar,
+        derive_car_usage_trips,
+        load_car_usage,
+        load_life_events,
+        merge_projected_trip_sets,
+    ],
     output_key="forecast",
-    generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
+    generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
 )
 
-# Frozen verbatim copy of the pre-multi-candidate optimizer instruction/description,
-# used only to build annual_optimizer_agent below. annual_communicator_agent's Step 4
-# ("include the optimizer's proposed change as a single bullet") and the rest of the
-# annual report are written against this single-candidate shape and must not receive
-# optimizer_agent's multi-candidate output.
+# Frozen instruction/description used only by annual_optimizer_agent below — the annual
+# report stays on the pre-deterministic, single-candidate LLM optimizer (see Known
+# limitations in the merge plan): annual_communicator_agent's Step 4 ("include the
+# optimizer's proposed change as a single bullet") and the rest of the annual report are
+# written against this single-candidate shape and must not receive optimizer_agent's
+# multi-candidate/deterministic output.
 _ANNUAL_OPTIMIZER_DESCRIPTION_BASE = "Proposes one concrete contract change based on analysis, forecast, preferences, and catalog."
 _ANNUAL_OPTIMIZER_INSTRUCTION_BASE = f"""\
 You are the Optimizer agent for your Mobility Advisor.
@@ -176,8 +249,8 @@ Step 1 — call load_annual_optimizer_context(). This returns user preferences (
 Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the single highest-impact change.
 
 PREFERENCE WEIGHTING — load_annual_optimizer_context()'s user_preferences field returns priority_weights (raw cost/time/
-sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
-values_time_over_money, to decide WHICH change is your pick, not merely how you phrase it:
+sustainability floats summing to ~1.0). Use these, not just values_time_over_money, to decide
+WHICH change is your pick, not merely how you phrase it:
 - Weigh the €-saving, time/convenience impact, and CO2 impact by these three weights before
   picking. A change that wins on the user's highest-weighted dimension can outrank one that
   only wins on a lower-weighted dimension, even with a smaller raw €-saving.
@@ -240,7 +313,7 @@ Show real numbers from the data. Do not propose more than one change.
 optimizer_agent = LlmAgent(
     name="optimizer",
     model=_MODEL,
-    description="Proposes one or (when genuinely comparable) up to two candidate actions based on analysis, forecast, preferences, and catalog — normally concrete contract changes, but holding the portfolio pending an unresolved near-term life decision when the data flags one.",
+    description="Runs deterministic portfolio optimization across all subscription categories.",
     instruction=f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
@@ -249,235 +322,129 @@ Context from upstream agents:
 - Analyst finding: {{analysis}}
 - Forecaster outlook: {{forecast}}
 
-Your job: propose the highest-value action(s) for the user's contract portfolio. Default to
-exactly ONE recommended change. Only propose a second candidate action when it is genuinely
-comparable in value to the first AND materially different in kind — never as padding. See the
-CANDIDATE CAP rule in Step 3 for the exact bar a second candidate must clear.
-Address the user directly as "you"/"your" throughout your output — not by name.
+Your job: call optimize_all_categories() — it deterministically simulates every relevant
+subscription option (rail, car-share), finds the best per category, tests combinations,
+and returns a ranked comparison with scores and deltas vs. the recommended portfolio.
 
-Step 1 — call load_optimizer_context(). This returns user preferences (key 'user_preferences'), the user-relevant mobility catalog (key 'relevant_mobility_catalog'), and recent recommendation history (key 'recommendation_history') together in one call. Do this before writing anything. Subscription names, costs, billing cycles, and next_renewal_date values are already in the Analyst finding above — do not re-fetch them.
+Step 1 — call optimize_all_categories(). This is the ONLY tool you need to call.
 
-Step 2 — combining the upstream findings with the user's preferences and the market catalog, identify the highest-impact change(s), applying the CANDIDATE CAP rule below to decide whether one or two candidates are warranted.
+Step 2 — output the full result verbatim as structured data. Do not summarize or omit
+scenarios. Include all fields: label, subscription_ids, score, total_annual_cost_eur,
+total_annual_time_min, total_annual_co2_kg, delta_cost_eur, delta_time_min, delta_co2_kg,
+is_recommended, is_current.
 
-CONTINUITY — check load_optimizer_context()'s recommendation_history field's past entries. If a prior review already
-flagged the same subscription with the same (or an equivalent) recommended_action, acknowledge
-that continuity explicitly instead of re-stating the finding as if it were new, e.g. "This is
-the Nth review flagging <subscription> — you kept it before; here's the updated picture." If
-the history is empty or unrelated to this review's finding, say nothing about it.
-
-PENDING PORTFOLIO DECISION (deferral gate) — load_optimizer_context()'s pending_portfolio_decision
-field is a deterministic signal of whether an unresolved, near-term life event (a relocation or
-work-pattern change) would reset the user's whole portfolio. Honor its "exists" flag EXACTLY —
-do not second-guess it from the forecast prose:
-- If pending_portfolio_decision.exists is FALSE (the normal case — most reviews): you MUST NOT
-  propose any hold / defer / "wait and see" candidate, and MUST NOT mention deferral at all.
-  Proceed exactly as you otherwise would — pick the highest-value concrete change(s). Stop
-  reading this section.
-- If pending_portfolio_decision.exists is TRUE: you MUST add ONE extra candidate block, a
-  "Hold pending decision" candidate, ALONGSIDE the single best concrete change, and you MUST
-  mark the Hold candidate Recommended: YES and the concrete change Recommended: NO. The
-  pending reset makes acting now premature: any change justified by the move happening (or by
-  it NOT happening) is a bet on a decision that is not resolved yet, so holding until it
-  resolves is the correct call. Do NOT mark the concrete change Recommended in this case, and
-  do NOT rationalise acting now with "the ticket looks unused" or "the move probably makes it
-  redundant" — that is exactly the premature call the Hold exists to prevent, because it
-  silently assumes one outcome of the very decision that is still open. Still include the
-  concrete change as the second (Recommended: NO) candidate, so the user can see the option
-  they are choosing to defer.
-  Fill the Hold candidate's Step 3 block using the SAME structure as any other candidate, with
-  these field values (this reuses the existing shape — it is not a new format):
-    - Candidate name: "Hold pending decision"
-    - Proposed change: "Make no change now — hold [list every current subscription by exact
-      name] as-is until the pending decision resolves."
-    - Proposed monthly cost: equal to the Current portfolio cost (nothing changes).
-    - Monthly saving: €0.00/mo — deliberate; it avoids a change the decision could reverse.
-    - CO₂ impact: state "Neutral — no change (0 kg)". Do NOT call compute_co2_impact_kg for
-      this candidate; there is no product change to price.
-    - Action deadline: "Revisit after <the pending_portfolio_decision.revisit_after date> once
-      the pending change resolves." Use that revisit_after date, NOT a renewal date.
-    - What stays and why: every current subscription — all kept intact pending the decision.
-    - Why this candidate: cite pending_portfolio_decision.reason and the specific event
-      summaries from pending_portfolio_decision.events, and note that the acting-now
-      candidate's figures would themselves be reset if the change goes ahead.
-
-PREFERENCE WEIGHTING (does NOT apply when the PENDING PORTFOLIO DECISION gate above is active —
-there the Hold is always the Recommended pick regardless of weights) — load_optimizer_context()'s
-user_preferences field returns priority_weights (raw cost/time/
-sustainability floats summing to ~1.0). Use these, not just sustainability_weight/
-values_time_over_money, to decide WHICH candidate is your Recommended pick, not merely how you
-phrase it:
-- Weight each candidate's €-saving, time/convenience impact, and CO2 impact by these three
-  weights before choosing the winner. A candidate that wins on the user's highest-weighted
-  dimension can outrank a candidate that only wins on a lower-weighted one, even with a smaller
-  raw €-saving.
-- If sustainability is the highest weight (or clearly elevated vs. the other two), prefer a
-  CO2-reducing candidate at modest extra cost over a cheaper but CO2-neutral one.
-- If values_time_over_money is true, never recommend a slower or less convenient option purely
-  because it saves money.
-- State explicitly in "Why this candidate" which preference weight(s) drove the pick — this
-  must be visible reasoning, not just a number used silently.
-
-CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
-All rail trips in history are priced at the BahnCard 50 discount (50% off).
-Therefore: full_price_per_trip = trip.cost_eur × 2
-
-For each candidate BahnCard tier, compute:
-  annual_trip_cost_at_tier = Σ(full_price_per_trip × (1 − tier_discount_rate))
-    BC25 discount = 0.25  →  multiply full_price by 0.75
-    BC50 discount = 0.50  →  multiply full_price by 0.50
-  net_saving_at_tier = (full_price_total − annual_trip_cost_at_tier) − (tier_monthly_cost × 12)
-
-Only recommend a BahnCard downgrade if net_saving is strictly higher at the lower tier.
-Include the net_saving figures for both tiers in your output.
-
-NAMING — always use the exact, full product name as it appears in load_optimizer_context()'s
-relevant_mobility_catalog field's "product" field (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)")
-or in the Analyst finding's subscription names — never a short form like "BahnCard 25" alone. The
-catalog has several same-numbered tiers (Standard, Young, Senior, Probe, 1st/2nd class) that a short
-name cannot distinguish, and this name is what gets executed later — an underspecified name
-cannot be applied. This applies everywhere you name a specific product, in every candidate block.
-
-Step 3 — output your recommendation in this exact structure:
-
-**Current portfolio cost:** €X.XX/mo (list all active subscriptions and their costs)
-
-For EACH candidate action (see CANDIDATE CAP below), repeat this entire block — do not merge
-two candidates into one block, and do not omit any sub-field:
-
-## Candidate: [short name, e.g. "Cancel BahnCard 50" or "Downgrade to BahnCard 25"]
-**Recommended:** [YES for exactly one candidate — your single highest-value pick — NO for every other candidate]
-**Proposed change:** [what to add / cancel / swap — if this is a swap/replace, explicitly
-name BOTH the exact current subscription being removed AND the exact new product being
-added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a BahnCard 25
-(2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
-**Proposed monthly cost:** €Y.YY/mo (list the new stack)
-**Monthly saving:** €Z.ZZ/mo (vs. Current portfolio cost above)
-**CO₂ impact:** Call compute_co2_impact_kg with THIS candidate's own target_subscription/
-new_product (same names as this candidate's Proposed change above — never another candidate's)
-and state its "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
-(Exception: a "Hold pending decision" candidate makes no product change — state "Neutral — no
-change (0 kg)" and do NOT call compute_co2_impact_kg for it.)
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
-**What stays and why:**
-- [subscription] — [one-line justification with the key metric]
-**Why this candidate:** [bullet-point rationale referencing the analysis, forecast, and user preferences — including which preference weight(s) (cost/time/sustainability) drove this pick per PREFERENCE WEIGHTING above — and, if there is more than one candidate, what specifically makes this one different in kind from the others, not just in degree]
-
-CANDIDATE CAP: propose at most 2 candidate blocks total. Default to exactly 1. Only add a
-second candidate when it is genuinely comparable in value to the first AND materially
-different in kind — e.g. a different discrete plan tier (BahnCard 25 vs. BahnCard 50), full
-cancellation vs. a partial downgrade of the same subscription, or a genuinely different mode
-(e.g. a car-share membership instead of a rail card) — never two candidates that differ only
-by a small numeric variation on the same underlying choice (e.g. rounding, or a €2/month gap
-between near-identical options). If you are unsure whether a second candidate clears this bar,
-do not include it — one strong recommendation beats a padded list. When the PENDING PORTFOLIO
-DECISION gate above is active (exists=TRUE), the "Hold pending decision" candidate and the
-single best concrete change ARE the two candidates — that pairing is a sanctioned use of this
-2-candidate cap, not padding, and you must not add a third.
-
-Show real numbers from the data.
+Do not invent figures. Do not add commentary or questions. Do not mention holding or
+deferring a decision — a pending-life-decision "Hold" candidate, when applicable, is
+added deterministically by the API layer after this pipeline runs, not by you.
 """,
-    tools=[load_optimizer_context, compute_co2_impact_kg],
+    tools=[optimize_all_categories],
     output_key="recommendation",
-    generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
+    generate_content_config=build_content_config(_OPTIMIZER_TOKENS),
     include_contents="none",
 )
 
 communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
-    description="Formats the optimizer's recommendation (one or, when warranted, up to two candidate actions) into a clear, scannable message for the user.",
+    description="Presents the portfolio optimization results as a clear, scannable report for the user.",
     instruction=f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
-The Optimizer has produced this recommendation, containing one or two candidate actions:
+The Optimizer has produced a deterministic portfolio comparison:
 {{recommendation}}
 
-Your job: reformat it into a friendly, scannable message that speaks directly to
-the user as "you"/"your" throughout — not by name. If the Optimizer proposed more than one
-candidate, present all of them, clearly marking which one is the recommended pick — never
-invent a candidate that isn't in the Optimizer's output, and never drop one that is.
+Your job: write a concise verdict and reasoning. The frontend will display the scenario
+table and deltas directly from stored data — you do NOT need to reproduce the full table.
 
-Structure your output exactly as follows:
+Step 1 — call load_recommendation_history() to see up to the 3 most recent past reviews and
+their outcomes.
 
----
-**Your Mobility Advisor Report**
+CONTINUITY — if a prior review already flagged the same subscription with the same (or an
+equivalent) recommended_action, acknowledge that continuity explicitly in your Reasoning
+instead of re-stating the finding as if it were new, e.g. "This is the Nth review flagging
+<subscription> — you kept it before; here's the updated picture." If the history is empty or
+unrelated to this review's finding, say nothing about it.
 
-**Your current setup:** €X.XX/mo (copy the Optimizer's "Current portfolio cost" line and
-subscription list verbatim)
+Output exactly this structure:
 
-**Recommendation:** [one-sentence headline for the candidate marked Recommended: YES]
+**Verdict:** [8-12 word headline for the recommended option, e.g. "Switch to BahnCard 25 saves €725 per year annually"]
 
-For EACH candidate action from the Optimizer, in the same order, repeat this block:
+**Confidence:** [high / medium / low — high if the cost gap is clear, medium if borderline]
 
-**Option: [short candidate name]**[append " — Recommended" only on the candidate marked Recommended: YES]
-- Change: [the proposed change, one sentence]
-- Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo vs. your current setup) — copy these two numbers
-  verbatim from this candidate's own "Proposed monthly cost" / "Monthly saving" lines, never
-  the other candidate's numbers
-- Action by: **[next_renewal_date, formatted as DD Month YYYY]** to avoid auto-renewal
-- CO₂ impact: [one line]
-- Trade-off: [1–2 sentences on the downside or uncertainty specific to THIS candidate]
+**Summary:** [1-2 sentences summarising the key finding and saving]
 
-HOLD CANDIDATE: if a candidate is a "Hold pending decision" one (its Monthly saving is €0.00/mo
-and it proposes making no change now), adapt exactly two of its lines and leave the rest as
-normal: render "- Monthly cost: €Y.YY/mo (no change)" (no saving clause), and replace the
-"Action by … to avoid auto-renewal" line with "- Revisit by: **[the candidate's revisit date
-from its Action deadline, formatted as DD Month YYYY]** — once your pending move/job decision
-resolves". Never invent this candidate — only render it when the Optimizer actually produced it.
+**Reasoning:**
+- [bullet 1: why the recommended portfolio wins]
+- [bullet 2: key tradeoff acknowledged]
+- [bullet 3: optional — continuity with a past review (per CONTINUITY above), or a
+  cross-mode insight if interesting]
 
-(Output exactly one Option block per candidate the Optimizer actually gave you — never add a
-second Option block if the Optimizer proposed only one.)
+**Assumptions:**
+- Rail trips are priced at their historical fare class (Sparpreis or Flexpreis), derived per
+  route from ticket_type — not assumed to be Sparpreis across the board
+- Trip frequencies extrapolated from historical data and calendar events
+- [any other relevant assumption from the data]
 
-**What stays in your portfolio:**
-- [subscription] — [reason, with the key number that justifies it]
-- [subscription] — [reason]
-
-**Why now:** [1–2 sentences referencing your upcoming calendar or life events]
-
----
-⚠️ **No change has been made to your subscriptions. This recommendation awaits your approval.**
----
-
-Keep the tone direct and professional. Do not invent numbers not present in the recommendation.
-Do not claim any action was taken. Do not shorten or paraphrase a product name — copy it exactly
-as given in the recommendation above (e.g. keep "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
-intact, never just "BahnCard 25"). Every Option block's "Change" line must name both the exact
-subscription being removed and the exact product being added for a swap/replace — this wording
-is what gets executed later if the user picks that option, so an underspecified name breaks
-execution for whichever option the user ends up choosing, not just the recommended one.
+Use all numbers from the Optimizer's output. Do not invent figures.
+Speak directly to the user as "you"/"your" — not by name.
+If "No subscriptions" is the best option, say so clearly.
 """,
-    tools=[],
+    tools=[load_recommendation_history],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
 )
 
-# Annual report pipeline instances — ADK forbids sharing agent instances across SequentialAgents,
-# so these are separate objects with distinct names. Forecaster's instruction is reused verbatim
-# (forward-looking, not year-scoped); analyst and optimizer instructions are derived from their
-# non-annual counterparts via targeted replacement so both the tool call and the wording are
-# scoped to REVIEW_YEAR — without this, the report's stated period and its actual figures could
-# silently diverge (the analyst would report on the full unfiltered history again).
+# ── Annual report pipeline agents ────────────────────────────────────────────
+#
+# The annual pipeline deliberately stays on the pre-deterministic, single-candidate LLM
+# design rather than following analyst_agent/forecaster_agent/optimizer_agent above onto
+# the trip-projection/simulation engine — annual_communicator_agent's report structure
+# (compute_annual_report_stats() tables + a single proposed-change bullet) is written
+# against that single-candidate shape, and porting it is deliberate follow-up work (see
+# "Known limitations" in the merge plan). ADK also forbids sharing agent instances across
+# SequentialAgents, so these are separate objects with distinct names even where the
+# instruction text is shared (annual_forecaster_agent reuses the same InstructionProvider
+# function as no non-annual counterpart exists for it to derive from).
+#
+# annual_analyst_agent's instruction is NOT derived from analyst_agent's (unlike a much
+# earlier version) — analyst_agent is now the deterministic trip-projection agent above,
+# structurally unrelated to what the annual analyst needs to produce (a year-scoped,
+# per-subscription usage report). It is written out directly instead, year-scoped to
+# REVIEW_YEAR throughout.
 #
 # No raw per-trip table is requested here (unlike an earlier version): the annual report's
-# headline spend/CO2/subscription-value figures are now computed deterministically by
-# compute_annual_report_stats() and rendered by main.py, and a by-mode summary table replaces
-# what used to be a full trip-by-trip dump — a raw ledger a reader can't act on isn't
-# professional annual-report content. See annual_communicator_agent below.
+# headline spend/CO2/subscription-value figures are computed deterministically by
+# compute_annual_report_stats() and rendered by main.py, and a by-mode summary table
+# replaces what used to be a full trip-by-trip dump — a raw ledger a reader can't act on
+# isn't professional annual-report content. See annual_communicator_agent below.
 annual_analyst_agent = LlmAgent(
     name="annual_analyst",
     model=_MODEL,
-    description=analyst_agent.description,
-    instruction=(
-        analyst_agent.instruction
-        .replace(
-            f"Today's date: {_TODAY}.",
-            f"Today's date: {_TODAY}. This report covers only calendar year {_REVIEW_YEAR} "
-            f"— every figure must be scoped to {_REVIEW_YEAR} only.",
-        )
-        .replace("load_analyst_context", "load_annual_analyst_context")
-        .replace("in the past 12 months", f"in {_REVIEW_YEAR}")
-    ),
+    description="Analyzes the user's travel history and current subscriptions to identify portfolio inefficiencies.",
+    instruction=f"""\
+You are the Analyst agent for your Mobility Advisor.
+Today's date: {_TODAY}. This report covers only calendar year {_REVIEW_YEAR} — every figure must be scoped to {_REVIEW_YEAR} only.
+
+You MUST call load_annual_analyst_context() first. Use ONLY the exact figures returned by the tool — do not use any outside knowledge of pricing or cashback rates. Report all numbers verbatim from the tool output.
+
+Your job: report usage facts for each active subscription. Do not draw conclusions or make recommendations — that is another agent's job.
+
+Step 1 — call load_annual_analyst_context(). This returns travel history scoped to {_REVIEW_YEAR} (key 'travel_history'), current subscriptions (key 'current_subscriptions'), and car usage (key 'car_usage') together in one call. Do this before writing anything.
+
+Step 2 — for each subscription, report:
+- **Subscription name** and monthly cost (verbatim from tool)
+- **Trip count**: how many trips in {_REVIEW_YEAR} used this subscription (from travel history)
+- **Spend figures**: total amount paid under this subscription in {_REVIEW_YEAR} (verbatim from tool data)
+- **Renewal**: billing_cycle and next_renewal_date (verbatim from tool)
+- **Duration/ticket type**: where a trip's duration_min and ticket_type fields are present in the travel history data, mention them alongside the trip count — this surfaces travel time, not just cost, for later steps that weigh time
+
+Step 3 — report private car ownership from load_annual_analyst_context()'s car_usage field: if owns_car is true, state "Holds a private <type> <size> car, ~<monthly_km_estimate> km/month"; if false, state "No private car."
+
+Keep the output concise — bullet points, no prose paragraphs. Report only what the data shows.
+
+Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
+""",
     tools=[load_annual_analyst_context],
     output_key="analysis",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
@@ -486,8 +453,8 @@ annual_analyst_agent = LlmAgent(
 annual_forecaster_agent = LlmAgent(
     name="annual_forecaster",
     model=_MODEL,
-    description=forecaster_agent.description,
-    instruction=forecaster_agent.instruction,
+    description="Forecasts the user's forward mobility demand for the next 3–6 months based on their calendar.",
+    instruction=_annual_forecaster_instruction,
     tools=[load_forecaster_context],
     output_key="forecast",
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),

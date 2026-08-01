@@ -24,6 +24,10 @@ export type Alternative = {
   co2ImpactKg?: number;
   tradeoff: string;
   isRecommended: boolean;
+  // Deltas vs. the recommended portfolio (0 for the recommended itself).
+  deltaCostVsRecommendedEur?: number;
+  deltaTimeVsRecommendedMin?: number;
+  deltaCo2VsRecommendedKg?: number;
   // null only for the always-present "Keep current setup" row; every other
   // alternative carries the action that gets executed if the user selects it.
   action: ProposedAction | null;

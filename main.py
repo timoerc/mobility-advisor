@@ -27,12 +27,14 @@ from pydantic import BaseModel, ValidationError
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
 from mobility_advisor.models import (
+    Alternative,
     AnalysisHistory,
     AnalysisHistoryEntry,
     AnalysisRunResult,
     CarUsage,
     CurrentSubscriptions,
     MetricDelta,
+    ProposedAction,
     Recommendation,
     TravelHistory,
     catalog_lookup,
@@ -168,7 +170,7 @@ class ResolveAnalysisRequest(BaseModel):
 def _atomic_write(path: Path, data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.write("\n")
         os.replace(tmp, path)
@@ -233,7 +235,7 @@ def _load_history() -> AnalysisHistory:
     if not path.exists():
         return AnalysisHistory(entries=[])
     try:
-        return AnalysisHistory.model_validate(json.loads(path.read_text()))
+        return AnalysisHistory.model_validate(json.loads(path.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, ValidationError):
         return AnalysisHistory(entries=[])
 
@@ -275,16 +277,16 @@ async def list_personas():
         pf = folder / "persona.json"
         if not pf.exists():
             continue
-        persona = json.loads(pf.read_text())
+        persona = json.loads(pf.read_text(encoding="utf-8"))
         sf = folder / "current_subscriptions.json"
         subscriptions = (
-            CurrentSubscriptions.model_validate(json.loads(sf.read_text())).model_dump()["subscriptions"]
+            CurrentSubscriptions.model_validate(json.loads(sf.read_text(encoding="utf-8"))).model_dump()["subscriptions"]
             if sf.exists() else []
         )
         persona["profileData"]["subscriptions"] = subscriptions
         cf = folder / "car_usage.json"
         persona["profileData"]["car"] = (
-            json.loads(cf.read_text()) if cf.exists() else CarUsage().model_dump()
+            json.loads(cf.read_text(encoding="utf-8")) if cf.exists() else CarUsage().model_dump()
         )
         result.append(persona)
     return result
@@ -319,7 +321,7 @@ async def get_current_subscriptions():
     path = _DATA / "current_subscriptions.json"
     if not path.exists():
         return {"subscriptions": []}
-    data = CurrentSubscriptions.model_validate(json.loads(path.read_text()))
+    data = CurrentSubscriptions.model_validate(json.loads(path.read_text(encoding="utf-8")))
     return {"subscriptions": data.model_dump()["subscriptions"]}
 
 
@@ -336,7 +338,7 @@ async def get_travel_history():
     path = _DATA / "travel_history_raw.json"
     if not path.exists():
         return {"trips": [], "reference_date": MOCK_TODAY.isoformat()}
-    data = TravelHistory.model_validate(json.loads(path.read_text()))
+    data = TravelHistory.model_validate(json.loads(path.read_text(encoding="utf-8")))
     return {"trips": data.model_dump()["trips"], "reference_date": MOCK_TODAY.isoformat()}
 
 
@@ -371,7 +373,7 @@ Output ONLY valid JSON — no markdown fences, no surrounding text.
     {
       "id": "<short slug, e.g. 'cancel' or 'keep'>",
       "name": "<human-readable name describing this OPTION, not just a product — see naming rules below>",
-      "annualCostEur": <annual subscription cost for this option in EUR>,
+      "annualCostEur": <total annual cost for this option in EUR — subscription cost PLUS trip cost if the report shows both; if only subscription cost is stated, use that>,
       "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
       "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
       "co2ImpactKg": <the signed kg/year number stated in this option's CO2 impact line;
@@ -397,7 +399,7 @@ Rules:
     - id: a short slug like "keep"
     - name: the literal string "Keep current setup" — never the product name, even though the
       product being kept is the same one named elsewhere
-    - annualCostEur: the report's "Your current setup" monthly figure x 12
+    - annualCostEur: the report's total annual cost for the current setup (subscription + trip costs if both are shown; "Your current setup" monthly figure x 12 if only monthly is shown)
     - savingsVsCurrentEur: 0
     - co2Impact: "Neutral"
     - co2ImpactKg: 0
@@ -418,9 +420,10 @@ Rules:
   is the "Hold pending decision" no-change option described above, whose action is null.
 - metrics must include at minimum: the monthly or annual saving (direction 'save') for the
   RECOMMENDED alternative, and CO2 impact (direction 'reduce' or 'neutral')
-- for each alternative with a non-null action: annualCostEur and savingsVsCurrentEur come from
-  THAT option's own "Monthly cost: €Y.YY/mo (saving €Z.ZZ/mo ...)" line, x 12 — never copy one
-  option's numbers onto another
+- for each alternative with a non-null action: annualCostEur is the TOTAL annual cost
+  (subscription fees + trip costs). If the report shows "Annual cost: €X (subscriptions: €Y +
+  trips: €Z)", use X. If only monthly subscription cost is shown, multiply by 12. savingsVsCurrentEur
+  will be recomputed server-side as (keep_cost - annualCostEur), so extract annualCostEur accurately
 - alternatives[].name must always describe the ACTION for that row, never a bare product name
   on its own — two rows must never end up with an identical name just because they both
   reference the same product. Prefix with the verb that matches what actually happens to that
@@ -445,7 +448,7 @@ Rules:
 
 
 def _clamp_actionable_alternatives(
-    rec: Recommendation, max_actionable: int = 2
+    rec: Recommendation, max_actionable: int = 5
 ) -> Recommendation:
     """Defensively enforce the product cap of `max_actionable` actionable alternatives.
 
@@ -499,6 +502,226 @@ def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
     if _CO2_METHODOLOGY_ASSUMPTION not in rec.assumptions:
         rec.assumptions.append(_CO2_METHODOLOGY_ASSUMPTION)
     return rec
+
+
+_STATIC = Path(__file__).parent / "mobility_advisor" / "static"
+
+
+def _build_alternatives_from_optimization() -> list[Alternative] | None:
+    """Build Alternative objects deterministically from _optimization_results.json.
+
+    Returns None if the file doesn't exist (fallback to LLM extraction).
+    """
+    opt_path = _DATA / "_optimization_results.json"
+    if not opt_path.exists():
+        return None
+
+    opt = json.loads(opt_path.read_text(encoding="utf-8"))
+    scenarios = opt.get("scenarios", [])
+    if not scenarios:
+        return None
+
+    catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
+    catalog_by_id = {o["id"]: o for o in catalog_raw["options"]}
+    current_ids = set(opt.get("current_subscription_ids", []))
+
+    # Find the baseline (no subs or current) cost for savingsVsCurrentEur
+    keep_cost = None
+    for s in scenarios:
+        if s.get("is_current") or (not s["subscription_ids"] and not current_ids):
+            keep_cost = s["total_annual_cost_eur"]
+            break
+    if keep_cost is None:
+        keep_cost = max(s["total_annual_cost_eur"] for s in scenarios)
+
+    # Find recommended CO2 for computing co2ImpactKg
+    rec_co2 = next((s["total_annual_co2_kg"] for s in scenarios if s.get("is_recommended")), None)
+    baseline_co2 = next(
+        (s["total_annual_co2_kg"] for s in scenarios if not s["subscription_ids"]),
+        rec_co2,
+    )
+
+    alts: list[Alternative] = []
+    for s in scenarios:
+        ids = set(s["subscription_ids"])
+        is_keep = s.get("is_current") or (not ids and not current_ids)
+
+        if is_keep:
+            alts.append(Alternative(
+                id="keep",
+                name="Keep current setup",
+                annualCostEur=s["total_annual_cost_eur"],
+                savingsVsCurrentEur=0,
+                co2Impact="Neutral",
+                co2ImpactKg=0.0,
+                tradeoff="No change to cost or emissions",
+                isRecommended=s.get("is_recommended", False),
+                action=None,
+                deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
+                deltaTimeVsRecommendedMin=s.get("delta_time_min", 0),
+                deltaCo2VsRecommendedKg=s.get("delta_co2_kg", 0),
+            ))
+            continue
+
+        # Build action from diff vs current portfolio
+        added = ids - current_ids
+        removed = current_ids - ids
+
+        added_names = [catalog_by_id[sid]["product"] for sid in sorted(added) if sid in catalog_by_id]
+        removed_names = [catalog_by_id[sid]["product"] for sid in sorted(removed) if sid in catalog_by_id]
+
+        if added_names and removed_names:
+            action_verb = "Switch to"
+            action_title = f"Replace {', '.join(removed_names)} with {', '.join(added_names)}"
+            name = f"Switch to {s['label']}"
+            consequence = (
+                f"Your {', '.join(removed_names)} will be cancelled and "
+                f"{', '.join(added_names)} will start in its place."
+            )
+        elif added_names:
+            action_verb = "Add"
+            action_title = f"Add {', '.join(added_names)}"
+            name = f"Add {s['label']}"
+            consequence = f"{', '.join(added_names)} will be added to your portfolio."
+        elif removed_names:
+            action_verb = "Cancel"
+            action_title = f"Cancel {', '.join(removed_names)}"
+            name = f"Cancel {', '.join(removed_names)}"
+            consequence = f"{', '.join(removed_names)} will be cancelled."
+        else:
+            action_title = s["label"]
+            name = s["label"]
+            consequence = "No change."
+
+        # Generate tradeoff string from deltas
+        d_cost = s.get("delta_cost_eur", 0)
+        d_time = s.get("delta_time_min", 0)
+        tradeoff_parts = []
+        if abs(d_cost) >= 1:
+            if d_cost > 0:
+                tradeoff_parts.append(f"€{round(d_cost)} more per year")
+            else:
+                tradeoff_parts.append(f"€{round(abs(d_cost))} cheaper per year")
+        if abs(d_time) >= 10:
+            if d_time > 0:
+                tradeoff_parts.append(f"+{round(d_time)} min travel time per year")
+            else:
+                tradeoff_parts.append(f"{round(d_time)} min travel time per year")
+        tradeoff = "; ".join(tradeoff_parts) if tradeoff_parts else "Similar cost and travel time"
+
+        # CO2 impact vs baseline (positive = saves CO2)
+        co2_impact_kg = round((baseline_co2 or 0) - s["total_annual_co2_kg"], 1) if baseline_co2 else 0
+
+        slug = "_".join(s["subscription_ids"]) if s["subscription_ids"] else "none"
+
+        alts.append(Alternative(
+            id=slug,
+            name=name,
+            annualCostEur=s["total_annual_cost_eur"],
+            savingsVsCurrentEur=round(keep_cost - s["total_annual_cost_eur"], 2),
+            co2ImpactKg=co2_impact_kg,
+            co2Impact=f"{abs(round(co2_impact_kg))} kg CO₂/year" if co2_impact_kg != 0 else "Neutral",
+            tradeoff=tradeoff,
+            isRecommended=s.get("is_recommended", False),
+            action=ProposedAction(
+                title=action_title,
+                description=f"{action_title}. This changes your mobility portfolio.",
+                consequence=consequence,
+            ),
+            deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
+            deltaTimeVsRecommendedMin=s.get("delta_time_min", 0),
+            deltaCo2VsRecommendedKg=s.get("delta_co2_kg", 0),
+        ))
+
+    # Deterministic "hold pending decision" row — detect_pending_portfolio_decision() is a
+    # strict gate that only fires for a genuine, near-term relocation/work-pattern change
+    # (see its docstring in tools.py), so this is a no-op for every persona without one. When
+    # it does fire, the row is added here as a candidate but NOT marked recommended yet —
+    # _enforce_hold_when_decision_pending() (called by /api/analyze after this function
+    # returns) is what promotes it over whatever scored best, same as it already does on the
+    # LLM-extraction fallback path. Cost is pinned to keep_cost (same convention as "Keep
+    # current setup") so Recommendation's deliberate-hold validator exception accepts it.
+    decision = detect_pending_portfolio_decision()
+    if decision["exists"]:
+        alts.append(Alternative(
+            id="hold",
+            name="Hold pending decision",
+            annualCostEur=keep_cost,
+            savingsVsCurrentEur=0,
+            co2Impact="Neutral",
+            co2ImpactKg=0.0,
+            tradeoff=decision["reason"],
+            isRecommended=False,
+            action=None,
+        ))
+
+    # Ensure exactly one recommended and one keep row
+    has_recommended = any(a.isRecommended for a in alts)
+    has_keep = any(a.action is None for a in alts)
+
+    if not has_recommended and alts:
+        alts[0].isRecommended = True
+    if not has_keep:
+        alts.append(Alternative(
+            id="keep",
+            name="Keep current setup",
+            annualCostEur=keep_cost,
+            savingsVsCurrentEur=0,
+            tradeoff="No change to cost or emissions",
+            isRecommended=False,
+            action=None,
+        ))
+
+    # Sort: recommended first, then by cost, keep-current last
+    def _sort_key(a):
+        if a.isRecommended:
+            return (0,)
+        if a.action is None:
+            return (2,)
+        return (1, a.annualCostEur)
+    alts.sort(key=_sort_key)
+
+    return alts
+
+
+_VERDICT_SYSTEM_PROMPT = """
+Extract ONLY the qualitative summary from this mobility advisor report.
+Output valid JSON — no markdown fences.
+
+{
+  "verdict": "<concise 8-10 word headline>",
+  "confidence": "<high | medium | low>",
+  "summaryText": "<1-2 sentences>",
+  "reasoning": ["<bullet 1>", "<bullet 2>", ...],
+  "assumptions": ["<assumption 1>", ...]
+}
+
+Rules:
+- verdict: summarize the recommended action and its key benefit
+- confidence: high if cost gap is clear, medium if borderline, low if uncertain
+- summaryText: the recommended option, how much it saves, and key tradeoff
+- reasoning: 2-4 bullets explaining why this portfolio wins
+- assumptions: key model assumptions (Sparpreis pricing, trip frequencies, etc.)
+""".strip()
+
+
+async def _extract_verdict(report_text: str) -> dict:
+    """Extract only qualitative fields from the communicator's text output."""
+    response = await litellm.acompletion(
+        model=_MODEL_ID,
+        messages=[
+            {"role": "system", "content": _VERDICT_SYSTEM_PROMPT},
+            {"role": "user", "content": report_text},
+        ],
+        temperature=0.0,
+    )
+    text = response.choices[0].message.content.strip()
+    if text.startswith("```"):
+        parts = text.split("```")
+        text = parts[1] if len(parts) > 1 else text
+        if text.startswith("json"):
+            text = text[4:].lstrip("\n")
+    return json.loads(text)
 
 
 async def _extract_recommendation_json(report_text: str) -> Recommendation:
@@ -657,7 +880,40 @@ async def analyze(req: AnalyzeRequest):
         ) from exc
 
     try:
-        rec = await _extract_recommendation_json(report_text)
+        det_alts = _build_alternatives_from_optimization()
+        if det_alts is not None:
+            verdict = await _extract_verdict(report_text)
+            rec_alt = next((a for a in det_alts if a.isRecommended), det_alts[0])
+            saving = rec_alt.savingsVsCurrentEur
+            metrics = [
+                MetricDelta(
+                    value=abs(round(saving)),
+                    unit="€/year",
+                    direction="save" if saving > 0 else ("extra_cost" if saving < 0 else "neutral"),
+                    label="Potential saving" if saving > 0 else ("Extra cost" if saving < 0 else "No change"),
+                ),
+            ]
+            if rec_alt.co2ImpactKg != 0:
+                metrics.append(MetricDelta(
+                    value=abs(round(rec_alt.co2ImpactKg, 1)),
+                    unit="kg CO2/year",
+                    direction="reduce" if rec_alt.co2ImpactKg > 0 else "increase",
+                    label="CO₂ reduction" if rec_alt.co2ImpactKg > 0 else "CO₂ increase",
+                ))
+            rec = Recommendation(
+                verdict=verdict.get("verdict", rec_alt.name),
+                confidence=verdict.get("confidence", "medium"),
+                summaryText=verdict.get("summaryText", ""),
+                metrics=metrics,
+                reasoning=verdict.get("reasoning", []),
+                assumptions=verdict.get("assumptions", []),
+                alternatives=det_alts,
+            )
+            rec = _normalize_keep_current_setup(rec)
+            rec = _enforce_hold_when_decision_pending(rec)
+            rec = _clamp_actionable_alternatives(rec)
+        else:
+            rec = await _extract_recommendation_json(report_text)
     except Exception as exc:
         raise HTTPException(
             status_code=500, detail=f"JSON extraction failed: {exc}"
@@ -761,7 +1017,7 @@ async def execute(req: ExecuteRequest):
     # invertible on its own). Persisted server-side on the history entry below, in this same request.
     prev_path = _DATA / "current_subscriptions.json"
     previous_subscriptions = (
-        CurrentSubscriptions.model_validate(json.loads(prev_path.read_text())).model_dump()
+        CurrentSubscriptions.model_validate(json.loads(prev_path.read_text(encoding="utf-8"))).model_dump()
         if prev_path.exists()
         else None
     )

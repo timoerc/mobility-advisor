@@ -19,21 +19,12 @@ optimization_pipeline = SequentialAgent(
         "for any question about whether the overall mobility setup is optimal, or whether "
         "to change/cancel/add/downgrade/upgrade a subscription."
     ),
-    sub_agents=[
-        ParallelAgent(
-            name="analyst_forecaster_parallel",
-            description=(
-                "Runs the Analyst and Forecaster stages concurrently — they are mutually "
-                "independent (Analyst reads travel/subscription/car data, Forecaster reads "
-                "calendar/life-event data; neither reads the other's output) — to cut one "
-                "full LLM round-trip off the pipeline's critical path versus running them "
-                "sequentially."
-            ),
-            sub_agents=[analyst_agent, forecaster_agent],
-        ),
-        optimizer_agent,
-        communicator_agent,
-    ],
+    # Sequential, NOT parallel: unlike the annual pipeline below, the Forecaster here reads
+    # a file the Analyst wrote (merge_projected_trip_sets() combines the Analyst's
+    # _projected_trips_history.json with the Forecaster's own calendar/car-usage trips) —
+    # running the two concurrently would race the Analyst's write against the Forecaster's
+    # read of the same file.
+    sub_agents=[analyst_agent, forecaster_agent, optimizer_agent, communicator_agent],
 )
 
 annual_report_pipeline = SequentialAgent(

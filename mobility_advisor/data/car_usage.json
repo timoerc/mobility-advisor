@@ -1,7 +1,7 @@
 {
-  "owns_car": false,
+  "owns_car": true,
   "mode": "car_private",
-  "type": null,
-  "size": null,
-  "monthly_km_estimate": null
+  "type": "Petrol",
+  "size": "Medium car",
+  "monthly_km_estimate": 600
 }
