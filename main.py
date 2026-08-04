@@ -553,20 +553,42 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
     catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
     catalog_by_id = {o["id"]: o for o in catalog_raw["options"]}
     current_ids = set(opt.get("current_subscription_ids", []))
+    break_even_by_ids = {
+        tuple(sorted(b["subscription_ids"])): b for b in opt.get("break_even", [])
+    }
 
-    # Find the baseline (no subs or current) cost for savingsVsCurrentEur
-    keep_cost = None
-    for s in scenarios:
+    # Search all_ranked (every simulated candidate), not the possibly-truncated `scenarios`
+    # display subset — "No subscriptions" and the current portfolio are always present in
+    # all_ranked (optimize_all_categories() guarantees both), so this should never actually
+    # fall through to the `max(...)` fallback below in practice.
+    all_ranked = opt.get("all_ranked", scenarios)
+
+    # Find the baseline (no subs or current) cost/time/co2 for savingsVsCurrentEur and for
+    # the recommended row's own tradeoff (see below).
+    keep_cost = keep_time = keep_co2 = None
+    for s in all_ranked:
         if s.get("is_current") or (not s["subscription_ids"] and not current_ids):
             keep_cost = s["total_annual_cost_eur"]
+            keep_time = s["total_annual_time_min"]
+            keep_co2 = s["total_annual_co2_kg"]
             break
     if keep_cost is None:
-        keep_cost = max(s["total_annual_cost_eur"] for s in scenarios)
+        # Should not happen — optimize_all_categories() always simulates both the current
+        # portfolio and "No subscriptions". Fall back to the worst candidate rather than
+        # crashing the whole recommendation, but flag it loudly: silently treating the
+        # priciest scenario as "the status quo" would make every savingsVsCurrentEur look
+        # artificially large.
+        print("Warning: _build_alternatives_from_optimization found no current/baseline "
+              "scenario — falling back to the most expensive candidate as the status quo baseline.")
+        worst = max(all_ranked, key=lambda s: s["total_annual_cost_eur"])
+        keep_cost = worst["total_annual_cost_eur"]
+        keep_time = worst["total_annual_time_min"]
+        keep_co2 = worst["total_annual_co2_kg"]
 
     # Find recommended CO2 for computing co2ImpactKg
-    rec_co2 = next((s["total_annual_co2_kg"] for s in scenarios if s.get("is_recommended")), None)
+    rec_co2 = next((s["total_annual_co2_kg"] for s in all_ranked if s.get("is_recommended")), None)
     baseline_co2 = next(
-        (s["total_annual_co2_kg"] for s in scenarios if not s["subscription_ids"]),
+        (s["total_annual_co2_kg"] for s in all_ranked if not s["subscription_ids"]),
         rec_co2,
     )
 
@@ -592,9 +614,20 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             ))
             continue
 
-        # Build action from diff vs current portfolio
-        added = ids - current_ids
-        removed = current_ids - ids
+        # Build action from diff vs current portfolio. Free tiers (Enterprise Silver, Miles
+        # & More, etc. — monthly_cost_eur == 0) are excluded from both sides of the diff:
+        # they're automatic loyalty tiers the optimizer never proposes adding or removing
+        # (see SKIP_IDS in optimize_all_categories()), so surfacing one as "Cancel
+        # Enterprise Silver" alongside a real BahnCard swap is just confusing — there is
+        # nothing to decide about a €0/mo tier the user isn't being asked to give up.
+        added = {
+            sid for sid in (ids - current_ids)
+            if catalog_by_id.get(sid, {}).get("monthly_cost_eur", 0) > 0
+        }
+        removed = {
+            sid for sid in (current_ids - ids)
+            if catalog_by_id.get(sid, {}).get("monthly_cost_eur", 0) > 0
+        }
 
         added_names = [catalog_by_id[sid]["product"] for sid in sorted(added) if sid in catalog_by_id]
         removed_names = [catalog_by_id[sid]["product"] for sid in sorted(removed) if sid in catalog_by_id]
@@ -619,9 +652,21 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             name = s["label"]
             consequence = "No change."
 
-        # Generate tradeoff string from deltas
-        d_cost = s.get("delta_cost_eur", 0)
-        d_time = s.get("delta_time_min", 0)
+        # Generate tradeoff string from deltas. delta_cost_eur/delta_time_min are computed
+        # vs. the RECOMMENDED candidate (see optimize_all_categories()) — for every other
+        # row that's the right comparison ("this costs €X more than the pick"), but for the
+        # recommended row itself those deltas are trivially 0 (it's being compared to
+        # itself), which used to fall through to a meaningless "Similar cost and travel
+        # time" on the one card the user is actually being asked to act on. The recommended
+        # row instead compares against the status quo, so its own card states what the
+        # user is being asked to give up or gain.
+        is_rec_row = s.get("is_recommended", False)
+        if is_rec_row:
+            d_cost = s["total_annual_cost_eur"] - keep_cost
+            d_time = s["total_annual_time_min"] - keep_time if keep_time is not None else 0
+        else:
+            d_cost = s.get("delta_cost_eur", 0)
+            d_time = s.get("delta_time_min", 0)
         tradeoff_parts = []
         if abs(d_cost) >= 1:
             if d_cost > 0:
@@ -633,7 +678,21 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
                 tradeoff_parts.append(f"+{round(d_time)} min travel time per year")
             else:
                 tradeoff_parts.append(f"{round(d_time)} min travel time per year")
-        tradeoff = "; ".join(tradeoff_parts) if tradeoff_parts else "Similar cost and travel time"
+
+        break_even = break_even_by_ids.get(tuple(sorted(s["subscription_ids"])))
+        if break_even is not None:
+            verb = "breaks even" if break_even["breaks_even"] else "runs a net loss"
+            tradeoff_parts.append(
+                f"{verb}: €{break_even['discount_value_eur']:.0f} discount value vs. "
+                f"€{break_even['annual_fee_eur']:.0f} fee"
+            )
+
+        if tradeoff_parts:
+            tradeoff = "; ".join(tradeoff_parts)
+        elif is_rec_row:
+            tradeoff = "Same cost and travel time as your current setup"
+        else:
+            tradeoff = "Similar cost and travel time"
 
         # CO2 impact vs baseline (positive = saves CO2)
         co2_impact_kg = round((baseline_co2 or 0) - s["total_annual_co2_kg"], 1) if baseline_co2 else 0

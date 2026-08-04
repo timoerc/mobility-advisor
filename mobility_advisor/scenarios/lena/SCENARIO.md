@@ -31,7 +31,7 @@ The `travel_history.json` fixture contains intentionally malformed entries — v
 - **current_subscriptions.json** — Valid, simplified stack. Entries carry `billing_cycle` and `next_renewal_date`.
 - **calendar_events_live.json** — Valid, sparse upcoming events, no strong demand signals.
 - **mobility_advisor/static/mobility_catalog.json** — Valid, full catalog (shared across all personas); each option carries `billing_cycle`.
-- **persona.json** — Valid, same as default profile. (Car-usage data lives separately in `car_usage.json`.)
+- **persona.json** — `home_city` is Frankfurt, matching her Frankfurt-origin travel history and Goethe-Universität-centered calendar (both malformed and clean entries alike). (Car-usage data lives separately in `car_usage.json`.)
 
 ---
 
@@ -63,15 +63,23 @@ Analysis is based on the remaining 14 trips (70% of history).
 
 RECOMMENDATION (PARTIAL DATA)
 ==============================
-Based on clean data subset (14 trips):
-  BC50 discounted DB spend: €373.50 over 12 months
-  Implied full-price equivalent: €747
-  Breakeven threshold: €488 — exceeded
-  → BahnCard 50 is justified based on clean data. Recommendation: retain.
+Based on clean data subset (14 trips). Lena holds BahnCard 50 **Young** (€10.17/mo =
+€122.04/yr, the age-eligible tier, not the €244/yr standard adult fee), and all her
+tickets are Sparpreis (`ticket_type` contains "Sparpreis, BahnCard 50"), so the
+applicable discount is BC50's **25% Sparpreis rate**, not its 50% Flexpreis rate:
+  BC50 Young discounted DB spend: €443.00 over 12 months
+  Implied full-price equivalent: €443.00 ÷ 0.75 = €590.67
+  Discount value realized: €590.67 × 0.25 = €147.67
+  BC50 Young breakeven threshold: €122.04 ÷ 0.25 = €488.16 (full-price spend) — exceeded
+  → Net vs. holding nothing: €147.67 − €122.04 = +€25.63/year. BahnCard 50 Young pays for
+    itself on clean data. Recommendation: retain — but note BahnCard 25 Young (€69.96/yr,
+    identical 25% Sparpreis discount) would net +€77.71/year on the same usage, a further
+    €52/year better; a thorough Optimizer should surface the downgrade even though BC50
+    Young itself isn't a net loss.
   → Next renewal: 15 January 2027 (from next_renewal_date in subscription data)
 
-Note: If the 6 flagged entries include significant rail spend, the actual BC50 benefit
-may be higher. Data quality fix recommended before the 2027-01-15 renewal deadline.
+Note: If the 6 flagged entries include significant rail spend, the actual BC50 Young
+benefit may be higher. Data quality fix recommended before the 2027-01-15 renewal deadline.
 ```
 
 ---

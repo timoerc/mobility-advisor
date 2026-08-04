@@ -2,7 +2,7 @@
   "events": [
     {
       "category": "subscription_change",
-      "summary": "Activated Deutschlandticket (HVV) subscription",
+      "summary": "Activated Deutschlandticket (RMV) subscription",
       "event_date": "2023-05-01",
       "signals": [
         "d_ticket_relevance_change"
@@ -12,8 +12,8 @@
     },
     {
       "category": "subscription_change",
-      "summary": "BahnCard 50 will not be renewed and expires on 30 June 2025",
-      "event_date": "2025-06-30",
+      "summary": "BahnCard 50 Young renewed for another 12 months",
+      "event_date": "2026-01-15",
       "signals": [
         "rail_card_relevance_change"
       ],

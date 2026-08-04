@@ -9,7 +9,7 @@
       "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
-        "local_transit_regular"
+        "long_distance_rail_likely"
       ]
     },
     {
@@ -21,7 +21,7 @@
       "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
-        "local_transit_regular"
+        "long_distance_rail_likely"
       ]
     },
     {
@@ -33,7 +33,7 @@
       "description": "Weekly Frankfurt office day (Tues)",
       "location": "Frankfurt",
       "signals": [
-        "local_transit_regular"
+        "long_distance_rail_likely"
       ]
     },
     {
@@ -68,7 +68,7 @@
       "time_end": null,
       "type": "life_event",
       "description": "Job offer decision deadline — possible relocation to Hamburg in September",
-      "location": null,
+      "location": "München",
       "signals": [
         "possible_relocation",
         "work_pattern_change"
@@ -97,7 +97,7 @@
       "description": "Recurring project sync — Frankfurt office",
       "location": "Frankfurt",
       "signals": [
-        "local_transit_regular"
+        "long_distance_rail_likely"
       ]
     },
     {
@@ -109,7 +109,7 @@
       "description": "Client meeting — Frankfurt",
       "location": "Frankfurt",
       "signals": [
-        "local_transit_regular"
+        "long_distance_rail_likely"
       ]
     }
   ]

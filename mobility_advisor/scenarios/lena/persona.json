@@ -14,7 +14,7 @@
       "household_context": "single"
     },
     "location": {
-      "home_city": "Hamburg"
+      "home_city": "Frankfurt"
     },
     "commute": {
       "office_days": [
@@ -40,10 +40,10 @@
       "miles_connected": false,
       "deutschlandticket_connected": true,
       "additional_connections": [
-        "HVV",
+        "RMV",
         "Nextbike"
       ]
     },
-    "notes": "Commute to university by U-Bahn and S-Bahn."
+    "notes": "Frankfurt-based student at Goethe-Universität; commutes locally by U-Bahn and S-Bahn, occasional long-distance rail trips home to Hamburg."
   }
 }

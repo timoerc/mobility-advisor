@@ -1,7 +1,7 @@
 {
   "id": "maja",
   "name": "Maja Hoffmann",
-  "tagline": "Frequent business traveller · BahnCard 50",
+  "tagline": "Occasional long-distance traveller · BahnCard 50",
   "avatar": "MH",
   "avatarBg": "#ec0016",
   "reference_date": "2026-06-15",
@@ -45,6 +45,6 @@
         "FreeNow"
       ]
     },
-    "notes": "Mostly travel Cologne–Frankfurt, sometimes Hamburg."
+    "notes": "Köln-based; occasional long-distance DB trips (Ulm, Freiburg, Karlsruhe), no regular Frankfurt commute."
   }
 }

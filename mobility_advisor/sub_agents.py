@@ -333,6 +333,14 @@ scenarios. Include all fields: label, subscription_ids, score, total_annual_cost
 total_annual_time_min, total_annual_co2_kg, delta_cost_eur, delta_time_min, delta_co2_kg,
 is_recommended, is_current.
 
+Step 3 — also output the result's break_even list verbatim (one entry per single rail
+subscription candidate — a BahnCard tier or Deutschlandticket alone): label, annual_fee_eur,
+discount_value_eur, net_eur, breaks_even. This is the forward-looking answer to "does this
+card pay for itself" — annual_fee_eur is what the card costs, discount_value_eur is how much
+cheaper the projected year's rail trips become by holding it, and net_eur is the difference
+(negative means the card is a net loss at this usage level, regardless of how it ranks
+against other candidates).
+
 Do not invent figures. Do not add commentary or questions. Do not mention holding or
 deferring a decision — a pending-life-decision "Hold" candidate, when applicable, is
 added deterministically by the API layer after this pipeline runs, not by you.
@@ -377,7 +385,12 @@ Output exactly this structure:
 **Reasoning:**
 - [bullet 1: why the recommended portfolio wins]
 - [bullet 2: key tradeoff acknowledged]
-- [bullet 3: optional — continuity with a past review (per CONTINUITY above), or a
+- [bullet 3: BREAK-EVEN — if the recommended or currently-held subscription appears in the
+  Optimizer's break_even list, state its discount_value_eur vs. annual_fee_eur and whether
+  it breaks even (net_eur >= 0) or runs a net loss. This is the concrete "does this
+  subscription pay for itself" answer — use it instead of a vague "similar cost" framing
+  whenever a break_even entry is available for the subscription in question.
+- [bullet 4: optional — continuity with a past review (per CONTINUITY above), or a
   cross-mode insight if interesting]
 
 **Assumptions:**
