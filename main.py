@@ -33,6 +33,7 @@ from mobility_advisor.models import (
     AnalysisRunResult,
     CarUsage,
     CurrentSubscriptions,
+    DeltaVsCurrent,
     MetricDelta,
     ProposedAction,
     Recommendation,
@@ -468,11 +469,33 @@ def _clamp_actionable_alternatives(
     return rec
 
 
-_CO2_METHODOLOGY_ASSUMPTION = (
-    "CO2 impact is 0 for any change that only adjusts price or tier on a mode you already "
-    "use (e.g. BahnCard 50 → BahnCard 25) — it only changes when an action adds or removes "
-    "your only means of accessing a transport mode, such as a car-sharing membership."
-)
+def _co2_methodology_assumption(weights: dict | None) -> str:
+    """A subscription changes what each transport mode costs you; projected usage of each
+    mode shifts in response (a logit mode share over generalized cost, not an all-or-
+    nothing pick — see _mode_shares() in tools.py), and CO2 and travel time follow from
+    that shift. This replaces the old "CO2 is 0 unless a mode becomes newly (un)available"
+    methodology, which was only true because mode choice used to ignore price entirely.
+    """
+    from mobility_advisor.tools import _generalized_cost_rates
+
+    value_of_time, co2_price = _generalized_cost_rates(weights)
+    return (
+        "A subscription changes what each transport mode costs you; projected mode usage "
+        "shifts in response (a gradual mode-share shift, not a hard switch), and travel "
+        f"time and CO2 follow. For this persona, time is valued at €{value_of_time:.2f}/hour "
+        f"and CO2 at €{co2_price:.3f}/kg when weighing mode choice, derived from their "
+        "stated cost/time/sustainability priorities."
+    )
+
+
+def _load_optimization_weights() -> dict | None:
+    """The flat cost_weight/time_weight/sustainability_weight dict optimize_all_categories()
+    persisted for this run, or None if no deterministic run has happened yet (LLM-extraction
+    fallback path)."""
+    opt_path = _DATA / "_optimization_results.json"
+    if not opt_path.exists():
+        return None
+    return json.loads(opt_path.read_text(encoding="utf-8")).get("weights")
 
 
 def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
@@ -499,8 +522,9 @@ def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
         if alt.action is None:
             alt.co2Impact = "Neutral"
             alt.co2ImpactKg = 0.0
-    if _CO2_METHODOLOGY_ASSUMPTION not in rec.assumptions:
-        rec.assumptions.append(_CO2_METHODOLOGY_ASSUMPTION)
+    assumption = _co2_methodology_assumption(_load_optimization_weights())
+    if assumption not in rec.assumptions:
+        rec.assumptions.append(assumption)
     return rec
 
 
@@ -585,13 +609,6 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         keep_time = worst["total_annual_time_min"]
         keep_co2 = worst["total_annual_co2_kg"]
 
-    # Find recommended CO2 for computing co2ImpactKg
-    rec_co2 = next((s["total_annual_co2_kg"] for s in all_ranked if s.get("is_recommended")), None)
-    baseline_co2 = next(
-        (s["total_annual_co2_kg"] for s in all_ranked if not s["subscription_ids"]),
-        rec_co2,
-    )
-
     alts: list[Alternative] = []
     for s in scenarios:
         ids = set(s["subscription_ids"])
@@ -611,6 +628,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
                 deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
                 deltaTimeVsRecommendedMin=s.get("delta_time_min", 0),
                 deltaCo2VsRecommendedKg=s.get("delta_co2_kg", 0),
+                deltaVsCurrent=DeltaVsCurrent(),
             ))
             continue
 
@@ -652,21 +670,12 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             name = s["label"]
             consequence = "No change."
 
-        # Generate tradeoff string from deltas. delta_cost_eur/delta_time_min are computed
-        # vs. the RECOMMENDED candidate (see optimize_all_categories()) — for every other
-        # row that's the right comparison ("this costs €X more than the pick"), but for the
-        # recommended row itself those deltas are trivially 0 (it's being compared to
-        # itself), which used to fall through to a meaningless "Similar cost and travel
-        # time" on the one card the user is actually being asked to act on. The recommended
-        # row instead compares against the status quo, so its own card states what the
-        # user is being asked to give up or gain.
-        is_rec_row = s.get("is_recommended", False)
-        if is_rec_row:
-            d_cost = s["total_annual_cost_eur"] - keep_cost
-            d_time = s["total_annual_time_min"] - keep_time if keep_time is not None else 0
-        else:
-            d_cost = s.get("delta_cost_eur", 0)
-            d_time = s.get("delta_time_min", 0)
+        # Generate tradeoff string from deltas vs. the user's CURRENT setup — every row's
+        # own card states what the user is being asked to give up or gain relative to what
+        # they hold today, the recommended row included.
+        d_cost = s["total_annual_cost_eur"] - keep_cost
+        d_time = s["total_annual_time_min"] - keep_time if keep_time is not None else 0
+        d_co2 = s["total_annual_co2_kg"] - keep_co2 if keep_co2 is not None else 0
         tradeoff_parts = []
         if abs(d_cost) >= 1:
             if d_cost > 0:
@@ -678,6 +687,11 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
                 tradeoff_parts.append(f"+{round(d_time)} min travel time per year")
             else:
                 tradeoff_parts.append(f"{round(d_time)} min travel time per year")
+        if abs(d_co2) >= 1:
+            if d_co2 > 0:
+                tradeoff_parts.append(f"+{round(d_co2)} kg CO₂ per year")
+            else:
+                tradeoff_parts.append(f"{round(d_co2)} kg CO₂ per year")
 
         break_even = break_even_by_ids.get(tuple(sorted(s["subscription_ids"])))
         if break_even is not None:
@@ -689,13 +703,12 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
 
         if tradeoff_parts:
             tradeoff = "; ".join(tradeoff_parts)
-        elif is_rec_row:
-            tradeoff = "Same cost and travel time as your current setup"
         else:
-            tradeoff = "Similar cost and travel time"
+            tradeoff = "Same cost, travel time, and CO₂ as your current setup"
 
-        # CO2 impact vs baseline (positive = saves CO2)
-        co2_impact_kg = round((baseline_co2 or 0) - s["total_annual_co2_kg"], 1) if baseline_co2 else 0
+        # CO2 impact vs. current setup (positive = saves CO2), consistent with
+        # savingsVsCurrentEur's baseline.
+        co2_impact_kg = round(-d_co2, 1)
 
         slug = "_".join(s["subscription_ids"]) if s["subscription_ids"] else "none"
 
@@ -716,6 +729,11 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
             deltaTimeVsRecommendedMin=s.get("delta_time_min", 0),
             deltaCo2VsRecommendedKg=s.get("delta_co2_kg", 0),
+            deltaVsCurrent=DeltaVsCurrent(
+                costEur=round(d_cost, 2),
+                timeMin=round(d_time, 1),
+                co2Kg=round(d_co2, 2),
+            ),
         ))
 
     # Deterministic "hold pending decision" row — detect_pending_portfolio_decision() is a
@@ -738,6 +756,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             tradeoff=decision["reason"],
             isRecommended=False,
             action=None,
+            deltaVsCurrent=DeltaVsCurrent(),
         ))
 
     # Ensure exactly one recommended and one keep row
@@ -755,6 +774,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             tradeoff="No change to cost or emissions",
             isRecommended=False,
             action=None,
+            deltaVsCurrent=DeltaVsCurrent(),
         ))
 
     # Sort: recommended first, then by cost, keep-current last
@@ -832,6 +852,131 @@ async def _extract_recommendation_json(report_text: str) -> Recommendation:
     return _clamp_actionable_alternatives(recommendation)
 
 
+def _load_optimization_context() -> tuple[float | None, float | None, float | None, dict | None]:
+    """(keep_cost, keep_time, keep_co2, weights) for the current run's status-quo baseline
+    and persona priority weights, or all-None if no deterministic optimization has run yet."""
+    opt_path = _DATA / "_optimization_results.json"
+    if not opt_path.exists():
+        return None, None, None, None
+    opt = json.loads(opt_path.read_text(encoding="utf-8"))
+    weights = opt.get("weights")
+    all_ranked = opt.get("all_ranked", opt.get("scenarios", []))
+    current_ids = set(opt.get("current_subscription_ids", []))
+    for s in all_ranked:
+        if s.get("is_current") or (not s["subscription_ids"] and not current_ids):
+            return (
+                s["total_annual_cost_eur"],
+                s["total_annual_time_min"],
+                s["total_annual_co2_kg"],
+                weights,
+            )
+    return None, None, None, weights
+
+
+_HEADLINE_DROP_THRESHOLDS = {"cost": 1.0, "co2": 1.0, "time": 15.0}
+
+
+def _format_time_headline(abs_time_min: float) -> tuple[float, str]:
+    """Minutes below 90 render as whole minutes; above that, hours to 1 decimal — same
+    breakpoint AlternativeRow uses for the vs-current strip."""
+    if abs_time_min < 90:
+        return round(abs_time_min), "min/year"
+    return round(abs_time_min / 60, 1), "h/year"
+
+
+def _build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> list[MetricDelta]:
+    """Decision-framed headline tiles for when a portfolio-resetting life event is pending:
+    the date the uncertainty resolves, the value being left on the table by holding instead
+    of taking the best deferred alternative, and what kind of decision is pending."""
+    best_deferred = max(
+        (a for a in alts if a.action is not None),
+        key=lambda a: a.savingsVsCurrentEur,
+        default=None,
+    )
+    value_on_hold = best_deferred.savingsVsCurrentEur if best_deferred else 0.0
+    category = decision["events"][0]["category"] if decision.get("events") else "life event"
+    return [
+        MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label="Revisit by"),
+        MetricDelta(
+            value=abs(round(value_on_hold)),
+            unit="€/year",
+            direction="neutral",
+            label="Value on hold",
+        ),
+        MetricDelta(
+            value=category.replace("_", " "), unit="", direction="neutral", label="Decision pending"
+        ),
+    ]
+
+
+def _build_headline_metrics(alts: list[Alternative], decision: dict) -> list[MetricDelta]:
+    """Headline tiles for the top of the recommendation.
+
+    Normal case: up to three tiles built from the recommended alternative's deltaVsCurrent —
+    one per dimension. A dimension whose |delta| is below its drop threshold
+    (_HEADLINE_DROP_THRESHOLDS) is omitted, except cost, which always survives so the row is
+    never empty. Tiles are ordered by strikingness = |delta| / |current total| * the
+    persona's own weight for that dimension, so the most persona-relevant, largest-magnitude
+    change leads.
+
+    Pending-decision case: when decision["exists"], the normal tiles would show a change the
+    Hold recommendation deliberately isn't making (its deltaVsCurrent is all zeros) — build
+    decision-framed tiles instead (see _build_pending_decision_metrics).
+    """
+    if decision["exists"]:
+        return _build_pending_decision_metrics(alts, decision)
+
+    rec_alt = next((a for a in alts if a.isRecommended), alts[0])
+    delta = rec_alt.deltaVsCurrent or DeltaVsCurrent()
+    keep_cost, keep_time, keep_co2, weights = _load_optimization_context()
+    w = weights or {}
+    w_cost = w.get("cost_weight", 0.34)
+    w_time = w.get("time_weight", 0.33)
+    w_co2 = w.get("sustainability_weight", 0.33)
+
+    def strikingness(value: float, total: float | None, weight: float) -> float:
+        if not total:
+            return 0.0
+        return abs(value) / abs(total) * weight
+
+    cost_metric = MetricDelta(
+        value=abs(round(delta.costEur)),
+        unit="€/year",
+        direction="save" if delta.costEur < 0 else ("extra_cost" if delta.costEur > 0 else "neutral"),
+        label="Potential saving" if delta.costEur < 0 else ("Extra cost" if delta.costEur > 0 else "No change"),
+    )
+    co2_metric = MetricDelta(
+        value=abs(round(delta.co2Kg, 1)),
+        unit="kg CO₂/year",
+        direction="reduce" if delta.co2Kg < 0 else ("increase" if delta.co2Kg > 0 else "neutral"),
+        label="CO₂ reduction" if delta.co2Kg < 0 else ("CO₂ increase" if delta.co2Kg > 0 else "No CO₂ change"),
+    )
+    time_value, time_unit = _format_time_headline(abs(delta.timeMin))
+    time_metric = MetricDelta(
+        value=time_value,
+        unit=time_unit,
+        direction="reduce" if delta.timeMin < 0 else ("increase" if delta.timeMin > 0 else "neutral"),
+        label="Time saved" if delta.timeMin < 0 else ("Extra travel time" if delta.timeMin > 0 else "No time change"),
+    )
+
+    ranked = sorted(
+        [
+            ("cost", delta.costEur, strikingness(delta.costEur, keep_cost, w_cost), cost_metric),
+            ("co2", delta.co2Kg, strikingness(delta.co2Kg, keep_co2, w_co2), co2_metric),
+            ("time", delta.timeMin, strikingness(delta.timeMin, keep_time, w_time), time_metric),
+        ],
+        key=lambda c: c[2],
+        reverse=True,
+    )
+
+    metrics = []
+    for dim, value, _score, metric in ranked:
+        if dim != "cost" and abs(value) < _HEADLINE_DROP_THRESHOLDS[dim]:
+            continue
+        metrics.append(metric)
+    return metrics
+
+
 def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     """When a portfolio-resetting life decision is pending, make the deliberate "Hold pending
     decision" alternative the recommended one — deterministically, not at the LLM's discretion.
@@ -866,12 +1011,7 @@ def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     rec.verdict = f"Hold your current setup until the pending decision resolves ({revisit})"
     rec.summaryText = decision["reason"]
     rec.confidence = "low"
-    rec.metrics = [
-        MetricDelta(
-            value=0, unit="€/year", direction="neutral", label="Recommended change right now"
-        ),
-        MetricDelta(value=0, unit="kg CO2", direction="neutral", label="CO2 impact"),
-    ]
+    rec.metrics = _build_pending_decision_metrics(rec.alternatives, decision)
     return rec
 
 
@@ -970,22 +1110,7 @@ async def analyze(req: AnalyzeRequest):
         if det_alts is not None:
             verdict = await _extract_verdict(report_text)
             rec_alt = next((a for a in det_alts if a.isRecommended), det_alts[0])
-            saving = rec_alt.savingsVsCurrentEur
-            metrics = [
-                MetricDelta(
-                    value=abs(round(saving)),
-                    unit="€/year",
-                    direction="save" if saving > 0 else ("extra_cost" if saving < 0 else "neutral"),
-                    label="Potential saving" if saving > 0 else ("Extra cost" if saving < 0 else "No change"),
-                ),
-            ]
-            if rec_alt.co2ImpactKg != 0:
-                metrics.append(MetricDelta(
-                    value=abs(round(rec_alt.co2ImpactKg, 1)),
-                    unit="kg CO2/year",
-                    direction="reduce" if rec_alt.co2ImpactKg > 0 else "increase",
-                    label="CO₂ reduction" if rec_alt.co2ImpactKg > 0 else "CO₂ increase",
-                ))
+            metrics = _build_headline_metrics(det_alts, detect_pending_portfolio_decision())
             rec = Recommendation(
                 verdict=verdict.get("verdict", rec_alt.name),
                 confidence=verdict.get("confidence", "medium"),

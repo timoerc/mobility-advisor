@@ -374,17 +374,32 @@ instead of re-stating the finding as if it were new, e.g. "This is the Nth revie
 <subscription> — you kept it before; here's the updated picture." If the history is empty or
 unrelated to this review's finding, say nothing about it.
 
+REQUIRED OPTION SHAPE — whenever you state the recommended option's numbers (in the Summary
+or Reasoning), give all three dimensions, not cost alone. The Optimizer's output already
+carries total_annual_time_min/total_annual_co2_kg and their deltas verbatim — use them:
+  Annual cost: €3,707 (subs €1,176 + trips €2,531)
+  Saving vs. current: €253/year
+  CO₂ impact: −38 kg CO₂/year
+  Travel time: +2 h 10 min/year
+A recommendation that only ever quotes the € figure is incomplete even if the saving is the
+headline number.
+
 Output exactly this structure:
 
 **Verdict:** [8-12 word headline for the recommended option, e.g. "Switch to BahnCard 25 saves €725 per year annually"]
 
-**Confidence:** [high / medium / low — high if the cost gap is clear, medium if borderline]
+**Confidence:** [high / medium / low — based on how clear-cut the recommended option is once
+cost, travel time, AND CO2 are all considered together; high only when none of the three
+dimensions meaningfully contradicts the verdict, medium if one does, low if the dimensions
+pull in different directions or the numbers are close]
 
-**Summary:** [1-2 sentences summarising the key finding and saving]
+**Summary:** [1-2 sentences summarising the key finding, using the REQUIRED OPTION SHAPE above]
 
 **Reasoning:**
 - [bullet 1: why the recommended portfolio wins]
-- [bullet 2: key tradeoff acknowledged]
+- [bullet 2: TRADE-OFF ACROSS DIMENSIONS — name the trade-off across cost, CO2, and travel
+  time when they disagree, e.g. "cheaper but slower" or "greener but more expensive". If all
+  three point the same direction, say so instead of manufacturing a trade-off.
 - [bullet 3: BREAK-EVEN — if the recommended or currently-held subscription appears in the
   Optimizer's break_even list, state its discount_value_eur vs. annual_fee_eur and whether
   it breaks even (net_eur >= 0) or runs a net loss. This is the concrete "does this

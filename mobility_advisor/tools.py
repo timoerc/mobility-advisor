@@ -2,6 +2,7 @@ import calendar
 import csv
 import json
 import logging
+import math
 import os
 import re
 import tempfile
@@ -1213,43 +1214,59 @@ def apply_subscription_discount(
     return round(best_price, 2)
 
 
-def _normalize_for_selection(values: list[float]) -> list[float]:
-    """Min-max normalize a small set of values to [0, 1], same rule
-    compute_portfolio_score() uses: a dimension with <5% spread is dropped (returns all
-    zeros) rather than letting floating-point noise between near-tied options decide.
+# Value of travel time and CO2, used to express duration and emissions in euros so a
+# subscription's price effect can actually change which mode is economical.
+# Anchors: ~€12/h is a mid-range German value of travel-time savings for non-work travel;
+# €0.20/kg is the UBA climate cost rate (~€200/t CO2). Both are scaled by the persona's
+# own priority weights relative to their cost weight.
+_BASE_VALUE_OF_TIME_EUR_PER_HOUR = 12.0
+_BASE_CO2_PRICE_EUR_PER_KG = 0.20
+_MODE_SHARE_THETA_FRACTION = 0.08
+
+
+def _generalized_cost_rates(weights: dict | None) -> tuple[float, float]:
+    """(value_of_time_eur_per_hour, co2_price_eur_per_kg) for these priority weights.
+
+    Scales the base anchors by how much a persona weighs time/sustainability relative to
+    cost, so a time-obsessed persona's generalized cost reacts more to a slow mode than a
+    cost-obsessed persona's does. weights=None returns (0.0, 0.0) — pure-cost selection,
+    preserving the pre-generalized-cost default.
     """
-    lo, hi = min(values), max(values)
-    if hi == lo:
-        return [0.0] * len(values)
-    spread_pct = (hi - lo) / max(abs(hi), abs(lo), 1)
-    if spread_pct < 0.05:
-        return [0.0] * len(values)
-    return [(v - lo) / (hi - lo) for v in values]
+    if weights is None:
+        return 0.0, 0.0
+    w_cost = max(weights.get("cost_weight", 1.0), 0.05)
+    w_time = weights.get("time_weight", 0.0)
+    w_co2 = weights.get("sustainability_weight", 0.0)
+    value_of_time = _BASE_VALUE_OF_TIME_EUR_PER_HOUR * (w_time / w_cost)
+    co2_price = _BASE_CO2_PRICE_EUR_PER_KG * (w_co2 / w_cost)
+    return value_of_time, co2_price
 
 
-def _select_best_alternative(
+def _mode_shares(
     alts: list,
     portfolio: list[dict],
     fare_class: str,
     frequency_per_year: float,
     weights: dict | None,
-) -> tuple[dict, float]:
-    """Pick the trip alternative minimizing the user's weighted cost/time/CO2 objective,
-    not cost alone. Without this, a persona's time and sustainability priority_weights
-    (used at the portfolio-ranking level by compute_portfolio_score()) never influenced
-    which MODE gets picked for any individual trip — every portfolio ended up with
-    identical total_annual_time_min/total_annual_co2_kg, silently making those two
-    weights inert and routing a cost-only greedy pick (e.g. onto a flight) even for a
-    persona whose stated priority is sustainability or time.
+) -> list[tuple[dict, float, float]]:
+    """Split a trip's frequency across its mode alternatives by a logit mode share over
+    generalized cost, instead of an all-or-nothing pick. Without this, a persona's time
+    and sustainability priority_weights never influenced which MODE gets used for any
+    individual trip — every portfolio ended up with identical total_annual_time_min/
+    total_annual_co2_kg, silently making those two weights inert.
 
-    Each alternative's discounted price, duration, and CO2 are min-max normalized across
-    THIS TRIP's own alternatives only (see _normalize_for_selection) — not globally, since
-    a short regional hop and a transcontinental trip have incomparable absolute numbers —
-    then combined with the same weighted-sum convention compute_portfolio_score() uses at
-    the portfolio level. weights=None (or missing keys) falls back to pure cost-weight=1.0,
-    matching the previous cost-only behavior.
+    Generalized cost per alternative: gc = discounted_price + (duration_min / 60) *
+    value_of_time + co2_kg * co2_price (see _generalized_cost_rates). Share is a softmax
+    over -gc / theta, theta = _MODE_SHARE_THETA_FRACTION * mean(gc), which makes theta
+    scale-free across a 20 km hop and an 800 km trip. min(gc) is subtracted before exp for
+    numerical safety.
 
-    Returns (best_alt_dict, discounted_price_for_best_alt).
+    Shares are used instead of a hard argmin because a hard pick lets a fraction-of-a-euro
+    fare margin swing every trip on a route at once; shares make the response gradual and
+    directly express that holding a subscription shifts how much a mode gets used, not a
+    binary switch of every trip.
+
+    Returns a list of (alt_dict, discounted_price, share) tuples, shares summing to 1.0.
     """
     priced: list[tuple[dict, float]] = []
     for alt in alts:
@@ -1261,31 +1278,56 @@ def _select_best_alternative(
         priced.append((alt_dict, discounted))
 
     if len(priced) == 1:
-        return priced[0]
+        return [(priced[0][0], priced[0][1], 1.0)]
 
-    w = weights or {}
-    w_cost = w.get("cost_weight", 1.0)
-    w_time = w.get("time_weight", 0.0)
-    w_co2 = w.get("sustainability_weight", 0.0)
+    value_of_time, co2_price = _generalized_cost_rates(weights)
+    gcs = [
+        price + (alt["duration_min"] / 60) * value_of_time + alt["co2_kg"] * co2_price
+        for alt, price in priced
+    ]
 
-    norm_cost = _normalize_for_selection([p[1] for p in priced])
-    norm_time = _normalize_for_selection([p[0]["duration_min"] for p in priced])
-    norm_co2 = _normalize_for_selection([p[0]["co2_kg"] for p in priced])
+    mean_gc = sum(gcs) / len(gcs)
+    theta = _MODE_SHARE_THETA_FRACTION * mean_gc
+    if theta <= 0:
+        best_idx = min(range(len(gcs)), key=lambda i: gcs[i])
+        return [
+            (alt, price, 1.0 if i == best_idx else 0.0)
+            for i, (alt, price) in enumerate(priced)
+        ]
 
-    best_idx = min(
-        range(len(priced)),
-        key=lambda i: w_cost * norm_cost[i] + w_time * norm_time[i] + w_co2 * norm_co2[i],
-    )
-    return priced[best_idx]
+    min_gc = min(gcs)
+    weights_exp = [math.exp(-(gc - min_gc) / theta) for gc in gcs]
+    total = sum(weights_exp)
+    shares = [w / total for w in weights_exp]
+
+    return [(alt, price, share) for (alt, price), share in zip(priced, shares)]
+
+
+def _select_best_alternative(
+    alts: list,
+    portfolio: list[dict],
+    fare_class: str,
+    frequency_per_year: float,
+    weights: dict | None,
+) -> tuple[dict, float]:
+    """Thin wrapper over _mode_shares() returning the highest-share (alt, discounted_price)
+    entry. Kept for explainability and any future use; simulate_portfolio() itself
+    accumulates over all shares rather than calling this.
+    """
+    shares = _mode_shares(alts, portfolio, fare_class, frequency_per_year, weights)
+    alt, price, _ = max(shares, key=lambda s: s[2])
+    return alt, price
 
 
 def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None) -> dict:
     """Simulate total annual cost, time, and CO2 for a given subscription portfolio.
 
-    Loads the merged projected trip set, applies subscription discounts per trip,
-    selects each trip's mode by the user's weighted cost/time/CO2 objective (see
-    _select_best_alternative — weights=None means pure cost, same as before this
-    parameter existed), and sums up totals.
+    Loads the merged projected trip set, applies subscription discounts per trip, and
+    splits each trip's frequency across its mode alternatives by a logit mode share over
+    generalized cost (see _mode_shares — weights=None means pure cost, same as before this
+    parameter existed). Per-trip totals are accumulated as share-weighted sums, so a
+    subscription that shifts generalized cost enough to make a mode more attractive shows
+    up as a gradual shift in projected mode usage rather than an all-or-nothing flip.
 
     Args:
         subscription_ids: List of catalog option IDs forming the portfolio
@@ -1295,7 +1337,7 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
 
     Returns a dict with total_subscription_cost_eur, total_trip_cost_eur,
     total_annual_cost_eur, total_annual_time_min, total_annual_co2_kg,
-    and a per-trip breakdown.
+    and a per-trip breakdown (dominant-share selected_mode plus a mode_shares dict).
     """
     merged_path = _DATA / "_projected_trips_merged.json"
     if not merged_path.exists():
@@ -1326,23 +1368,27 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
         if not alts:
             continue
 
-        best_alt, best_cost = _select_best_alternative(
+        shares = _mode_shares(
             alts, portfolio, trip.fare_class, trip.frequency_per_year, weights
         )
 
-        annual_cost = best_cost * trip.frequency_per_year
-        annual_time = best_alt["duration_min"] * trip.frequency_per_year
-        annual_co2 = best_alt["co2_kg"] * trip.frequency_per_year
+        annual_cost = sum(price * share for _, price, share in shares) * trip.frequency_per_year
+        annual_time = sum(alt["duration_min"] * share for alt, _, share in shares) * trip.frequency_per_year
+        annual_co2 = sum(alt["co2_kg"] * share for alt, _, share in shares) * trip.frequency_per_year
 
         total_trip_cost += annual_cost
         total_time += annual_time
         total_co2 += annual_co2
 
+        dominant_alt, dominant_price, _ = max(shares, key=lambda s: s[2])
+        mode_shares = {alt["mode"]: round(share, 4) for alt, _, share in shares}
+
         trip_breakdown.append({
             "route": trip.route,
             "frequency": trip.frequency_per_year,
-            "selected_mode": best_alt["mode"],
-            "price_per_trip": best_cost,
+            "selected_mode": dominant_alt["mode"],
+            "mode_shares": mode_shares,
+            "price_per_trip": dominant_price,
             "annual_cost": round(annual_cost, 2),
             "annual_time_min": round(annual_time, 1),
             "annual_co2_kg": round(annual_co2, 3),
@@ -1411,7 +1457,7 @@ def compute_portfolio_score(
         if hi == lo:
             return [0.0] * len(values)
         spread_pct = (hi - lo) / max(abs(hi), abs(lo), 1)
-        if spread_pct < 0.05:
+        if spread_pct < 0.02:
             return [0.0] * len(values)
         return [(v - lo) / (hi - lo) for v in values]
 

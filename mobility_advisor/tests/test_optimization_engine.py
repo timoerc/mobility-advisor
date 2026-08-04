@@ -115,6 +115,99 @@ def test_compute_portfolio_score_no_valid_results_is_error():
     assert result["status"] == "error"
 
 
+# ── _generalized_cost_rates ────────────────────────────────────────────────────────
+
+
+def test_generalized_cost_rates_scales_with_weights():
+    vot_time_heavy, co2_time_heavy = tools._generalized_cost_rates(
+        {"cost_weight": 0.3, "time_weight": 0.5, "sustainability_weight": 0.2}
+    )
+    vot_cost_heavy, co2_cost_heavy = tools._generalized_cost_rates(
+        {"cost_weight": 0.8, "time_weight": 0.1, "sustainability_weight": 0.1}
+    )
+    assert vot_time_heavy > vot_cost_heavy
+    assert co2_time_heavy > co2_cost_heavy
+
+
+def test_generalized_cost_rates_floors_zero_cost_weight():
+    # A near-zero cost weight must not blow the rates up to absurd values.
+    zero = tools._generalized_cost_rates(
+        {"cost_weight": 0.0, "time_weight": 0.5, "sustainability_weight": 0.5}
+    )
+    floored = tools._generalized_cost_rates(
+        {"cost_weight": 0.05, "time_weight": 0.5, "sustainability_weight": 0.5}
+    )
+    assert zero == floored
+
+
+def test_generalized_cost_rates_none_weights_is_pure_cost():
+    assert tools._generalized_cost_rates(None) == (0.0, 0.0)
+
+
+# ── _mode_shares ────────────────────────────────────────────────────────────────────
+
+_RAIL_REGIONAL_ALT = {
+    "mode": "rail_regional", "distance_km": 30, "duration_min": 45,
+    "co2_kg": 1.5, "estimated_price_eur": 12.0,
+}
+_CAR_ALT = {
+    "mode": "car_share", "distance_km": 30, "duration_min": 35,
+    "co2_kg": 4.5, "estimated_price_eur": 9.0,
+}
+_DTICKET = {"mode": "rail", "benefits": {"unlimited_regional": True, "unlimited_long_distance": False}}
+_DEFAULT_WEIGHTS = {"cost_weight": 0.34, "time_weight": 0.33, "sustainability_weight": 0.33}
+
+
+def test_mode_shares_sums_to_one():
+    shares = tools._mode_shares([_RAIL_REGIONAL_ALT, _CAR_ALT], [], "spar", 100, _DEFAULT_WEIGHTS)
+    assert sum(share for _, _, share in shares) == pytest.approx(1.0)
+
+
+def test_mode_shares_single_alternative_gets_full_share():
+    shares = tools._mode_shares([_RAIL_REGIONAL_ALT], [], "spar", 100, _DEFAULT_WEIGHTS)
+    assert shares == [(_RAIL_REGIONAL_ALT, _RAIL_REGIONAL_ALT["estimated_price_eur"], 1.0)]
+
+
+def test_mode_shares_rail_discount_raises_rail_share_on_rail_eligible_trip():
+    no_sub = {
+        alt["mode"]: share
+        for alt, _, share in tools._mode_shares(
+            [_RAIL_REGIONAL_ALT, _CAR_ALT], [], "spar", 100, _DEFAULT_WEIGHTS
+        )
+    }
+    with_dticket = {
+        alt["mode"]: share
+        for alt, _, share in tools._mode_shares(
+            [_RAIL_REGIONAL_ALT, _CAR_ALT], [_DTICKET], "spar", 100, _DEFAULT_WEIGHTS
+        )
+    }
+    assert with_dticket["rail_regional"] > no_sub["rail_regional"]
+
+
+# ── simulate_portfolio: mode choice must respond to the portfolio ──────────────────
+
+
+def test_simulate_portfolio_time_and_co2_differ_across_portfolios(isolated_main_data_dir):
+    # Regression guard for the bug this change fixes: before generalized cost + mode
+    # shares, every portfolio produced byte-identical total_annual_time_min/
+    # total_annual_co2_kg because mode selection ignored subscription-driven price
+    # changes entirely.
+    trip = {
+        "route": "Home → Office", "origin": "Home", "destination": "Office",
+        "frequency_per_year": 200, "source": "history", "distance_km": 30,
+        "alternatives": [_RAIL_REGIONAL_ALT, _CAR_ALT], "fare_class": "spar",
+    }
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_merged.json", [trip])
+
+    empty = tools.simulate_portfolio([], weights=_DEFAULT_WEIGHTS)
+    with_dticket = tools.simulate_portfolio(["db_deutschlandticket"], weights=_DEFAULT_WEIGHTS)
+
+    assert empty["status"] == "ok"
+    assert with_dticket["status"] == "ok"
+    assert empty["total_annual_time_min"] != with_dticket["total_annual_time_min"]
+    assert empty["total_annual_co2_kg"] != with_dticket["total_annual_co2_kg"]
+
+
 # ── _travel_reduction_factor: damping from a travel_reduction life event ─────────────
 
 

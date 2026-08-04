@@ -1,7 +1,9 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
 
 export type MetricDelta = {
-  value: number;
+  // Usually the numeric delta a tile is built from; a headline tile can instead carry a
+  // date or a word (e.g. a pending-decision tile showing "2026-09-01" or "relocation").
+  value: number | string;
   unit: string;
   direction: "save" | "extra_cost" | "reduce" | "increase" | "neutral";
   label: string;
@@ -11,6 +13,15 @@ export type ProposedAction = {
   title: string;
   description: string;
   consequence: string;
+};
+
+// This alternative's projected impact vs. the user's current portfolio, on all three
+// preference dimensions. Single sign convention: negative = better than current
+// (cheaper / faster / less CO2), so all three fields read the same way.
+export type DeltaVsCurrent = {
+  costEur: number;
+  timeMin: number;
+  co2Kg: number;
 };
 
 export type Alternative = {
@@ -28,6 +39,9 @@ export type Alternative = {
   deltaCostVsRecommendedEur?: number;
   deltaTimeVsRecommendedMin?: number;
   deltaCo2VsRecommendedKg?: number;
+  // Absent on entries seeded before this field existed — the presentation layer falls
+  // back to the legacy savingsVsCurrentEur/co2ImpactKg pair in that case.
+  deltaVsCurrent?: DeltaVsCurrent;
   // null only for the always-present "Keep current setup" row; every other
   // alternative carries the action that gets executed if the user selects it.
   action: ProposedAction | null;

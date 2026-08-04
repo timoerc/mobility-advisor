@@ -284,7 +284,9 @@ class ProjectedTripSet(BaseModel):
 # main.py serializes them directly as the /api/analyze response body.
 
 class MetricDelta(BaseModel):
-    value: float
+    # Usually the numeric delta a tile is built from; a headline tile can instead carry a
+    # date or a word (e.g. a pending-decision tile showing "2026-09-01" or "relocation").
+    value: float | str
     unit: str
     direction: Literal["save", "extra_cost", "reduce", "increase", "neutral"]
     label: str
@@ -294,6 +296,15 @@ class ProposedAction(BaseModel):
     title: str
     description: str
     consequence: str
+
+
+class DeltaVsCurrent(BaseModel):
+    """This alternative's projected impact vs. the user's current portfolio, on all three
+    preference dimensions. Single sign convention across all three: negative = better than
+    current (cheaper / faster / less CO2), so the fields read the same way."""
+    costEur: float = 0.0
+    timeMin: float = 0.0
+    co2Kg: float = 0.0
 
 
 class Alternative(BaseModel):
@@ -311,6 +322,10 @@ class Alternative(BaseModel):
     deltaCostVsRecommendedEur: float = 0.0
     deltaTimeVsRecommendedMin: float = 0.0
     deltaCo2VsRecommendedKg: float = 0.0
+    # Deltas vs. the user's CURRENT setup, on all three dimensions — what the presentation
+    # layer drives its "vs. your current setup" strip from. Optional so seeded
+    # analysis_history.json entries predating this field still validate.
+    deltaVsCurrent: DeltaVsCurrent | None = None
     # None only for the always-present "Keep current setup" row. Every other
     # alternative must carry its own action so it can be executed if the user
     # selects it — see /api/execute in main.py.

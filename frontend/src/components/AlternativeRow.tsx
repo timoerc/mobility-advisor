@@ -10,16 +10,70 @@ type AlternativeRowProps = {
   readOnly?: boolean;
 };
 
-function DeltaBadge({ value, unit, invert }: { value: number; unit: string; invert?: boolean }) {
-  if (Math.abs(value) < 0.5) return null;
-  const rounded = Math.round(value);
-  const isGood = invert ? rounded > 0 : rounded < 0;
-  const isBad = invert ? rounded < 0 : rounded > 0;
-  const color = isGood ? "text-green-700 bg-green-50" : isBad ? "text-red-600 bg-red-50" : "text-gray-500 bg-gray-50";
-  const sign = rounded > 0 ? "+" : "";
+// vs. current setup slots: negative always means better than current (cheaper / greener /
+// faster), so all three read the same way and share one color rule.
+type VsCurrentSlots = {
+  costEur: number;
+  co2Kg: number;
+  timeMin: number | null; // null => omit the slot (legacy history entries with no time data)
+};
+
+function vsCurrentSlots(alt: Alternative): VsCurrentSlots {
+  if (alt.deltaVsCurrent) {
+    return {
+      costEur: alt.deltaVsCurrent.costEur,
+      co2Kg: alt.deltaVsCurrent.co2Kg,
+      timeMin: alt.deltaVsCurrent.timeMin,
+    };
+  }
+  // Legacy fallback for analysis_history.json entries seeded before deltaVsCurrent existed:
+  // savingsVsCurrentEur/co2ImpactKg use the opposite sign convention (positive = better).
+  return {
+    costEur: -alt.savingsVsCurrentEur,
+    co2Kg: -(alt.co2ImpactKg ?? 0),
+    timeMin: null,
+  };
+}
+
+function formatEur(value: number): string {
+  const sign = value < 0 ? "−" : "+";
+  return `${sign}€${Math.round(Math.abs(value))} /yr`;
+}
+
+function formatCo2(value: number): string {
+  const sign = value < 0 ? "−" : "+";
+  return `${sign}${Math.round(Math.abs(value))} kg`;
+}
+
+function formatTime(value: number): string {
+  const sign = value < 0 ? "−" : "+";
+  const absMin = Math.abs(value);
+  if (absMin < 90) return `${sign}${Math.round(absMin)} min`;
+  const hours = Math.floor(absMin / 60);
+  const mins = Math.round(absMin % 60);
+  return `${sign}${hours} h ${mins}`;
+}
+
+function DeltaBadge({
+  value,
+  threshold,
+  format,
+}: {
+  value: number;
+  threshold: number;
+  format: (value: number) => string;
+}) {
+  const isNeutral = Math.abs(value) < threshold;
+  const isGood = !isNeutral && value < 0;
+  const isBad = !isNeutral && value > 0;
+  const color = isGood
+    ? "text-green-700 bg-green-50"
+    : isBad
+      ? "text-red-600 bg-red-50"
+      : "text-gray-500 bg-gray-50";
   return (
     <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${color}`}>
-      {sign}{rounded} {unit}
+      {isNeutral ? "no change" : format(value)}
     </span>
   );
 }
@@ -27,15 +81,7 @@ function DeltaBadge({ value, unit, invert }: { value: number; unit: string; inve
 export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: AlternativeRowProps) {
   const savingsPositive = alt.savingsVsCurrentEur > 0;
   const savingsNeutral = alt.savingsVsCurrentEur === 0;
-  const co2Kg = alt.co2ImpactKg ?? 0;
-  const co2Positive = co2Kg > 0;
-  const co2Negative = co2Kg < 0;
-
-  const hasDelta = !alt.isRecommended && (
-    (alt.deltaCostVsRecommendedEur != null && Math.abs(alt.deltaCostVsRecommendedEur) >= 1) ||
-    (alt.deltaTimeVsRecommendedMin != null && Math.abs(alt.deltaTimeVsRecommendedMin) >= 10) ||
-    (alt.deltaCo2VsRecommendedKg != null && Math.abs(alt.deltaCo2VsRecommendedKg) >= 1)
-  );
+  const slots = vsCurrentSlots(alt);
 
   const borderClass = readOnly
     ? selected
@@ -85,28 +131,27 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
         </div>
       </div>
 
-      {hasDelta && (
-        <div className="flex flex-wrap gap-1.5 mt-0.5">
-          <span className="text-[11px] text-gray-400">vs. recommended:</span>
-          <DeltaBadge value={alt.deltaCostVsRecommendedEur ?? 0} unit="€" />
-          <DeltaBadge value={alt.deltaTimeVsRecommendedMin ?? 0} unit="min" />
-          <DeltaBadge value={alt.deltaCo2VsRecommendedKg ?? 0} unit="kg CO₂" />
+      <div className="mt-0.5">
+        <span className="text-[11px] text-gray-400">vs. your current setup</span>
+        <div className="flex flex-wrap gap-4 mt-1">
+          <div className="flex flex-col gap-0.5 items-start">
+            <DeltaBadge value={slots.costEur} threshold={1} format={formatEur} />
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">cost</span>
+          </div>
+          <div className="flex flex-col gap-0.5 items-start">
+            <DeltaBadge value={slots.co2Kg} threshold={1} format={formatCo2} />
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">CO₂</span>
+          </div>
+          {slots.timeMin !== null && (
+            <div className="flex flex-col gap-0.5 items-start">
+              <DeltaBadge value={slots.timeMin} threshold={15} format={formatTime} />
+              <span className="text-[10px] text-gray-400 uppercase tracking-wide">travel time</span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <p className="text-xs text-gray-500 m-0 leading-relaxed">{alt.tradeoff}</p>
-      {(co2Kg !== 0 || alt.co2Impact) && (
-        <p
-          className={`text-xs font-medium m-0 ${
-            co2Positive ? "text-green-600" : co2Negative ? "text-red-600" : "text-gray-500"
-          }`}
-        >
-          <span className="font-semibold">CO₂ impact: </span>
-          {co2Kg !== 0
-            ? `${co2Positive ? "–" : "+"}${Math.round(Math.abs(co2Kg))} kg CO₂/year`
-            : "Neutral"}
-        </p>
-      )}
     </>
   );
 
