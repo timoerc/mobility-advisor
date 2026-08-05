@@ -1491,9 +1491,10 @@ def compute_portfolio_score(
 
 
 def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
-    """Forward-looking break-even for every single-subscription rail candidate
-    (a BahnCard tier or Deutschlandticket alone — optimize_all_categories()'s "rail"
-    category), against the "no subscriptions" baseline.
+    """Forward-looking break-even for every single-subscription candidate — a BahnCard
+    tier or Deutschlandticket alone (optimize_all_categories()'s "rail" category), or a
+    car-share membership alone ("car_share" category) — against the "no subscriptions"
+    baseline.
 
     This is the forward-looking counterpart to compute_annual_report_stats()'s
     discount_value_eur/net_eur — that function attributes discount value retrospectively
@@ -1501,10 +1502,13 @@ def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
     the already-simulated forward-projected trip set, so it automatically reflects
     calibrated fares, cost-based mode selection, and every projected route (not just
     literal past trips). discount_value_eur is simply how much cheaper the projected
-    year's rail trip costs become with this subscription held vs. not — a definition that
-    works uniformly whether the subscription is a percentage discount card or a flat-fee
-    unlimited pass, unlike the retrospective version which has to special-case each kind
-    (see _rail_coverage_kind()).
+    year's trip costs become with this subscription held vs. not — a definition that
+    works uniformly across rail percentage-discount cards, flat-fee unlimited rail passes,
+    and car-share membership credits/km-discounts alike, unlike the retrospective version
+    which has to special-case each kind (see _rail_coverage_kind()). For a persona with no
+    projected trips in that mode (e.g. no car-share usage), discount_value_eur is
+    correctly 0 — the membership fee is a pure net loss, which is itself the useful
+    finding for a "why would I want this" question.
 
     Requires a "baseline" category entry (the "No subscriptions" candidate) in `entries`;
     returns [] if absent (should not happen — optimize_all_categories() always adds it).
@@ -1516,7 +1520,7 @@ def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
 
     result = []
     for e in entries:
-        if e["category"] != "rail":
+        if e["category"] not in ("rail", "car_share"):
             continue
         annual_fee_eur = e["total_subscription_cost_eur"]
         discount_value_eur = round(baseline_trip_cost - e["total_trip_cost_eur"], 2)
@@ -1764,14 +1768,39 @@ def optimize_all_categories() -> dict:
         e["score"] = rank_map.get(tuple(sorted(e["subscription_ids"])), 999)
     entries.sort(key=lambda e: e["score"])
 
-    # --- Compute deltas vs recommended (#1) ---
+    # --- Compute deltas vs recommended (#1) and vs the user's current setup ---
+    # Two distinct baselines, deliberately kept as separate fields rather than one the
+    # caller has to reinterpret per row: delta_*_eur/min/kg is "this row minus the
+    # recommended row" (zero on the recommended row itself, so it says nothing about how
+    # the recommendation compares to today). delta_*_vs_current_* is "this row minus the
+    # user's current portfolio" (zero on the current row itself) — this is the one to use
+    # for "vs. your current setup" language, on every row including the recommended one,
+    # with no sign flip required. Same convention as frontend Alternative.deltaVsCurrent:
+    # negative = better than current (cheaper / faster / less CO2).
     rec = entries[0]
+    current_ref = next(
+        (e for e in entries if tuple(sorted(e["subscription_ids"])) == current_key), None
+    )
     for e in entries:
         e["is_recommended"] = (e is rec)
         e["is_current"] = (tuple(sorted(e["subscription_ids"])) == current_key)
         e["delta_cost_eur"] = round(e["total_annual_cost_eur"] - rec["total_annual_cost_eur"], 2)
         e["delta_time_min"] = round(e["total_annual_time_min"] - rec["total_annual_time_min"], 1)
         e["delta_co2_kg"] = round(e["total_annual_co2_kg"] - rec["total_annual_co2_kg"], 3)
+        if current_ref is not None:
+            e["delta_cost_vs_current_eur"] = round(
+                e["total_annual_cost_eur"] - current_ref["total_annual_cost_eur"], 2
+            )
+            e["delta_time_vs_current_min"] = round(
+                e["total_annual_time_min"] - current_ref["total_annual_time_min"], 1
+            )
+            e["delta_co2_vs_current_kg"] = round(
+                e["total_annual_co2_kg"] - current_ref["total_annual_co2_kg"], 3
+            )
+        else:
+            e["delta_cost_vs_current_eur"] = None
+            e["delta_time_vs_current_min"] = None
+            e["delta_co2_vs_current_kg"] = None
 
     # --- Select up to 5 scenarios to show ---
     # Guaranteed slots: recommended (#1) and current portfolio (always shown).
