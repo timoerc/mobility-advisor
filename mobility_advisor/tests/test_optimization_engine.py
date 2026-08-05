@@ -91,14 +91,14 @@ def test_compute_portfolio_score_lower_cost_wins_under_cost_weight():
     assert scored["best"]["subscription_ids"] == ["a"]
 
 
-def test_compute_portfolio_score_skips_normalization_under_small_spread():
-    # Two candidates whose cost differs by well under 5% of the larger value: the
-    # normalization-skip guard should treat them as tied on cost (score contribution 0),
-    # not let a trivial gap dominate the ranking versus a real difference in another
-    # dimension.
+def test_compute_portfolio_score_display_normalization_skips_small_spread():
+    # norm_cost/norm_time/norm_co2 are DISPLAY-only fields (see compute_portfolio_score's
+    # docstring) — they play no role in ranking. _normalize_for_display's 2% dead-band
+    # should still collapse a trivial (<2%) spread to 0 for both candidates here, rather
+    # than stretching a fraction-of-a-percent difference to a full 0..1 range.
     results = [
-        _sim(1000, 500, 100, ["a"]),  # cost differs from b by 1% — below the 5% threshold
-        _sim(1010, 300, 100, ["b"]),  # meaningfully less time
+        _sim(1000, 500, 100, ["a"]),  # cost differs from b by 1% — below the 2% dead-band
+        _sim(1010, 300, 100, ["b"]),
     ]
     scored = tools.compute_portfolio_score(
         results, {"cost_weight": 0.5, "time_weight": 0.5, "sustainability_weight": 0.0}
@@ -106,8 +106,52 @@ def test_compute_portfolio_score_skips_normalization_under_small_spread():
     ranked = {r["subscription_ids"][0]: r for r in scored["ranked_portfolios"]}
     assert ranked["a"]["norm_cost"] == 0.0
     assert ranked["b"]["norm_cost"] == 0.0
-    # Time has a real (>5%) spread, so it still discriminates — b wins on time.
+
+
+def test_compute_portfolio_score_ranks_by_monetized_generalized_cost():
+    # b costs 10 EUR/yr more than a but saves exactly 1 hour/yr; at these weights
+    # (cost_weight == time_weight) value_of_time is exactly 12 EUR/hour (see
+    # _generalized_cost_rates), so b's generalized cost is 1010 + 8 = 1018 against a's
+    # 1000 + 20 = 1020 — an exact, precomputable EUR figure, not a set-relative 0..1 score.
+    # This is the replacement for the old min-max-normalized ranking (see git history) —
+    # the point of this test is that the score is a real monetized number, checkable
+    # independent of whatever else happens to be in the candidate set.
+    results = [_sim(1000, 100, 0, ["a"]), _sim(1010, 40, 0, ["b"])]
+    scored = tools.compute_portfolio_score(
+        results, {"cost_weight": 0.5, "time_weight": 0.5, "sustainability_weight": 0.0}
+    )
+    ranked = {r["subscription_ids"][0]: r for r in scored["ranked_portfolios"]}
+    assert ranked["a"]["score"] == pytest.approx(1020.0)
+    assert ranked["b"]["score"] == pytest.approx(1018.0)
     assert scored["best"]["subscription_ids"] == ["b"]
+
+
+def test_compute_portfolio_score_independent_of_irrelevant_alternatives():
+    # Regression guard for the set-relative min-max normalization this replaced: under the
+    # old algorithm, scoring these same two real candidates (numbers drawn from an actual
+    # katrin optimizer run: "BahnCard 50" vs "No subscriptions") alongside an irrelevant,
+    # wildly expensive third candidate ("MILES Black", ~3x priciest option, same time/CO2
+    # as the baseline) flipped a tie between the two real candidates into "No subscriptions"
+    # winning outright — an unrelated candidate that could never itself win changed which
+    # of the other two was better. Monetized generalized cost has no such set-relative
+    # renormalization: each candidate's score depends only on its own totals and the fixed
+    # value_of_time/co2_price rates, so adding or removing an irrelevant candidate must
+    # leave both the winner AND the exact score of every other candidate unchanged.
+    weights = {"cost_weight": 0.3, "time_weight": 0.5, "sustainability_weight": 0.2}
+    low_co2 = _sim(1006, 1308.0, 188.3, ["bc50"])
+    baseline = _sim(1098, 1259.4, 229.3, ["none"])
+    decoy = _sim(3287, 1259.4, 229.3, ["miles_black"])
+
+    without_decoy = tools.compute_portfolio_score([low_co2, baseline], weights)
+    with_decoy = tools.compute_portfolio_score([low_co2, baseline, decoy], weights)
+
+    assert without_decoy["best"]["subscription_ids"] == ["bc50"]
+    assert with_decoy["best"]["subscription_ids"] == ["bc50"]
+
+    scores_without = {r["subscription_ids"][0]: r["score"] for r in without_decoy["ranked_portfolios"]}
+    scores_with = {r["subscription_ids"][0]: r["score"] for r in with_decoy["ranked_portfolios"]}
+    assert scores_without["bc50"] == scores_with["bc50"]
+    assert scores_without["none"] == scores_with["none"]
 
 
 def test_compute_portfolio_score_no_valid_results_is_error():
@@ -379,3 +423,203 @@ def test_clear_optimization_scratch_files_removes_everything(tmp_path, monkeypat
 def test_clear_optimization_scratch_files_is_a_noop_when_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "_DATA", tmp_path)
     main._clear_optimization_scratch_files()  # must not raise when nothing exists yet
+
+
+# ── simulate_portfolio: car-share credit is a portfolio-level budget, not per-trip ─────
+
+
+def test_car_share_credit_never_exceeds_annual_budget_under_heavy_usage(isolated_main_data_dir):
+    # Regression guard for the bug this replaces (see apply_subscription_discount's
+    # docstring): a monthly credit used to be re-granted in full to every trip on a route
+    # occurring under 12x/year, so N low-frequency routes could collectively disburse many
+    # times the actual annual credit budget. 8 distinct routes at 6x/year each (48 trips
+    # total, ~14.43 EUR gross/trip after MILES Gold's 15% km discount = ~693 EUR/yr
+    # realized spend) must never draw down more than the real annual budget
+    # (monthly_credit_eur * 12 = 50 * 12 = 600 EUR), even though realized spend here
+    # exceeds it — the old per-trip re-granting had no such ceiling at all.
+    car_share_alt = {
+        "mode": "car_share", "distance_km": 20, "duration_min": 25,
+        "co2_kg": 3.0, "estimated_price_eur": 15.8,
+    }
+    trips = [
+        {
+            "route": f"Route {i}", "origin": f"O{i}", "destination": f"D{i}",
+            "frequency_per_year": 6, "source": "history", "distance_km": 20,
+            "alternatives": [car_share_alt], "fare_class": "spar",
+        }
+        for i in range(8)
+    ]
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_merged.json", trips)
+
+    sim = tools.simulate_portfolio(["miles_gold"], weights=None)
+    assert sim["status"] == "ok"
+    assert sim["car_share_credit_applied_eur"] == pytest.approx(50.0 * 12)
+
+
+def test_car_share_credit_capped_at_realized_spend_under_light_usage(isolated_main_data_dir):
+    # The other half of the same guard: with realized spend genuinely BELOW the credit
+    # budget, the credit applied must equal realized spend exactly, not the full budget —
+    # a persona who barely uses car-sharing shouldn't have simulate_portfolio() invent
+    # savings beyond what they actually spent.
+    car_share_alt = {
+        "mode": "car_share", "distance_km": 20, "duration_min": 25,
+        "co2_kg": 3.0, "estimated_price_eur": 15.8,
+    }
+    trip = {
+        "route": "Route 0", "origin": "O0", "destination": "D0",
+        "frequency_per_year": 2, "source": "history", "distance_km": 20,
+        "alternatives": [car_share_alt], "fare_class": "spar",
+    }
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_merged.json", [trip])
+
+    sim = tools.simulate_portfolio(["miles_gold"], weights=None)
+    assert sim["status"] == "ok"
+    # 2 trips/yr * (0.79 * 0.85 * 20km + 1.0 unlock) ~= 28.86 EUR/yr realized spend,
+    # nowhere near the 600 EUR/yr budget.
+    gross_per_trip = 0.79 * 0.85 * 20 + 1.0
+    assert sim["car_share_credit_applied_eur"] == pytest.approx(gross_per_trip * 2, abs=0.05)
+    assert sim["car_share_credit_applied_eur"] < 50.0 * 12
+
+
+# ── derive_projected_trips_from_history: local/commute demand aggregation (C3) ─────────
+
+
+def test_local_aggregate_trip_created_for_subthreshold_regional_routes():
+    # katrin-shaped regression: 3 short regional routes each seen only once in the data
+    # window (annual_freq == 1, below the 2/yr recurrence bar) must not be silently
+    # dropped — collectively they ARE the kind of demand a Deutschlandticket prices
+    # against, even though no single one of them recurs often enough to qualify alone.
+    local_routes = [
+        {"distance_km": 40.0, "freq": 1, "ticket_types": ["Deutschland-Ticket"]},
+        {"distance_km": 37.0, "freq": 1, "ticket_types": ["Deutschland-Ticket"]},
+        {"distance_km": 26.0, "freq": 1, "ticket_types": ["Deutschland-Ticket"]},
+    ]
+    trip, warning = tools._build_local_aggregate_trip(
+        local_routes, reduction_factor=1.0, calibration_ratio=1.0, calibration_max_dist=1000.0
+    )
+    assert trip is not None
+    assert trip["frequency_per_year"] == 3
+    assert trip["origin"] == "various"
+    modes = {a["mode"] for a in trip["alternatives"]}
+    assert "rail_regional" in modes
+    assert "aggregated" in warning.lower()
+
+
+def test_local_aggregate_trip_none_when_damped_to_zero():
+    local_routes = [{"distance_km": 40.0, "freq": 1, "ticket_types": [None]}]
+    trip, warning = tools._build_local_aggregate_trip(
+        local_routes, reduction_factor=0.0, calibration_ratio=1.0, calibration_max_dist=1000.0
+    )
+    assert trip is None
+    assert warning == ""
+
+
+def test_commute_aggregate_trip_from_office_days(isolated_data_dir):
+    persona_path = isolated_data_dir / "persona.json"
+    persona = json.loads(persona_path.read_text(encoding="utf-8"))
+    persona["profileData"]["commute"] = {"office_days": ["mon", "tue", "wed", "thu"], "wfh_days": ["fri"]}
+    persona_path.write_text(json.dumps(persona), encoding="utf-8")
+
+    trip, warning = tools._build_commute_aggregate_trip(
+        reduction_factor=1.0, calibration_ratio=1.0, calibration_max_dist=1000.0
+    )
+    assert trip is not None
+    assert trip["frequency_per_year"] == 4 * tools._WORKING_WEEKS_PER_YEAR * 2
+    assert trip["origin"] == "various"
+    assert "rail_regional" in {a["mode"] for a in trip["alternatives"]}
+    assert "office day" in warning.lower()
+
+
+def test_commute_aggregate_trip_none_when_fully_remote(isolated_data_dir):
+    persona_path = isolated_data_dir / "persona.json"
+    persona = json.loads(persona_path.read_text(encoding="utf-8"))
+    persona["profileData"]["commute"] = {"office_days": [], "wfh_days": ["mon", "tue", "wed", "thu", "fri"]}
+    persona_path.write_text(json.dumps(persona), encoding="utf-8")
+
+    trip, warning = tools._build_commute_aggregate_trip(1.0, 1.0, 1000.0)
+    assert trip is None
+    assert warning == ""
+
+
+# ── _rail_fare_calibration_ratio: flat-rate-covered trips must not contaminate it (H2) ──
+
+
+def test_rail_fare_calibration_excludes_flat_rate_and_zero_cost_trips(isolated_data_dir):
+    # A persona whose history mixes real DB Sparpreis fares with Deutschlandticket-covered
+    # regional legs (cost_eur == 0 by construction) must not have those 0-EUR legs drag the
+    # calibration ratio down — they say nothing about what a Sparpreis/Flexpreis BahnCard
+    # fare actually costs, unlike a real (if discounted) paid fare.
+    history = {"trips": [
+        {
+            "date": "2025-01-10", "mode": "rail", "origin": "Köln Hbf", "destination": "Hamburg Hbf",
+            "cost_eur": 100.0, "distance_km": 424, "provider": "Deutsche Bahn",
+            "ticket_type": "Sparpreis, 2. Klasse",
+        },
+        {
+            "date": "2025-01-12", "mode": "rail", "origin": "Hamburg Hbf", "destination": "Köln Hbf",
+            "cost_eur": 95.0, "distance_km": 424, "provider": "Deutsche Bahn",
+            "ticket_type": "Sparpreis, 2. Klasse",
+        },
+        {
+            "date": "2025-02-01", "mode": "rail", "origin": "Köln Hbf", "destination": "Bonn Hbf",
+            "cost_eur": 0.0, "distance_km": 25, "provider": "Deutsche Bahn",
+            "ticket_type": "Deutschland-Ticket",
+        },
+    ]}
+    (isolated_data_dir / "travel_history_raw.json").write_text(json.dumps(history), encoding="utf-8")
+    (isolated_data_dir / "current_subscriptions.json").write_text(
+        json.dumps({"subscriptions": []}), encoding="utf-8"
+    )
+
+    ratio, max_dist, warnings = tools._rail_fare_calibration_ratio()
+
+    expected_synthetic = 2 * tools.estimate_trip_price("rail_intercity", 424)
+    expected_ratio = (100.0 + 95.0) / expected_synthetic
+    assert ratio == pytest.approx(expected_ratio, rel=1e-3)
+    # max_distance_km is derived from the farthest CALIBRATED trip (424km) — the excluded
+    # 25km Deutschlandticket leg must not influence it.
+    assert max_dist == pytest.approx(max(424 * 2.0, 600.0))
+
+
+# ── optimize_all_categories: end-to-end coherence across every persona ─────────────────
+
+_ALL_PERSONAS = ["katrin", "lena", "maja", "sofia", "stefan", "tobias"]
+
+
+@pytest.mark.parametrize("persona", _ALL_PERSONAS)
+def test_optimize_all_categories_produces_a_coherent_ranking(persona, tmp_path, monkeypatch):
+    # End-to-end regression guard, one per persona: the full deterministic pipeline must
+    # produce a valid, internally consistent ranking — not just "runs without crashing".
+    # This is what would have caught the pre-fix "cancel everything, always" failure mode
+    # across every persona at once, and stays a golden-style check against future
+    # objective-function regressions — the recommended candidate's generalized cost
+    # (score) must be <= every other simulated candidate's, by definition of "recommended".
+    for f in (_SCENARIOS / persona).glob("*.json"):
+        shutil.copy(f, tmp_path / f.name)
+    monkeypatch.setattr(tools, "_DATA", tmp_path)
+    # Force the offline geocode fallback — fast and deterministic, no network dependency.
+    # driving_route() (used for car_share/car_rental/car_private alternatives) isn't
+    # covered by the offline geocode wrapper at all — it always hits the real ORS API — so
+    # it's stubbed out directly to fall back to the heuristic distance estimate instantly.
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+
+    tools.derive_projected_trips_from_history()
+    tools.derive_car_usage_trips()
+    tools.merge_projected_trip_sets()
+    result = tools.optimize_all_categories()
+
+    assert result["status"] == "ok"
+    assert result["total_simulated"] > 0
+    assert len(result["scenarios"]) >= 1
+
+    persisted = json.loads((tmp_path / "_optimization_results.json").read_text(encoding="utf-8"))
+    all_ranked = persisted["all_ranked"]
+    recommended = next(e for e in all_ranked if e["is_recommended"])
+    assert all(recommended["score"] <= e["score"] + 1e-6 for e in all_ranked)
+
+    # Every candidate must be internally consistent: total cost is fee + trip cost, exactly.
+    for e in all_ranked:
+        assert e["total_annual_cost_eur"] == pytest.approx(
+            e["total_subscription_cost_eur"] + e["total_trip_cost_eur"], abs=0.05
+        )

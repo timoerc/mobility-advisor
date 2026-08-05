@@ -392,7 +392,12 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
         if mode in ("car_share", "car_rental", "car_private"):
             try:
                 route_result = driving_route(origin, destination)
-                time.sleep(_REQUEST_DELAY)
+                # Only the live-API path has a rate limit to respect (see _cached_geocode's
+                # docstring for the same convention) — sleeping here unconditionally added a
+                # full _REQUEST_DELAY per car-mode alternative even when ORS_API_KEY is unset
+                # and driving_route() never left this process at all.
+                if ORS_API_KEY:
+                    time.sleep(_REQUEST_DELAY)
             except Exception as exc:
                 logger.warning("driving_route failed for %s → %s: %s", origin, destination, exc)
                 route_result = None
@@ -412,11 +417,13 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
             continue
 
         co2_mode = mode
+        rail_trip_type = None
         if mode in ("flight_short_haul", "flight_domestic"):
             co2_mode = "flight"
         elif mode in ("rail_intercity", "rail_regional"):
             co2_mode = "rail"
-        co2 = co2_kg_for_mode(co2_mode, dist_km)
+            rail_trip_type = "Intercity" if mode == "rail_intercity" else "Regional"
+        co2 = co2_kg_for_mode(co2_mode, dist_km, trip_type=rail_trip_type)
         price = estimate_trip_price(mode, dist_km)
 
         alt = RouteAlternative(
@@ -538,9 +545,15 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     an alternative beyond it.
 
     FlixTrain and other non-DB providers are excluded — they are not BahnCard fares (same
-    distinction _rail_coverage_kind() draws for the annual report). Falls back to
+    distinction _rail_coverage_kind() draws for the annual report). Trips already covered
+    by a flat-rate pass (Deutschlandticket, BahnCard 100 — ticket_type names one, or
+    cost_eur is 0) are excluded too: their "fare" is €0 by construction, which has nothing
+    to do with what a Sparpreis/Flexpreis BahnCard trip would have cost, and previously
+    dragged the ratio down (a persona with a few flat-rate-covered regional legs got a
+    systematically cheaper calibrated price on every other route). Falls back to
     (1.0, 0.0, [warning]) — the unscaled synthetic curve, applied nowhere — when fewer
-    than _RAIL_FARE_CALIBRATION_MIN_TRIPS priced DB trips with a usable distance exist.
+    than _RAIL_FARE_CALIBRATION_MIN_TRIPS priced DB Sparpreis/Flexpreis trips with a usable
+    distance exist.
     """
     trips = load_travel_history()["trips"]
 
@@ -570,7 +583,10 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
         dist = t.get("distance_km")
         if cost is None or not dist or dist <= 0:
             continue
-        fare_class = "flex" if "flex" in (t.get("ticket_type") or "").lower() else "spar"
+        ticket_type_lower = (t.get("ticket_type") or "").lower()
+        if cost == 0 or "deutschland-ticket" in ticket_type_lower or "bahncard 100" in ticket_type_lower:
+            continue
+        fare_class = "flex" if "flex" in ticket_type_lower else "spar"
         pct = flex_pct if fare_class == "flex" else spar_pct
         full_price = cost / (1 - pct / 100) if pct else cost
         rail_mode = "rail_regional" if dist <= _RAIL_DISTANCE_THRESHOLD_KM else "rail_intercity"
@@ -668,15 +684,168 @@ def _travel_reduction_factor() -> tuple[float, list[str]]:
     return factor, [warning]
 
 
+def _build_local_aggregate_trip(
+    local_aggregate: list[dict],
+    reduction_factor: float,
+    calibration_ratio: float,
+    calibration_max_dist: float,
+) -> tuple[dict | None, str]:
+    """Build one synthetic "local/regional travel" ProjectedTrip from routes that were each
+    seen too rarely (<2/yr) individually to qualify on their own, following the same
+    origin="various" synthetic-trip convention derive_car_usage_trips() uses.
+
+    Frequency-weights the aggregate distance across the contributing routes, then prices
+    rail_regional/car_share/car_private alternatives directly at that distance — mirroring
+    derive_car_usage_trips()'s per-bucket pricing — rather than trying to average distinct
+    real routes' alternatives together.
+
+    Returns (trip_dict_or_None, warning). trip is None (with an empty warning) if the
+    damped total frequency rounds to 0 — a travel-reduction signal can legitimately zero
+    this out just like it does every other projected route.
+    """
+    total_freq = sum(r["freq"] for r in local_aggregate)
+    avg_dist = round(
+        sum(r["distance_km"] * r["freq"] for r in local_aggregate) / total_freq, 1
+    )
+    ticket_types = [tt for r in local_aggregate for tt in r["ticket_types"]]
+    fare_class = _dominant_fare_class(ticket_types)
+
+    damped_freq = round(total_freq * reduction_factor)
+    if damped_freq < 1:
+        return None, ""
+
+    owns_car = load_car_usage().get("owns_car", False)
+    modes = ["rail_regional", "car_share"] + (["car_private"] if owns_car else [])
+    alternatives: list[dict] = []
+    for mode in modes:
+        co2_mode = "rail" if mode.startswith("rail") else mode
+        rail_trip_type = "Intercity" if mode == "rail_intercity" else "Regional" if mode == "rail_regional" else None
+        co2 = co2_kg_for_mode(co2_mode, avg_dist, trip_type=rail_trip_type)
+        price = estimate_trip_price(mode, avg_dist)
+        if mode in ("rail_intercity", "rail_regional") and avg_dist <= calibration_max_dist:
+            price = round(price * calibration_ratio, 2)
+        dur = estimate_duration_min(mode, avg_dist)
+        alt = RouteAlternative(
+            mode=mode,
+            distance_km=avg_dist,
+            duration_min=round(dur, 1),
+            co2_kg=round(co2, 3),
+            estimated_price_eur=round(price, 2),
+        )
+        alternatives.append(alt.model_dump())
+
+    trip = ProjectedTrip(
+        route=f"Local/regional travel ({len(local_aggregate)} route(s), aggregated)",
+        origin="various",
+        destination="various",
+        frequency_per_year=damped_freq,
+        source="history",
+        category="local_aggregate",
+        distance_km=avg_dist,
+        alternatives=alternatives,
+        fare_class=fare_class,
+    )
+    warning = (
+        f"Aggregated {len(local_aggregate)} regional route(s) each seen under 2x/yr "
+        f"individually ({total_freq}/yr combined, ~{avg_dist}km avg) into one projected "
+        f"local-travel trip, instead of dropping them — this is the demand a "
+        f"Deutschlandticket or regional pass actually prices against."
+    )
+    return trip.model_dump(), warning
+
+
+_TYPICAL_URBAN_COMMUTE_KM = 8.0
+_WORKING_WEEKS_PER_YEAR = 46  # 52 weeks minus ~4 weeks statutory vacation and public holidays
+
+
+def _build_commute_aggregate_trip(
+    reduction_factor: float, calibration_ratio: float, calibration_max_dist: float
+) -> tuple[dict | None, str]:
+    """Synthesize the recurring home-city commute as a projected local-travel trip.
+
+    travel_history_raw.json only ever records inter-city trips — a daily commute within
+    the home city never shows up there at all, so without this a Deutschlandticket (or any
+    other regional pass) has no representable demand to be judged against beyond whatever
+    occasional short inter-city trips history happens to contain (see
+    _build_local_aggregate_trip — a real but usually much smaller signal). persona.json's
+    commute.office_days gives a real per-persona office-day count; the trip distance itself
+    is not in any fixture, so it is approximated at _TYPICAL_URBAN_COMMUTE_KM — the
+    Mobilität in Deutschland (MiD) household travel survey puts the average one-way commute
+    distance for urban regional-transit commuters at roughly 8-10km, rounded down here.
+    frequency_per_year counts one-way legs (there + back per office day), matching the
+    convention derive_projected_trips_from_history already uses for real routes.
+
+    Returns (None, "") if the persona has no office_days at all (fully remote).
+    """
+    persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
+    commute = persona.get("profileData", {}).get("commute", {})
+    office_days = commute.get("office_days", [])
+    if not office_days:
+        return None, ""
+
+    raw_freq = len(office_days) * _WORKING_WEEKS_PER_YEAR * 2  # there + back
+    damped_freq = round(raw_freq * reduction_factor)
+    if damped_freq < 1:
+        return None, ""
+
+    dist = _TYPICAL_URBAN_COMMUTE_KM
+    owns_car = load_car_usage().get("owns_car", False)
+    modes = ["rail_regional", "car_share"] + (["car_private"] if owns_car else [])
+    alternatives: list[dict] = []
+    for mode in modes:
+        co2_mode = "rail" if mode.startswith("rail") else mode
+        rail_trip_type = "Regional" if mode == "rail_regional" else None
+        co2 = co2_kg_for_mode(co2_mode, dist, trip_type=rail_trip_type)
+        price = estimate_trip_price(mode, dist)
+        if mode == "rail_regional" and dist <= calibration_max_dist:
+            price = round(price * calibration_ratio, 2)
+        dur = estimate_duration_min(mode, dist)
+        alt = RouteAlternative(
+            mode=mode,
+            distance_km=dist,
+            duration_min=round(dur, 1),
+            co2_kg=round(co2, 3),
+            estimated_price_eur=round(price, 2),
+        )
+        alternatives.append(alt.model_dump())
+
+    trip = ProjectedTrip(
+        route=f"Home-city commute (~{len(office_days)}x/week office, ~{dist}km one-way)",
+        origin="various",
+        destination="various",
+        frequency_per_year=damped_freq,
+        source="history",
+        category="commute_aggregate",
+        distance_km=dist,
+        alternatives=alternatives,
+        fare_class="spar",
+    )
+    warning = (
+        f"Modelled {len(office_days)} office day(s)/week as a recurring home-city commute "
+        f"at ~{dist}km one-way (typical urban commute distance, not from actual data — "
+        f"travel history only records inter-city trips) — {damped_freq}/yr legs. This is "
+        f"the demand a Deutschlandticket or regional pass is actually priced against."
+    )
+    return trip.model_dump(), warning
+
+
 def derive_projected_trips_from_history() -> dict:
     """Analyze travel history and derive projected recurring routes with annual frequencies.
 
     Groups historical trips by normalized city pair (direction-independent), counts
     occurrences, extrapolates to annual frequency, and computes per-mode alternatives
-    for routes with frequency >= 2/year. Each route's dominant fare class (Sparpreis vs.
-    Flexpreis) is derived from its trips' ticket_type text, and the projected frequency is
-    damped when a near-term travel_reduction life-event signal exists (see
-    _travel_reduction_factor()).
+    for routes with frequency >= 2/year. Routes below that per-route bar are not simply
+    dropped: a regional route (<= _RAIL_DISTANCE_THRESHOLD_KM) seen too rarely on its own
+    to individually qualify is folded into a single synthetic "local/regional travel"
+    aggregate trip (see the aggregation step below) — this is the demand a Deutschlandticket
+    or regional pass actually prices against, and dropping it entirely made every such pass
+    structurally incapable of showing value regardless of how much local travel a persona
+    actually does. A long-distance route seen only once is still dropped — a real one-off
+    trip is not recurring demand a subscription decision should be based on.
+
+    Each route's dominant fare class (Sparpreis vs. Flexpreis) is derived from its trips'
+    ticket_type text, and the projected frequency is damped when a near-term
+    travel_reduction life-event signal exists (see _travel_reduction_factor()).
 
     Writes results to data/_projected_trips_history.json and returns a summary.
     """
@@ -718,6 +887,9 @@ def derive_projected_trips_from_history() -> dict:
 
     projected: list[dict] = []
     warnings: list[str] = list(reduction_warnings) + list(calibration_warnings)
+    # Below-threshold regional routes, collected for the aggregate step below instead of
+    # being individually dropped — see the docstring.
+    local_aggregate: list[dict] = []
 
     for key, info in route_counts.items():
         # Frequency threshold is checked on the raw historical rate — "is this actually a
@@ -725,25 +897,34 @@ def derive_projected_trips_from_history() -> dict:
         # damped-to-near-zero frequency never wrongly excludes a route the history clearly
         # supports.
         annual_freq = round(info["count"] * 12 / data_window_months)
-        if annual_freq < 2:
+        if annual_freq == 0:
             continue
-        annual_freq = round(annual_freq * reduction_factor)
 
         origin = info["origin"]
         dest = info["destination"]
-        fare_class = _dominant_fare_class(info["ticket_types"])
 
         if ORS_API_KEY:
             time.sleep(_REQUEST_DELAY)
         result = compute_route_alternatives(origin, dest)
         if result.get("warnings"):
             warnings.extend(result["warnings"])
+        hav_km = result.get("haversine_km")
+        dist_km = round(hav_km * 1.3, 1) if hav_km else 0.0
 
+        if annual_freq < 2:
+            if dist_km and dist_km <= _RAIL_DISTANCE_THRESHOLD_KM:
+                local_aggregate.append({
+                    "distance_km": dist_km,
+                    "freq": annual_freq,
+                    "ticket_types": info["ticket_types"],
+                })
+            continue
+
+        annual_freq = round(annual_freq * reduction_factor)
+        fare_class = _dominant_fare_class(info["ticket_types"])
         alternatives = _apply_rail_calibration(
             result.get("alternatives", []), calibration_ratio, calibration_max_dist
         )
-        hav_km = result.get("haversine_km")
-        dist_km = hav_km * 1.3 if hav_km else 0.0
 
         trip = ProjectedTrip(
             route=f"{origin} → {dest}",
@@ -751,11 +932,26 @@ def derive_projected_trips_from_history() -> dict:
             destination=dest,
             frequency_per_year=annual_freq,
             source="history",
-            distance_km=round(dist_km, 1),
+            distance_km=dist_km,
             alternatives=alternatives,
             fare_class=fare_class,
         )
         projected.append(trip.model_dump())
+
+    if local_aggregate:
+        agg_trip, agg_warning = _build_local_aggregate_trip(
+            local_aggregate, reduction_factor, calibration_ratio, calibration_max_dist
+        )
+        if agg_trip is not None:
+            projected.append(agg_trip)
+            warnings.append(agg_warning)
+
+    commute_trip, commute_warning = _build_commute_aggregate_trip(
+        reduction_factor, calibration_ratio, calibration_max_dist
+    )
+    if commute_trip is not None:
+        projected.append(commute_trip)
+        warnings.append(commute_warning)
 
     trip_set = ProjectedTripSet(
         trips=projected,
@@ -932,11 +1128,13 @@ def derive_car_usage_trips() -> dict:
             if mode == "car_private" and not owns_car:
                 continue
             co2_mode = mode
+            rail_trip_type = None
             if mode.startswith("flight"):
                 co2_mode = "flight"
-            elif mode.startswith("rail"):
+            elif mode in ("rail_intercity", "rail_regional"):
                 co2_mode = "rail"
-            co2 = co2_kg_for_mode(co2_mode, dist)
+                rail_trip_type = "Intercity" if mode == "rail_intercity" else "Regional"
+            co2 = co2_kg_for_mode(co2_mode, dist, trip_type=rail_trip_type)
             price = estimate_trip_price(mode, dist)
             if mode in ("rail_intercity", "rail_regional") and dist <= calibration_max_dist:
                 price *= calibration_ratio
@@ -1058,9 +1256,26 @@ def merge_projected_trip_sets() -> dict:
             existing_prio = _SOURCE_PRIORITY.get(existing["source"], 0)
             new_prio = _SOURCE_PRIORITY.get(trip["source"], 0)
             if new_prio > existing_prio:
-                warnings.append(
-                    f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
-                )
+                # Calendar wins on priority (fresher/more specific route data), but must
+                # not silently discard a higher, history-corroborated frequency — a route
+                # history shows happening 3x/yr is real recurring demand even when the
+                # calendar (an LLM's read of a handful of events) only inferred 1x/yr for
+                # the same route. Taking the max keeps calendar's route/alternative data
+                # while never losing history's frequency evidence; the reverse
+                # (uncorroborated calendar demand inflating a route beyond what anything
+                # supports) is already bounded below by _UNCORROBORATED_CALENDAR_FREQUENCY_CAP.
+                merged_freq = max(trip["frequency_per_year"], existing["frequency_per_year"])
+                if merged_freq > trip["frequency_per_year"]:
+                    warnings.append(
+                        f"Dedup: {key[0]} ↔ {key[1]} — calendar route data used, but "
+                        f"frequency kept at history's higher {merged_freq}/yr rather than "
+                        f"calendar's {trip['frequency_per_year']}/yr"
+                    )
+                else:
+                    warnings.append(
+                        f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
+                    )
+                trip["frequency_per_year"] = merged_freq
                 _merge_fare_class(trip, existing)
                 deduped[key] = trip
             elif new_prio == existing_prio and trip["frequency_per_year"] > existing["frequency_per_year"]:
@@ -1104,51 +1319,19 @@ def merge_projected_trip_sets() -> dict:
 
 # ── Portfolio simulation (Branch 3) ──────────────────────────────────────────
 
-# Enterprise tiers are automatic based on rental count per year.
-_ENTERPRISE_TIERS = [
-    (24, "enterprise_platinum"),
-    (12, "enterprise_gold"),
-    (6, "enterprise_silver"),
-    (0, "enterprise_plus"),
-]
-
-# Miles & More tiers are automatic based on status miles per year.
-# Rough heuristic: 1 intra-Europe flight ≈ 750 status miles.
-_STATUS_MILES_PER_FLIGHT = 750
-_MM_TIERS = [
-    (600000, "lh_miles_hon_circle"),
-    (100000, "lh_miles_senator"),
-    (35000, "lh_miles_frequent_traveller"),
-    (0, "lh_miles_member"),
-]
-
-
-def _resolve_automatic_tiers(
-    projected_trips: list[dict], catalog: dict[str, dict]
-) -> list[str]:
-    """Determine automatic Enterprise and Miles & More tier IDs from projected trip volumes."""
-    car_rental_trips = sum(
-        t["frequency_per_year"]
-        for t in projected_trips
-        if any(a["mode"] == "car_rental" for a in t.get("alternatives", []))
-    )
-    flight_trips = sum(
-        t["frequency_per_year"]
-        for t in projected_trips
-        if any(a["mode"].startswith("flight") for a in t.get("alternatives", []))
-    )
-
-    auto_ids: list[str] = []
-    for threshold, tier_id in _ENTERPRISE_TIERS:
-        if car_rental_trips >= threshold and tier_id in catalog:
-            auto_ids.append(tier_id)
-            break
-    status_miles = flight_trips * _STATUS_MILES_PER_FLIGHT
-    for threshold, tier_id in _MM_TIERS:
-        if status_miles >= threshold and tier_id in catalog:
-            auto_ids.append(tier_id)
-            break
-    return auto_ids
+# Enterprise (car rental) and Miles & More (flight) loyalty tiers are all €0/mo, automatic
+# perks tied to usage volume rather than something a persona chooses to buy — the catalog
+# still carries them (a persona's current_subscriptions.json can legitimately hold one, and
+# the retrospective annual report attributes value to one already held, see
+# compute_annual_report_stats), but they play no role in the FORWARD optimizer:
+# apply_subscription_discount has no car_rental/flight branch, so they were priced but never
+# actually cheaper than anything, and optimize_all_categories excludes them from the
+# candidate surface entirely (SKIP_IDS) since there is nothing to recommend adding or
+# removing about a free, automatically-assigned tier. A previous _resolve_automatic_tiers()
+# helper computed which tier a projected trip volume would automatically earn, but nothing
+# ever consumed that result (its only caller, load_simulation_candidates(), was itself never
+# registered as a tool for any agent) — both were dead code and have been removed rather
+# than left half-wired.
 
 
 def apply_subscription_discount(
@@ -1157,9 +1340,8 @@ def apply_subscription_discount(
     distance_km: float,
     portfolio: list[dict],
     fare_class: str = "spar",
-    frequency_per_year: float = 1,
 ) -> float:
-    """Apply subscription discounts to a single trip's estimated price.
+    """Apply subscription discounts to a single trip's estimated (marginal) price.
 
     fare_class ("spar" or "flex") selects which catalog discount rate applies to a rail
     trip — discount_sparpreis_pct or discount_flexpreis_pct. These differ per BahnCard
@@ -1169,10 +1351,18 @@ def apply_subscription_discount(
     silently assumed to be Sparpreis — otherwise every BahnCard tier looks identical on
     trips that were never actually priced that way.
 
-    frequency_per_year spreads a car-share subscription's monthly_credit_eur across the
-    number of times per month this specific route actually recurs, so a monthly credit
-    isn't re-granted in full to every individual trip — a route happening 12x/month must
-    split one month's credit across those 12 trips, not claim it 12 times over.
+    Car-share pricing here is the gross per-km/unlock/protection price with NO monthly
+    credit applied — the credit is a portfolio-level annual budget, not a per-trip
+    entitlement, and it is deducted exactly once, at the portfolio level, in
+    simulate_portfolio() against total realized car-share spend across every trip. Pricing
+    it in here per-trip (against a single route's own frequency) let a route occurring
+    fewer than 12x/year claim the FULL monthly credit on every one of its trips — an €600/yr
+    credit budget could be disbursed several times over across a handful of low-frequency
+    routes. This does mean mode-share selection (see _mode_shares) sees the marginal,
+    uncredited car-share price rather than a credit-aware one — a deliberate
+    simplification, since correctly allocating a single shared credit across many
+    competing routes to influence which mode each one picks would require solving one
+    joint allocation across the whole trip set, not pricing routes independently.
 
     Returns the discounted price. The cheapest applicable discount wins.
     """
@@ -1201,14 +1391,9 @@ def apply_subscription_discount(
             disc_km = benefits.get("discount_km_pct", 0)
             unlock = benefits.get("unlock_fee_eur_per_trip", 1.0)
             protection = benefits.get("protection_plus_eur_per_trip", 3.9)
-            credit = benefits.get("monthly_credit_eur", 0)
 
             km_cost = base_km * (1 - disc_km / 100) * distance_km
             trip_cost = km_cost + unlock + protection
-            if credit > 0:
-                trips_per_month = frequency_per_year / 12
-                credit_per_trip = credit / trips_per_month if trips_per_month > 1 else credit
-                trip_cost = max(0, trip_cost - credit_per_trip)
             best_price = min(best_price, round(trip_cost, 2))
 
     return round(best_price, 2)
@@ -1221,6 +1406,19 @@ def apply_subscription_discount(
 # own priority weights relative to their cost weight.
 _BASE_VALUE_OF_TIME_EUR_PER_HOUR = 12.0
 _BASE_CO2_PRICE_EUR_PER_KG = 0.20
+
+# Logit "temperature" for _mode_shares' softmax over generalized cost, as a fraction of the
+# mean generalized cost across a trip's alternatives (see _mode_shares' docstring for the
+# formula). Not fitted against any observed German mode-choice data — no revealed-preference
+# dataset is wired into this project — so treat it as a judgment call, not a calibrated
+# constant, and read it by its effect rather than its value: at 0.08, two alternatives whose
+# generalized cost differs by ~8% of the mean split roughly 70/30; a ~25% gap is needed
+# before the cheaper option takes essentially the whole share (>95%). That is deliberately
+# soft — it's what makes a subscription's effect on mode choice gradual (see _mode_shares'
+# docstring for why a hard argmin was rejected) — rather than a knife-edge switch on a
+# fraction-of-a-euro price change. A lower value sharpens the split toward a hard argmin: at
+# theta->0, this degenerates to the pre-mode-share hard cheapest-alternative pick. A higher
+# value flattens it toward splitting demand near-evenly regardless of cost.
 _MODE_SHARE_THETA_FRACTION = 0.08
 
 
@@ -1266,6 +1464,13 @@ def _mode_shares(
     directly express that holding a subscription shifts how much a mode gets used, not a
     binary switch of every trip.
 
+    frequency_per_year is kept in the signature (this route's own annual frequency, used by
+    callers to annualize the returned per-trip prices) but is no longer forwarded into
+    apply_subscription_discount() — car-share pricing there is now the marginal, uncredited
+    price; the monthly credit is applied once at the portfolio level in simulate_portfolio()
+    against total realized car-share spend, not per route (see apply_subscription_discount's
+    docstring for why).
+
     Returns a list of (alt_dict, discounted_price, share) tuples, shares summing to 1.0.
     """
     priced: list[tuple[dict, float]] = []
@@ -1273,7 +1478,7 @@ def _mode_shares(
         alt_dict = alt if isinstance(alt, dict) else alt.model_dump()
         discounted = apply_subscription_discount(
             alt_dict["mode"], alt_dict["estimated_price_eur"], alt_dict["distance_km"],
-            portfolio, fare_class=fare_class, frequency_per_year=frequency_per_year,
+            portfolio, fare_class=fare_class,
         )
         priced.append((alt_dict, discounted))
 
@@ -1335,9 +1540,20 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
         weights: Optional dict with cost_weight/time_weight/sustainability_weight
             (see compute_portfolio_score). None selects the cheapest mode per trip only.
 
+    A held car-share subscription's monthly_credit_eur is a portfolio-level annual budget
+    (credit * 12), not a per-trip entitlement — it is deducted here exactly once, capped at
+    whatever car-share spend was actually realized across every trip in the projected set,
+    never per route (see apply_subscription_discount's docstring for the bug this replaces:
+    a route occurring under 12x/year used to claim the full monthly credit on every one of
+    its trips, disbursing many times the annual budget). car_share_credit_applied_eur in
+    the return value is that one-time deduction, so total_trip_cost_eur = (sum of
+    trip_breakdown's per-trip annual_cost, which are gross/uncredited for car-share trips)
+    minus car_share_credit_applied_eur — the two won't sum to the same total by design.
+
     Returns a dict with total_subscription_cost_eur, total_trip_cost_eur,
     total_annual_cost_eur, total_annual_time_min, total_annual_co2_kg,
-    and a per-trip breakdown (dominant-share selected_mode plus a mode_shares dict).
+    car_share_credit_applied_eur, and a per-trip breakdown (dominant-share selected_mode
+    plus a mode_shares dict).
     """
     merged_path = _DATA / "_projected_trips_merged.json"
     if not merged_path.exists():
@@ -1361,6 +1577,7 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
     total_trip_cost = 0.0
     total_time = 0.0
     total_co2 = 0.0
+    total_car_share_spend = 0.0
     trip_breakdown: list[dict] = []
 
     for trip in trip_set.trips:
@@ -1375,10 +1592,14 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
         annual_cost = sum(price * share for _, price, share in shares) * trip.frequency_per_year
         annual_time = sum(alt["duration_min"] * share for alt, _, share in shares) * trip.frequency_per_year
         annual_co2 = sum(alt["co2_kg"] * share for alt, _, share in shares) * trip.frequency_per_year
+        annual_car_share_cost = sum(
+            price * share for alt, price, share in shares if alt["mode"] == "car_share"
+        ) * trip.frequency_per_year
 
         total_trip_cost += annual_cost
         total_time += annual_time
         total_co2 += annual_co2
+        total_car_share_spend += annual_car_share_cost
 
         dominant_alt, dominant_price, _ = max(shares, key=lambda s: s[2])
         mode_shares = {alt["mode"]: round(share, 4) for alt, _, share in shares}
@@ -1394,11 +1615,19 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
             "annual_co2_kg": round(annual_co2, 3),
         })
 
+    annual_car_share_credit = sum(
+        opt.get("benefits", {}).get("monthly_credit_eur", 0) * 12
+        for opt in portfolio if opt.get("mode") == "car_share"
+    )
+    car_share_credit_applied = min(annual_car_share_credit, total_car_share_spend)
+    total_trip_cost -= car_share_credit_applied
+
     return {
         "status": "ok",
         "subscription_ids": subscription_ids,
         "total_subscription_cost_eur": round(total_sub_cost, 2),
         "total_trip_cost_eur": round(total_trip_cost, 2),
+        "car_share_credit_applied_eur": round(car_share_credit_applied, 2),
         "total_annual_cost_eur": round(total_sub_cost + total_trip_cost, 2),
         "total_annual_time_min": round(total_time, 1),
         "total_annual_co2_kg": round(total_co2, 3),
@@ -1406,21 +1635,59 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
     }
 
 
+def _normalize_for_display(values: list[float]) -> list[float]:
+    """Min-max normalize a dimension to 0-1 across a candidate set, for DISPLAY only.
+
+    A 2% dead-band collapses a trivial spread to 0 for all candidates, rather than letting
+    a fraction-of-a-percent difference blow up to a full 0..1 range once it's the only
+    variation left. Not used for ranking (see compute_portfolio_score) — set-relative
+    normalization mixes units that aren't comparable (a EUR spread and a minutes spread are
+    not the same "distance"), which is exactly why ranking uses a monetized generalized
+    cost instead. This is kept only so callers can still show "how does this candidate
+    compare on cost alone" as a 0..1 bar.
+    """
+    lo, hi = min(values), max(values)
+    if hi == lo:
+        return [0.0] * len(values)
+    spread_pct = (hi - lo) / max(abs(hi), abs(lo), 1)
+    if spread_pct < 0.02:
+        return [0.0] * len(values)
+    return [(v - lo) / (hi - lo) for v in values]
+
+
 def compute_portfolio_score(
     simulation_results: list[dict],
     weights: dict,
 ) -> dict:
-    """Score and rank multiple portfolio simulations using weighted normalization.
+    """Score and rank multiple portfolio simulations by monetized generalized annual cost.
 
-    Takes simulation results from multiple simulate_portfolio() calls and the
-    user's priority weights. Normalizes each dimension (cost, time, CO2) to 0-1
-    across all candidates, applies weights. Lower score = better.
+    Takes simulation results from multiple simulate_portfolio() calls and the user's
+    priority weights, and ranks candidates on:
+
+        generalized_eur = total_annual_cost_eur
+                         + (total_annual_time_min / 60) * value_of_time
+                         + total_annual_co2_kg * co2_price
+
+    using the same value_of_time/co2_price rates _mode_shares() already uses to pick mode
+    shares (see _generalized_cost_rates) — so the portfolio ranking and the per-trip mode
+    choice share one objective instead of disagreeing about what "better" means. Lower
+    score = better.
+
+    This replaces the previous set-relative min-max normalization, which mixed
+    incommensurable units (a EUR spread and a minutes spread both mapped to 0..1) and broke
+    independence of irrelevant alternatives: adding or removing an irrelevant candidate
+    changed every other candidate's normalized position and could reorder the ranking. A
+    monetized cost has none of that — every candidate is measured against a fixed EUR/hour
+    and EUR/kg rate, not against whatever else happens to be in the candidate set, so
+    dropping or adding a candidate can never change the relative order of the others.
 
     Args:
         simulation_results: List of dicts from simulate_portfolio().
         weights: Dict with cost_weight, time_weight, sustainability_weight (sum to 1).
 
-    Returns a dict with ranked portfolios and their scores.
+    Returns a dict with ranked portfolios and their scores. Each ranked entry also carries
+    norm_cost/norm_time/norm_co2 — set-relative 0..1 positions per dimension, for display
+    only (e.g. a per-dimension bar). They play no role in the ranking itself.
     """
     if not simulation_results:
         return {"status": "error", "error": "no simulation results to score"}
@@ -1448,29 +1715,28 @@ def compute_portfolio_score(
     w_time = weights.get("time_weight", 0.33) if isinstance(weights, dict) else 0.33
     w_co2 = weights.get("sustainability_weight", 0.33) if isinstance(weights, dict) else 0.33
 
+    value_of_time, co2_price = _generalized_cost_rates(
+        {"cost_weight": w_cost, "time_weight": w_time, "sustainability_weight": w_co2}
+    )
+
     costs = [r["total_annual_cost_eur"] for r in valid]
     times = [r["total_annual_time_min"] for r in valid]
     co2s = [r["total_annual_co2_kg"] for r in valid]
-
-    def _normalize(values: list[float]) -> list[float]:
-        lo, hi = min(values), max(values)
-        if hi == lo:
-            return [0.0] * len(values)
-        spread_pct = (hi - lo) / max(abs(hi), abs(lo), 1)
-        if spread_pct < 0.02:
-            return [0.0] * len(values)
-        return [(v - lo) / (hi - lo) for v in values]
-
-    norm_cost = _normalize(costs)
-    norm_time = _normalize(times)
-    norm_co2 = _normalize(co2s)
+    norm_cost = _normalize_for_display(costs)
+    norm_time = _normalize_for_display(times)
+    norm_co2 = _normalize_for_display(co2s)
 
     scored: list[dict] = []
     for i, r in enumerate(valid):
-        score = w_cost * norm_cost[i] + w_time * norm_time[i] + w_co2 * norm_co2[i]
+        generalized_eur = (
+            r["total_annual_cost_eur"]
+            + (r["total_annual_time_min"] / 60) * value_of_time
+            + r["total_annual_co2_kg"] * co2_price
+        )
         scored.append({
             "subscription_ids": r["subscription_ids"],
-            "score": round(score, 4),
+            "score": round(generalized_eur, 2),
+            "generalized_annual_cost_eur": round(generalized_eur, 2),
             "total_annual_cost_eur": r["total_annual_cost_eur"],
             "total_annual_time_min": r["total_annual_time_min"],
             "total_annual_co2_kg": r["total_annual_co2_kg"],
@@ -1484,17 +1750,23 @@ def compute_portfolio_score(
     return {
         "status": "ok",
         "weights": {"cost": w_cost, "time": w_time, "sustainability": w_co2},
+        "value_of_time_eur_per_hour": round(value_of_time, 2),
+        "co2_price_eur_per_kg": round(co2_price, 3),
         "ranked_portfolios": scored,
         "best": scored[0],
         "worst": scored[-1],
     }
 
 
-def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
-    """Forward-looking break-even for every single-subscription candidate — a BahnCard
-    tier or Deutschlandticket alone (optimize_all_categories()'s "rail" category), or a
-    car-share membership alone ("car_share" category) — against the "no subscriptions"
-    baseline.
+def _compute_break_even(entries: list[dict]) -> list[dict]:
+    """Forward-looking break-even for every non-baseline candidate — a single BahnCard tier
+    or Deutschlandticket, a single car-share membership, a BahnCard+Deutschlandticket
+    combo, a rail+car-share combo, or the user's current portfolio — against the "no
+    subscriptions" baseline. Covers every candidate optimize_all_categories() simulates,
+    not just single-subscription rail/car-share picks: a combo's fee and discount value are
+    exactly as answerable a "does this pay for itself" question as a single card's, and
+    restricting break-even to singles meant the current portfolio and every multi-
+    subscription candidate had no break-even line at all.
 
     This is the forward-looking counterpart to compute_annual_report_stats()'s
     discount_value_eur/net_eur — that function attributes discount value retrospectively
@@ -1502,10 +1774,13 @@ def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
     the already-simulated forward-projected trip set, so it automatically reflects
     calibrated fares, cost-based mode selection, and every projected route (not just
     literal past trips). discount_value_eur is simply how much cheaper the projected
-    year's trip costs become with this subscription held vs. not — a definition that
-    works uniformly across rail percentage-discount cards, flat-fee unlimited rail passes,
-    and car-share membership credits/km-discounts alike, unlike the retrospective version
-    which has to special-case each kind (see _rail_coverage_kind()). For a persona with no
+    year's trip costs become with this candidate held vs. holding nothing — a definition
+    that works uniformly across rail percentage-discount cards, flat-fee unlimited rail
+    passes, car-share membership credits/km-discounts, and any combination of them, unlike
+    the retrospective version which has to special-case each kind (see
+    _rail_coverage_kind()). Note this mixes fare-discount value with any mode-share shift
+    the candidate induces (see _mode_shares) — it answers "how much cheaper do my trips get
+    with this", not narrowly "how much discount did I receive". For a persona with no
     projected trips in that mode (e.g. no car-share usage), discount_value_eur is
     correctly 0 — the membership fee is a pure net loss, which is itself the useful
     finding for a "why would I want this" question.
@@ -1520,7 +1795,7 @@ def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
 
     result = []
     for e in entries:
-        if e["category"] not in ("rail", "car_share"):
+        if e["category"] == "baseline":
             continue
         annual_fee_eur = e["total_subscription_cost_eur"]
         discount_value_eur = round(baseline_trip_cost - e["total_trip_cost_eur"], 2)
@@ -1535,77 +1810,6 @@ def _compute_rail_break_even(entries: list[dict]) -> list[dict]:
         })
     return result
 
-
-def load_simulation_candidates() -> dict:
-    """Load catalog options filtered for portfolio simulation.
-
-    Pre-filters the catalog to a manageable set of chooseable subscriptions:
-    1. Age-eligible options only
-    2. Exclude 1st class BahnCards (simplification for v1)
-    3. Exclude automatic tiers (Enterprise, Miles & More) — those are computed from trip volume
-    4. Include only one MILES tier (the most relevant)
-
-    Returns a dict with chooseable options and automatic tier info.
-    """
-    catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
-    catalog_options = catalog_raw["options"]
-    catalog_by_id = {opt["id"]: opt for opt in catalog_options}
-
-    persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
-    age = persona.get("profileData", {}).get("personal", {}).get("age")
-
-    auto_tier_ids = {
-        "enterprise_plus", "enterprise_silver", "enterprise_gold", "enterprise_platinum",
-        "lh_miles_member", "lh_miles_frequent_traveller", "lh_miles_senator", "lh_miles_hon_circle",
-    }
-    first_class_ids = {
-        "db_bc25_1st_annual_standard", "db_bc50_1st_annual_standard",
-        "db_bc100_1st_annual", "db_bc100_2nd_annual",
-    }
-    excluded_no_sub_ids = {"flixbus_payperuse"}
-
-    chooseable: list[dict] = []
-    for opt in catalog_options:
-        if opt["id"] in auto_tier_ids:
-            continue
-        if opt["id"] in first_class_ids:
-            continue
-        if opt["id"] in excluded_no_sub_ids:
-            continue
-
-        elig = opt.get("eligibility", {})
-        if age is not None:
-            min_age = elig.get("min_age")
-            max_age = elig.get("max_age")
-            if min_age is not None and age < min_age:
-                continue
-            if max_age is not None and age > max_age:
-                continue
-
-        chooseable.append(opt)
-
-    merged_path = _DATA / "_projected_trips_merged.json"
-    auto_tiers: list[str] = []
-    if merged_path.exists():
-        merged = json.loads(merged_path.read_text(encoding="utf-8"))
-        trip_set = ProjectedTripSet.model_validate(merged)
-        auto_tiers = _resolve_automatic_tiers(
-            [t.model_dump() for t in trip_set.trips], catalog_by_id
-        )
-
-    return {
-        "status": "ok",
-        "chooseable_options": [
-            {"id": o["id"], "product": o["product"], "mode": o["mode"], "monthly_cost_eur": o["monthly_cost_eur"]}
-            for o in chooseable
-        ],
-        "chooseable_count": len(chooseable),
-        "automatic_tiers": auto_tiers,
-        "excluded_reasons": {
-            "automatic_tiers": list(auto_tier_ids),
-            "first_class": list(first_class_ids),
-        },
-    }
 
 
 def optimize_all_categories() -> dict:
@@ -1665,17 +1869,39 @@ def optimize_all_categories() -> dict:
     dt_opts = [o for o in rail if o.get("benefits", {}).get("unlimited_regional")]
     bc_opts = [o for o in rail if not o.get("benefits", {}).get("unlimited_regional")]
 
-    # --- Build candidate list: (label, category, ids) ---
-    cands: list[tuple[str, str, list[str]]] = []
-    cands.append(("No subscriptions", "baseline", []))
+    # --- Build the full candidate list as the cross product of every rail choice (none, a
+    # single BahnCard/Deutschlandticket, or a BahnCard+Deutschlandticket combo) and every
+    # car-share choice (none, or a single MILES tier) — exhaustive rather than picking one
+    # best-rail/best-car-share pair by raw cost and simulating only that one combo. With
+    # ~10 rail options and ~5 car-share tiers this is at most a few dozen simulate_portfolio()
+    # calls, all cached below, so exhaustive is cheap. This also means every candidate is
+    # judged by the same one ranking pass (compute_portfolio_score on ALL of them) instead
+    # of the combo step separately picking its rail/car-share halves by raw annual cost —
+    # a persona weighting time or CO2 heavily could have its best combo built from
+    # components that aren't individually cheapest, which the old greedy selection could
+    # never construct.
+    rail_choices: list[tuple[str, list[str]]] = [("", [])]
+    rail_choices += [(o["product"], [o["id"]]) for o in rail]
+    rail_choices += [
+        (f"{bc['product']} + Deutschlandticket", [bc["id"], dt["id"]])
+        for bc in bc_opts for dt in dt_opts
+    ]
+    car_share_choices: list[tuple[str, list[str]]] = [("", [])]
+    car_share_choices += [(o["product"], [o["id"]]) for o in miles_opts]
 
-    for o in rail:
-        cands.append((o["product"], "rail", [o["id"]]))
-    for bc in bc_opts:
-        for dt in dt_opts:
-            cands.append((f"{bc['product']} + Deutschlandticket", "rail_combo", [bc["id"], dt["id"]]))
-    for o in miles_opts:
-        cands.append((o["product"], "car_share", [o["id"]]))
+    cands: list[tuple[str, str, list[str]]] = []
+    for rail_label, rail_ids in rail_choices:
+        for cs_label, cs_ids in car_share_choices:
+            ids = rail_ids + cs_ids
+            if not ids:
+                cands.append(("No subscriptions", "baseline", ids))
+            elif rail_ids and cs_ids:
+                cands.append((f"{rail_label} + {cs_label}", "combo", ids))
+            elif rail_ids:
+                cat = "rail_combo" if len(rail_ids) == 2 else "rail"
+                cands.append((rail_label, cat, ids))
+            else:
+                cands.append((cs_label, "car_share", ids))
 
     # --- Simulate all (deduplicate by sorted ids) ---
     sim_cache: dict[tuple, dict] = {}
@@ -1726,37 +1952,6 @@ def optimize_all_categories() -> dict:
 
     if not entries:
         return {"status": "error", "error": "No valid simulations produced"}
-
-    # --- Find best per category, then try best-rail + best-miles combo ---
-    best_rail_entry = min(
-        (e for e in entries if e["category"] in ("rail", "rail_combo")),
-        key=lambda e: e["total_annual_cost_eur"], default=None,
-    )
-    best_miles_entry = min(
-        (e for e in entries if e["category"] == "car_share"),
-        key=lambda e: e["total_annual_cost_eur"], default=None,
-    )
-
-    if best_rail_entry and best_miles_entry:
-        combo_ids = best_rail_entry["subscription_ids"] + best_miles_entry["subscription_ids"]
-        combo_key = tuple(sorted(combo_ids))
-        if combo_key not in seen_keys:
-            seen_keys.add(combo_key)
-            sim = simulate_portfolio(combo_ids, weights)
-            if sim.get("status") == "ok":
-                sim_cache[combo_key] = sim
-                entries.append({
-                    "status": "ok",
-                    "label": f"{best_rail_entry['label']} + {best_miles_entry['label']}",
-                    "category": "combo",
-                    "subscription_ids": combo_ids,
-                    "total_subscription_cost_eur": sim["total_subscription_cost_eur"],
-                    "total_trip_cost_eur": sim["total_trip_cost_eur"],
-                    "total_annual_cost_eur": sim["total_annual_cost_eur"],
-                    "total_annual_time_min": sim["total_annual_time_min"],
-                    "total_annual_co2_kg": sim["total_annual_co2_kg"],
-                    "trip_breakdown": sim["trip_breakdown"],
-                })
 
     # --- Score all ---
     scoring = compute_portfolio_score(entries, weights)
@@ -1857,7 +2052,7 @@ def optimize_all_categories() -> dict:
     def _slim(e):
         return {k: v for k, v in e.items() if k != "trip_breakdown"}
 
-    break_even = _compute_rail_break_even(entries)
+    break_even = _compute_break_even(entries)
 
     output = {
         "status": "ok",

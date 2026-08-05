@@ -22,6 +22,9 @@ _FIXTURE_PATHS = [
     _ROOT / "scenarios" / "maja" / "current_subscriptions.json",
     _ROOT / "scenarios" / "stefan" / "current_subscriptions.json",
     _ROOT / "scenarios" / "lena" / "current_subscriptions.json",
+    _ROOT / "scenarios" / "katrin" / "current_subscriptions.json",
+    _ROOT / "scenarios" / "sofia" / "current_subscriptions.json",
+    _ROOT / "scenarios" / "tobias" / "current_subscriptions.json",
 ]
 
 

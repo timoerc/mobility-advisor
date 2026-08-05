@@ -56,7 +56,10 @@ def test_co2_footprint_includes_all_modes(maja):
 
 def test_rail_vs_car_saving_is_secondary_not_subtracted(maja):
     result = tools.compute_annual_report_stats()
-    assert result["rail_vs_car_saving_kg"] == pytest.approx(365.53)
+    # co2_factors.csv's Rail,Null,Null was corrected from a DEFRA-derived 0.03203 kg/km to
+    # 0.045 (midpoint of the German UBA/TREMOD Fernverkehr/Nahverkehr figures — see
+    # load_co2_lookup's docstring), which this figure is derived from.
+    assert result["rail_vs_car_saving_kg"] == pytest.approx(330.47)
     # The secondary rail-only saving must never be netted against the real total.
     assert result["rail_vs_car_saving_kg"] < result["total_co2_kg"]
 
@@ -102,7 +105,10 @@ def test_bahncard_and_deutschlandticket_trips_dont_overlap(katrin):
 
     assert bc25["has_discount_value"] is True
     assert bc25["trips_attributed"] == 8  # paid long-distance legs only
-    assert bc25["discount_value_eur"] == pytest.approx(217.00)
+    # katrin's fixture Flexpreis fares were repriced to realistic 2nd-class levels
+    # (~€57-131/leg instead of ~€21-32/leg — see travel_history_raw.json), so the discount
+    # value her BC25 actually earns scales up accordingly.
+    assert bc25["discount_value_eur"] == pytest.approx(790.20)
 
     assert dticket["is_paid_subscription"] is True
     assert dticket["has_discount_value"] is False  # flat fee, no per-trip discount

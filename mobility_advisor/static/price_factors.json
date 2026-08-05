@@ -25,9 +25,9 @@
     "notes": "Domestic German flights (shorter, proportionally more expensive). ~€90 at 400km, ~€110 at 600km"
   },
   "car_share": {
-    "base_rate": 0.35,
+    "base_rate": 0.79,
     "exponent": 1.00,
-    "notes": "MILES-style per-km pricing (linear). Includes unlock fee amortized. ~€3.50 at 10km, ~€17.50 at 50km"
+    "notes": "Matches MILES Basis's real per-km rate (mobility_catalog.json base_km_rate_eur), the pay-per-use tier this curve represents as the no-subscription baseline. Previously 0.35 — a rate no real car-sharing service charges, which made every paid MILES tier's per-km discount structurally unable to ever beat the unsubscribed default. ~€7.90 at 10km, ~€39.50 at 50km (before per-trip unlock/protection fees, applied separately in tools.py:apply_subscription_discount)."
   },
   "car_rental": {
     "base_rate": 0.45,

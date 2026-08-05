@@ -693,23 +693,37 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             else:
                 tradeoff_parts.append(f"{round(d_co2)} kg CO₂ per year")
 
-        # Break-even for the subscription(s) actually being added/removed in THIS row — not
-        # for whatever's left over in the resulting portfolio. break_even_by_ids is keyed by
-        # single-subscription candidates (a bare BahnCard tier or Deutschlandticket), so a row
-        # that keys off its own remaining subscription_ids (e.g. "Cancel BahnCard 25" leaves
-        # just the Deutschland-Ticket behind) would silently show the untouched subscription's
-        # break-even instead of the one the row's title/action is actually about.
+        # Break-even for this row's resulting portfolio as a whole, not for its added/removed
+        # subscriptions scored independently. optimize_all_categories() now computes
+        # break-even for every non-baseline candidate it simulates (see _compute_break_even),
+        # not just single-subscription ones, so the row's own subscription_ids usually has a
+        # direct match — showing that one combined figure instead of one line per added/
+        # removed id avoids double-counting: two cards' discount_value_eur are each computed
+        # independently against the "no subscriptions" baseline, so summing both lines (e.g.
+        # for "Add BahnCard 25 + Deutschlandticket") overstates what holding both together
+        # actually saves, since they compete for the same trips. Falls back to the
+        # per-added/removed-id lookup only for a row with no whole-portfolio match (should
+        # not normally happen, since `s` is itself one of optimize_all_categories()'s
+        # simulated candidates).
         break_even_parts = []
-        for sid in sorted(added | removed):
-            break_even = break_even_by_ids.get((sid,))
-            if break_even is None:
-                continue
-            verb = "breaks even" if break_even["breaks_even"] else "runs a net loss"
-            product = catalog_by_id.get(sid, {}).get("product", break_even["label"])
+        row_break_even = break_even_by_ids.get(tuple(sorted(ids)))
+        if row_break_even is not None:
+            verb = "breaks even" if row_break_even["breaks_even"] else "runs a net loss"
             break_even_parts.append(
-                f"{product} {verb}: €{break_even['discount_value_eur']:.0f} discount value vs. "
-                f"€{break_even['annual_fee_eur']:.0f} fee"
+                f"{s['label']} {verb}: €{row_break_even['discount_value_eur']:.0f} discount "
+                f"value vs. €{row_break_even['annual_fee_eur']:.0f} fee"
             )
+        else:
+            for sid in sorted(added | removed):
+                break_even = break_even_by_ids.get((sid,))
+                if break_even is None:
+                    continue
+                verb = "breaks even" if break_even["breaks_even"] else "runs a net loss"
+                product = catalog_by_id.get(sid, {}).get("product", break_even["label"])
+                break_even_parts.append(
+                    f"{product} {verb}: €{break_even['discount_value_eur']:.0f} discount value vs. "
+                    f"€{break_even['annual_fee_eur']:.0f} fee"
+                )
         if break_even_parts:
             tradeoff_parts.append("; ".join(break_even_parts))
 

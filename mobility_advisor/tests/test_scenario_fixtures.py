@@ -20,7 +20,7 @@ import pytest
 from mobility_advisor.tools import _normalize_to_city
 
 _SCENARIOS = Path(__file__).parent.parent / "scenarios"
-_PERSONAS = ["maja", "lena", "stefan"]
+_PERSONAS = ["maja", "lena", "stefan", "katrin", "sofia", "tobias"]
 
 _LONG_DISTANCE_SIGNALS = {
     "long_distance_rail_likely",

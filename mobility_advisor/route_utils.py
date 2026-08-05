@@ -185,7 +185,18 @@ def estimate_duration_min(mode: str, distance_km: float) -> float:
 
 
 def load_co2_lookup() -> dict[tuple[str, str, str], float]:
-    """Load co2_factors.csv into a dict keyed by (mode, type, size) → kg CO2e/km."""
+    """Load co2_factors.csv into a dict keyed by (mode, type, size) → kg CO2e/km.
+
+    Most rows (Car_*, Bus, flight) are UK DEFRA/BEIS-style per-km conversion factors, used
+    as reasonable order-of-magnitude proxies since no German-specific per-vehicle-class
+    breakdown is wired into the fixtures. The two Rail rows are the exception: Rail,
+    Intercity (0.03546) and Rail, Regional (0.054) are set to the German UBA/TREMOD
+    figures for Fernverkehr (~32g/pkm) and Nahverkehr (~54g/pkm) respectively — DEFRA's
+    own "national rail" (~35g) and "light rail and tram" (~29g) figures materially
+    understate German regional rail's per-passenger emissions (more stops, lower average
+    occupancy than long-distance ICE/IC). Rail, Null, Null (0.045) is a simple midpoint of
+    the two, used only where a caller doesn't distinguish intercity from regional.
+    """
     lookup: dict[tuple[str, str, str], float] = {}
     with _CO2_CSV.open(encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -213,10 +224,16 @@ def lookup_co2_emission_kg(
     return round(kg_per_km * distance_km, 3)
 
 
-def co2_kg_for_mode(mode: str, distance_km: float) -> float:
-    """Quick CO2 estimate for a mode using generic (Null,Null) factors."""
+def co2_kg_for_mode(mode: str, distance_km: float, trip_type: str | None = None) -> float:
+    """Quick CO2 estimate for a mode using generic (Null,Null) factors by default.
+
+    trip_type lets a caller that already knows the rail sub-mode ("Intercity" vs
+    "Regional") get the correctly differentiated factor instead of the generic Rail/Null/
+    Null blend — see load_co2_lookup's docstring for why that split matters for German
+    rail specifically. None (the default) preserves the old generic-only behavior.
+    """
     lookup = load_co2_lookup()
-    result = lookup_co2_emission_kg(lookup, mode, distance_km)
+    result = lookup_co2_emission_kg(lookup, mode, distance_km, trip_type=trip_type)
     return result if result is not None else 0.0
 
 

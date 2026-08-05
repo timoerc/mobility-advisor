@@ -74,9 +74,9 @@ Car_Rental,Null,Small Car,0.14322
 Car_Rental,Null,Medium Car,0.17322
 Car_Rental,Null,Large Car,0.22678
 Car_Rental,Null,Null,0.16725
-Rail,Regional,Null,0.0286
+Rail,Regional,Null,0.054
 Rail,Intercity,Null,0.03546
-Rail,Null,Null,0.03203
+Rail,Null,Null,0.045
 Taxi,Null,Null,0.14861
 flight,domestic,Null,0.22928
 flight,short-haul,Null,0.12786

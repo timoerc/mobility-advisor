@@ -28,8 +28,8 @@ Six self-contained fixture sets live under `mobility_advisor/scenarios/`, each i
 
 | Persona | Holds | Tests | Expected result |
 |---|---|---|---|
-| `maja` | BahnCard 50 + Enterprise Silver | Basic over-subscription detection | Recommend cancelling BC50, no hedging |
-| `katrin` | BahnCard 25 + Deutschland-Ticket | Preference-weighting tiebreak on a cost near-wash | Upgrade BC25 → BC50, driven by time preference |
+| `maja` | BahnCard 50 + Enterprise Silver | Basic over-subscription detection | Downgrade BC50 → BC25 (Enterprise Silver is a free automatic tier, untouched either way) |
+| `katrin` | BahnCard 25 + Deutschland-Ticket | Preference-weighting tiebreak on a cost near-wash | Keep BahnCard 25, drop the Deutschland-Ticket (her regional travel doesn't cover its fee) |
 | `sofia` | Deutschland-Ticket + MILES Basis | The "add/upgrade a product" case | Upgrade MILES Basis → Silber, right tier |
 | `tobias` | BahnCard 50 + Deutschland-Ticket | Forward signal overriding a strong historical ROI | Downgrade/cancel BC50 ahead of renewal |
 | `stefan` | Car + BC50 + Deutschland-Ticket + MILES Silber | Hedging under genuine ambiguity (possible relocation) | Conditional recommendation, not a single confident action |
