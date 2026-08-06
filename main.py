@@ -1016,7 +1016,11 @@ def _build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> 
     return [
         MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label="Revisit by"),
         MetricDelta(
-            value=abs(round(value_on_hold)),
+            # max(0, ...), not abs(...) — savingsVsCurrentEur is negative when even the best
+            # deferred alternative is WORSE than the status quo (no candidate improves on
+            # holding), and abs() flipped that into a positive "Value on hold €X" figure,
+            # implying value is being left on the table when there is none.
+            value=max(0, round(value_on_hold)),
             unit="€/year",
             direction="neutral",
             label="Value on hold",

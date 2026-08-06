@@ -528,9 +528,10 @@ def test_car_share_credit_capped_at_realized_spend_under_light_usage(isolated_ma
 
     sim = tools.simulate_portfolio(["miles_gold"], weights=None)
     assert sim["status"] == "ok"
-    # 2 trips/yr * (0.79 * 0.85 * 20km + 1.0 unlock) ~= 28.86 EUR/yr realized spend,
-    # nowhere near the 600 EUR/yr budget.
-    gross_per_trip = 0.79 * 0.85 * 20 + 1.0
+    # 2 trips/yr * (0.79 * 0.85 * 20km [km tariff] + 0.19 * 0.90 * 25min [time tariff,
+    # MILES Gold's 10% discount_time_pct off the base MILES per-minute rate] + 1.0 unlock)
+    # ~= 37.41 EUR/yr realized spend, nowhere near the 600 EUR/yr budget.
+    gross_per_trip = 0.79 * 0.85 * 20 + 0.19 * 0.90 * 25 + 1.0
     assert sim["car_share_credit_applied_eur"] == pytest.approx(gross_per_trip * 2, abs=0.05)
     assert sim["car_share_credit_applied_eur"] < 50.0 * 12
 
@@ -825,3 +826,161 @@ def test_optimize_all_categories_produces_a_coherent_ranking(persona, tmp_path, 
         assert e["total_annual_cost_eur"] == pytest.approx(
             e["total_subscription_cost_eur"] + e["total_trip_cost_eur"], abs=0.05
         )
+
+
+# ── optimize_all_categories: current portfolio must not fork into two candidates ───────
+
+
+def test_current_portfolio_with_skip_id_has_no_duplicate_entry(isolated_main_data_dir):
+    # Regression guard: Maja's current portfolio is BahnCard 50 + Enterprise Silver, a
+    # zero-cost SKIP_IDS tier (an automatic loyalty perk excluded from the candidate
+    # surface — see SKIP_IDS' own comment). Before current_key/_match_key filtered such
+    # ids out of the matching identity, this made the current portfolio dead-end as a
+    # SEPARATE entry (category="current") sitting alongside its own candidate twin
+    # ("BahnCard 50", category="rail") with byte-identical cost/time/CO2 — a tie the
+    # stable sort resolved in favor of the twin, which could then get recommended with
+    # nothing to add or remove (main.py rendered it as "No change.").
+    trip = {
+        "route": "Köln → Ulm", "origin": "Köln", "destination": "Ulm",
+        "frequency_per_year": 5, "source": "history", "distance_km": 450,
+        "alternatives": [{
+            "mode": "rail_intercity", "distance_km": 450, "duration_min": 170,
+            "co2_kg": 16.0, "estimated_price_eur": 40.0,
+        }],
+        "fare_class": "spar",
+    }
+    _write_projected_trip_set(isolated_main_data_dir / "_projected_trips_merged.json", [trip])
+
+    result = tools.optimize_all_categories()
+    assert result["status"] == "ok"
+    opt = json.loads(
+        (isolated_main_data_dir / "_optimization_results.json").read_text(encoding="utf-8")
+    )
+    all_ranked = opt["all_ranked"]
+
+    # Exactly one entry is marked current, and it's the BahnCard-50-only candidate (the
+    # portfolio's real identity once its zero-cost automatic tier is stripped for matching).
+    current_entries = [e for e in all_ranked if e.get("is_current")]
+    assert len(current_entries) == 1
+    assert current_entries[0]["subscription_ids"] == ["db_bc50_2nd_annual_standard"]
+
+    # No separate category="current" entry was appended — it merged into the existing
+    # rail-only candidate instead of forking into a duplicate.
+    assert not any(e["category"] == "current" for e in all_ranked)
+
+    # And there is only one entry at all whose ids collapse to BahnCard 50 alone.
+    bc50_only = [e for e in all_ranked if e["subscription_ids"] == ["db_bc50_2nd_annual_standard"]]
+    assert len(bc50_only) == 1
+
+
+# ── compute_route_alternatives: exactly one flight mode per route ──────────────────────
+
+
+def test_compute_route_alternatives_never_offers_both_flight_modes(monkeypatch):
+    # Regression guard: flight_short_haul and flight_domestic used to share the same
+    # (400, inf) distance band unconditionally, so every route >=400km got BOTH as
+    # separate alternatives — near-identical price/duration/CO2, which double-counted
+    # flight demand in _mode_shares()'s softmax (a classic red-bus/blue-bus split).
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "_geocode_cache", {})
+    monkeypatch.setattr(tools, "_city_coords_cache", None)
+    # Stub out the live-only driving-route call so car_share/car_rental/car_private
+    # alternatives fall back to the heuristic distance instantly, no network involved.
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+
+    # Both endpoints inside Germany (per city_coords.json's offline fallback table) — must
+    # get flight_domestic only.
+    domestic = tools.compute_route_alternatives("Berlin", "Stuttgart")
+    domestic_flight_modes = [
+        a["mode"] for a in domestic["alternatives"] if a["mode"].startswith("flight")
+    ]
+    assert domestic_flight_modes == ["flight_domestic"]
+
+    # Athens is outside Germany — must get flight_short_haul only, regardless of the
+    # other endpoint.
+    international = tools.compute_route_alternatives("Athens", "Zurich")
+    international_flight_modes = [
+        a["mode"] for a in international["alternatives"] if a["mode"].startswith("flight")
+    ]
+    assert international_flight_modes == ["flight_short_haul"]
+
+
+# ── apply_subscription_discount: local-tariff trips are exempt from BahnCard discounts ─
+
+
+def test_local_tariff_trip_ignores_bahncard_but_deutschlandticket_still_covers_it():
+    # Regression guard: the synthesized home-city commute (ProjectedTrip.tariff="local")
+    # is a Verkehrsverbund/city-transit fare, not a real DB ticket — a BahnCard has no
+    # authority over it at all. Before local_tariff existed, apply_subscription_discount
+    # applied a BahnCard's Sparpreis/Flexpreis discount to it exactly as if it were a real
+    # DB Nahverkehr ticket, which for Maja's fixture inflated BahnCard 25's reported
+    # discount value by 58% (the commute is ~94% of her projected annual legs).
+    bc25 = {"mode": "rail", "benefits": {"discount_sparpreis_pct": 25, "discount_flexpreis_pct": 25}}
+    deutschlandticket = {"mode": "rail", "benefits": {"unlimited_regional": True}}
+
+    price_with_bahncard = tools.apply_subscription_discount(
+        "rail_regional", 2.03, 8.0, [bc25], fare_class="spar", local_tariff=True,
+    )
+    assert price_with_bahncard == 2.03  # unchanged — BahnCard has no authority here
+
+    price_with_deutschlandticket = tools.apply_subscription_discount(
+        "rail_regional", 2.03, 8.0, [deutschlandticket], fare_class="spar", local_tariff=True,
+    )
+    assert price_with_deutschlandticket == 0.0  # genuinely covers local transit
+
+    # Control: the same BahnCard DOES discount a non-local (real DB-ticketed) trip.
+    price_national = tools.apply_subscription_discount(
+        "rail_regional", 2.03, 8.0, [bc25], fare_class="spar", local_tariff=False,
+    )
+    assert price_national < 2.03
+
+
+# ── derive_projected_trips_from_history: a genuine one-off route is dropped, not annualized
+
+
+def test_single_observation_route_never_appears_regardless_of_data_window(isolated_data_dir, monkeypatch):
+    # Regression guard: a route observed exactly ONCE used to be projected as recurring
+    # whenever the surrounding data window was short enough for annualizing a single trip
+    # to round UP to 2/yr (e.g. 1 trip over a ~4-month window -> round(1*12/4) = 3) —
+    # contradicting derive_projected_trips_from_history's own documented behavior ("a
+    # long-distance route seen only once is still dropped"). Five recurring Köln<->Ulm
+    # trips set a short (~4-month) overall data window; the single long-distance
+    # Athen->Zurich trip must never surface as an individually-projected route, and (being
+    # long-distance) must not be folded into the local aggregate either — it must simply
+    # be gone.
+    history = {"trips": [
+        {"date": "2025-07-14", "mode": "rail", "origin": "Köln Hbf", "destination": "Ulm Hbf",
+         "cost_eur": 27.0, "distance_km": 451.1, "provider": "Deutsche Bahn", "ticket_type": "Sparpreis"},
+        {"date": "2025-07-17", "mode": "rail", "origin": "Ulm Hbf", "destination": "Köln Hbf",
+         "cost_eur": 22.5, "distance_km": 450.6, "provider": "Deutsche Bahn", "ticket_type": "Sparpreis"},
+        {"date": "2025-08-05", "mode": "rail", "origin": "Köln Hbf", "destination": "Ulm Hbf",
+         "cost_eur": 22.5, "distance_km": 451.1, "provider": "Deutsche Bahn", "ticket_type": "Sparpreis"},
+        {"date": "2025-08-07", "mode": "rail", "origin": "Ulm Hbf", "destination": "Köln Hbf",
+         "cost_eur": 27.0, "distance_km": 450.6, "provider": "Deutsche Bahn", "ticket_type": "Sparpreis"},
+        {"date": "2025-11-18", "mode": "rail", "origin": "Köln Hbf", "destination": "Ulm Hbf",
+         "cost_eur": 12.7, "distance_km": 451.1, "provider": "Deutsche Bahn", "ticket_type": "Sparpreis"},
+        {"date": "2025-09-14", "mode": "flight", "origin": "Athens (ATH)", "destination": "Zurich (ZRH)",
+         "cost_eur": 334.69, "distance_km": 1617.0, "provider": "Swiss International", "ticket_type": "Economy"},
+    ]}
+    (isolated_data_dir / "travel_history_raw.json").write_text(json.dumps(history), encoding="utf-8")
+
+    # Offline geocode fallback — fast and deterministic, no network dependency (same
+    # pattern as the golden end-to-end test above).
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "_geocode_cache", {})
+    monkeypatch.setattr(tools, "_city_coords_cache", None)
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+
+    result = tools.derive_projected_trips_from_history()
+    assert result["status"] == "ok"
+
+    routes = [r["route"] for r in result["routes"]]
+    assert not any("Athen" in r or "Zurich" in r for r in routes)
+    assert not any("aggregated" in r for r in routes)  # long-distance: dropped, not aggregated
+
+    projected = json.loads(
+        (isolated_data_dir / "_projected_trips_history.json").read_text(encoding="utf-8")
+    )
+    assert not any(
+        t.get("origin") == "Athen" or t.get("destination") == "Zurich" for t in projected["trips"]
+    )

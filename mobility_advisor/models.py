@@ -270,6 +270,20 @@ class ProjectedTrip(BaseModel):
     # apply_subscription_discount() pick discount_flexpreis_pct vs.
     # discount_sparpreis_pct instead of assuming every trip is Sparpreis.
     fare_class: Literal["spar", "flex"] = "spar"
+    # "national" (default): a real DB-ticketed trip (Fernverkehr or Nahverkehr single
+    # ticket), which a BahnCard's percentage discount or an unlimited pass legitimately
+    # applies to. "local": a Verkehrsverbund/city-transit fare (e.g. the synthesized
+    # home-city commute) that a BahnCard has no authority over at all — only a coverage
+    # benefit that is genuinely valid on local transit (Deutschlandticket's
+    # unlimited_regional) should discount it. See apply_subscription_discount().
+    tariff: Literal["national", "local"] = "national"
+    # Majority-vote (see _dominant_operator_is_non_db()) whether this route's contributing
+    # historical trips ran on a non-DB rail operator (e.g. FlixTrain) rather than Deutsche
+    # Bahn. False (the default) means DB-eligible — the default for every source without a
+    # real provider signal (calendar, car_usage), matching prior behavior for those. A
+    # BahnCard's discount and a Deutschlandticket's coverage are both DB-only benefits (see
+    # apply_subscription_discount()) and must not apply when this is True.
+    non_db_operator: bool = False
 
 
 class ProjectedTripSet(BaseModel):

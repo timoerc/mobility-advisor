@@ -165,8 +165,8 @@
     {
       "date": "2025-12-09",
       "mode": "car_share",
-      "origin": "MILES Station Bockenheim, Frankfurt am Main",
-      "destination": "Frankfurt Sachsenhausen, Schweizer Straße",
+      "origin": "MILES Station Köln Ehrenfeld",
+      "destination": "Köln Sülz, Berrenrather Straße",
       "departure_time": "16:00",
       "arrival_time": "18:00",
       "duration_min": 120,

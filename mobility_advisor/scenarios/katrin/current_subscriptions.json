@@ -7,7 +7,7 @@
       "provider": "Deutsche Bahn",
       "product": "BahnCard 25 (2. Klasse, Standard, Jahresabo)",
       "mode": "rail",
-      "monthly_cost_eur": 9.25,
+      "monthly_cost_eur": 5.24,
       "billing_cycle": "annual",
       "minimum_months": 12,
       "eligibility": {
@@ -21,7 +21,7 @@
         "unlimited_regional": false
       },
       "qualifying_threshold": null,
-      "notes": "25% auf Flexpreise, 25% auf Sparpreise. 111 €/Jahr."
+      "notes": "25% auf Flexpreise, 25% auf Sparpreise. 62,90 €/Jahr (corrected — was previously priced ~1.8x too high at 111 €/Jahr)."
     },
     {
       "id": "db_deutschlandticket",

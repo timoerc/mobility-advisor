@@ -38,6 +38,7 @@
         "max_age": null
       },
       "benefits": {
+        "base_km_rate_eur": 0.79,
         "monthly_credit_eur": 0.0,
         "discount_km_pct": 0,
         "discount_time_pct": 0,

@@ -36,6 +36,7 @@ from .route_utils import (
     estimate_trip_price,
     geocode,
     haversine_distance_km,
+    is_domestic_flight_route,
 )
 
 _DATA = Path(__file__).parent / "data"
@@ -258,6 +259,11 @@ _MODE_DISTANCE_FILTERS: dict[str, tuple[float, float]] = {
     "car_share": (0, 100),
     "car_rental": (100, float("inf")),
     "car_private": (0, float("inf")),
+    # flight_short_haul and flight_domestic share the same distance band on purpose — which
+    # one a given route actually offers is decided in compute_route_alternatives() by
+    # is_domestic_flight_route(), not by distance. Never both: two flight alternatives with
+    # near-identical price/duration/CO2 (both map to the same "flight" CO2 factor) would
+    # double-count flight demand in _mode_shares()'s softmax.
     "flight_short_haul": (400, float("inf")),
     "flight_domestic": (400, float("inf")),
 }
@@ -347,7 +353,9 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
 
     Geocodes both endpoints, computes haversine distance as a cheap pre-filter,
     then for each mode that passes the distance filter computes distance, duration,
-    CO2, and estimated price.
+    CO2, and estimated price. Exactly one flight alternative is offered per route
+    (flight_domestic if both endpoints are in Germany, else flight_short_haul — see
+    is_domestic_flight_route()), never both.
 
     Args:
         origin: City or station name (e.g. "Köln" or "Köln Hbf").
@@ -375,6 +383,11 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
     car_usage = load_car_usage()
     owns_car = car_usage.get("owns_car", False)
 
+    # Which single flight mode this route may offer — never both flight_domestic and
+    # flight_short_haul (see _MODE_DISTANCE_FILTERS' comment on why offering both
+    # double-counts flight demand in _mode_shares()'s softmax).
+    domestic_route = is_domestic_flight_route(orig_coords, dest_coords)
+
     alternatives: list[dict] = []
 
     for mode, (min_km, max_km) in _MODE_DISTANCE_FILTERS.items():
@@ -387,6 +400,11 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
         if mode == "rail_regional" and hav_km > _RAIL_DISTANCE_THRESHOLD_KM:
             continue
         if mode == "rail_intercity" and hav_km <= _RAIL_DISTANCE_THRESHOLD_KM:
+            continue
+
+        if mode == "flight_domestic" and not domestic_route:
+            continue
+        if mode == "flight_short_haul" and domestic_route:
             continue
 
         if mode in ("car_share", "car_rental", "car_private"):
@@ -515,6 +533,22 @@ def _dominant_fare_class(ticket_types: list[str | None]) -> str:
     return "flex" if flex_count * 2 > len(ticket_types) else "spar"
 
 
+def _dominant_operator_is_non_db(providers: list[str | None]) -> bool:
+    """Majority-vote whether a route's contributing historical trips ran on a non-DB
+    operator (e.g. FlixTrain) rather than Deutsche Bahn.
+
+    True only on a strict majority of non-DB-provider trips — a mixed or DB-dominated
+    route defaults to False (DB-eligible), matching _dominant_fare_class's majority-vote
+    convention. A BahnCard's discount and a Deutschlandticket's coverage are both DB-only
+    benefits (see apply_subscription_discount's docstring) — without this check, a route
+    actually run by FlixTrain got re-projected as a generic rail_intercity alternative and
+    discounted by a BahnCard exactly as if it were a real DB ticket, which FlixTrain does
+    not honour.
+    """
+    non_db_count = sum(1 for p in providers if p and "deutsche bahn" not in p.lower())
+    return non_db_count * 2 > len(providers)
+
+
 _RAIL_FARE_CALIBRATION_MIN_TRIPS = 2
 # Tightened from (0.3, 3.0): now that the ratio is only ever applied to rail_intercity
 # alternatives (see _apply_rail_calibration), a 3x swing has no regional trip to hide
@@ -555,10 +589,14 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     cost_eur is 0) are excluded too: their "fare" is €0 by construction, which has nothing
     to do with what a Sparpreis/Flexpreis BahnCard trip would have cost, and previously
     dragged the ratio down (a persona with a few flat-rate-covered regional legs got a
-    systematically cheaper calibrated price on every other route). Falls back to
+    systematically cheaper calibrated price on every other route). Trips at or under
+    _RAIL_DISTANCE_THRESHOLD_KM are excluded too — the ratio is applied only to
+    rail_intercity alternatives (see _apply_rail_calibration's docstring for why regional
+    fares are exempt), so a regional trip in the fitting sample would calibrate the ratio
+    against a fare structure it is never actually used to scale. Falls back to
     (1.0, 0.0, [warning]) — the unscaled synthetic curve, applied nowhere — when fewer
-    than _RAIL_FARE_CALIBRATION_MIN_TRIPS priced DB Sparpreis/Flexpreis trips with a usable
-    distance exist.
+    than _RAIL_FARE_CALIBRATION_MIN_TRIPS priced DB Sparpreis/Flexpreis intercity trips
+    with a usable distance exist.
     """
     trips = load_travel_history()["trips"]
 
@@ -588,14 +626,18 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
         dist = t.get("distance_km")
         if cost is None or not dist or dist <= 0:
             continue
+        if dist <= _RAIL_DISTANCE_THRESHOLD_KM:
+            # The ratio is only ever applied to rail_intercity alternatives (see
+            # _apply_rail_calibration) — a regional-distance fare here would fit the ratio
+            # against a fare structure it never actually scales.
+            continue
         ticket_type_lower = (t.get("ticket_type") or "").lower()
         if cost == 0 or "deutschland-ticket" in ticket_type_lower or "bahncard 100" in ticket_type_lower:
             continue
         fare_class = "flex" if "flex" in ticket_type_lower else "spar"
         pct = flex_pct if fare_class == "flex" else spar_pct
         full_price = cost / (1 - pct / 100) if pct else cost
-        rail_mode = "rail_regional" if dist <= _RAIL_DISTANCE_THRESHOLD_KM else "rail_intercity"
-        synthetic = estimate_trip_price(rail_mode, dist)
+        synthetic = estimate_trip_price("rail_intercity", dist)
         if synthetic <= 0:
             continue
         full_price_total += full_price
@@ -894,6 +936,11 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
     calibration ratio is applied here either — the ratio is fitted against intercity fares
     only and this is a fixed regional leg (see _apply_rail_calibration's docstring).
 
+    tariff="local" — a home-city commute is a Verkehrsverbund/city-transit fare, not a DB
+    ticket at all, so a BahnCard's percentage discount has no authority over it (see
+    apply_subscription_discount's docstring). Only a genuinely local-transit-valid coverage
+    benefit (Deutschlandticket's unlimited_regional) should discount this trip.
+
     Returns (None, "") if the persona has no office_days at all (fully remote).
     """
     persona = json.loads((_DATA / "persona.json").read_text(encoding="utf-8"))
@@ -936,6 +983,7 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
         distance_km=dist,
         alternatives=alternatives,
         fare_class="spar",
+        tariff="local",
     )
     warning = (
         f"Modelled {len(office_days)} office day(s)/week as a recurring home-city commute "
@@ -950,15 +998,19 @@ def derive_projected_trips_from_history() -> dict:
     """Analyze travel history and derive projected recurring routes with annual frequencies.
 
     Groups historical trips by normalized city pair (direction-independent), counts
-    occurrences, extrapolates to annual frequency, and computes per-mode alternatives
-    for routes with frequency >= 2/year. Routes below that per-route bar are not simply
-    dropped: a regional route (<= _RAIL_DISTANCE_THRESHOLD_KM) seen too rarely on its own
-    to individually qualify is folded into a single synthetic "local/regional travel"
-    aggregate trip (see the aggregation step below) — this is the demand a Deutschlandticket
-    or regional pass actually prices against, and dropping it entirely made every such pass
-    structurally incapable of showing value regardless of how much local travel a persona
-    actually does. A long-distance route seen only once is still dropped — a real one-off
-    trip is not recurring demand a subscription decision should be based on.
+    occurrences, extrapolates to annual frequency, and computes per-mode alternatives for
+    routes with >= 2 raw observations AND an extrapolated frequency >= 2/year — both, not
+    just the annualized figure: over a short data window a single observation can itself
+    round up to 2/yr (e.g. 1 trip over a 5-month window annualizes to round(1*12/5) = 2),
+    which used to let a genuine one-off masquerade as a recurring route. Routes below
+    either bar are not simply dropped: a regional route (<= _RAIL_DISTANCE_THRESHOLD_KM)
+    seen too rarely on its own to individually qualify is folded into a single synthetic
+    "local/regional travel" aggregate trip (see the aggregation step below) — this is the
+    demand a Deutschlandticket or regional pass actually prices against, and dropping it
+    entirely made every such pass structurally incapable of showing value regardless of how
+    much local travel a persona actually does. A long-distance route seen only once is
+    still dropped outright, never aggregated — a real one-off trip is not recurring demand
+    a subscription decision should be based on, at any distance.
 
     A trip whose origin and destination normalize to the SAME city (e.g. a MILES car-share
     hop between two Berlin districts) is not part of any inter-city route at all — it is
@@ -1000,10 +1052,12 @@ def derive_projected_trips_from_history() -> dict:
                 "count": 0,
                 "dates": [],
                 "ticket_types": [],
+                "providers": [],
             }
         route_counts[key]["count"] += 1
         route_counts[key]["dates"].append(trip["date"])
         route_counts[key]["ticket_types"].append(trip.get("ticket_type"))
+        route_counts[key]["providers"].append(trip.get("provider"))
 
     reduction_factor, reduction_warnings = _travel_reduction_factor()
     calibration_ratio, calibration_max_dist, calibration_warnings = _rail_fare_calibration_ratio()
@@ -1055,7 +1109,12 @@ def derive_projected_trips_from_history() -> dict:
         hav_km = result.get("haversine_km")
         dist_km = round(hav_km * 1.3, 1) if hav_km else 0.0
 
-        if annual_freq < 2:
+        # A route only qualifies as individually recurring on BOTH the raw observation
+        # count and the annualized rate — the annualized rate alone can round a single
+        # observation up to 2/yr over a short data window, letting a genuine one-off pass
+        # this bar (see the docstring). A regional under-qualifying route still feeds the
+        # local aggregate; a long-distance one is dropped outright either way.
+        if info["count"] < 2 or annual_freq < 2:
             if dist_km and dist_km <= _RAIL_DISTANCE_THRESHOLD_KM:
                 local_aggregate.append({
                     "distance_km": dist_km,
@@ -1076,6 +1135,7 @@ def derive_projected_trips_from_history() -> dict:
             continue
 
         fare_class = _dominant_fare_class(info["ticket_types"])
+        non_db_operator = _dominant_operator_is_non_db(info["providers"])
         alternatives = _apply_rail_calibration(
             result.get("alternatives", []), calibration_ratio, calibration_max_dist
         )
@@ -1089,6 +1149,7 @@ def derive_projected_trips_from_history() -> dict:
             distance_km=dist_km,
             alternatives=alternatives,
             fare_class=fare_class,
+            non_db_operator=non_db_operator,
         )
         projected.append(trip.model_dump())
 
@@ -1283,9 +1344,11 @@ def derive_car_usage_trips() -> dict:
 
     for cat in categories:
         dist = cat["distance_km"]
+        # max(1, ...) guarantees every category (short/medium/long) is represented at least
+        # once whenever the persona has any car usage at all — freq can therefore never be
+        # below 1 here, unlike derive_projected_trips_from_history's routes (which have no
+        # such floor and can legitimately round to 0/yr).
         freq = max(1, round(cat["km_share"] * km_est / dist * 12))
-        if freq < 1:
-            continue
 
         alternatives: list[dict] = []
         for mode in cat["modes"]:
@@ -1507,6 +1570,19 @@ def merge_projected_trip_sets() -> dict:
 _MILES_BASIS_BASE_KM_RATE_EUR = 0.79
 _MILES_BASIS_UNLOCK_FEE_EUR = 1.0
 _MILES_BASIS_PROTECTION_FEE_EUR = 3.9
+# MILES's published Basis tariff is a per-km AND per-minute rate combined, not per-km
+# alone — every catalog car-share tier's discount_time_pct benefit exists specifically to
+# discount this second component. Without a base rate to discount, discount_time_pct was
+# dead: every tier's "X% off Zeittarif" was worth exactly €0 regardless of how much it
+# should have reduced a car-share trip's cost. €0.19/min is MILES's publicly listed Basis
+# per-minute rate (the low end of its published per-vehicle-class range) — an anchor in
+# the same spirit as _BASE_VALUE_OF_TIME_EUR_PER_HOUR below, not a precisely-metered figure.
+# The fixtures don't record an actual rental duration for a car-share trip, only distance —
+# duration_min here is estimate_duration_min()'s driving-time heuristic, which understates
+# real MILES usage (park, run an errand, drive back) whenever a ride isn't pure transit
+# time, so this remains an approximation like every other synthetic price curve in this
+# module, not a claim of precisely reconstructed billing.
+_MILES_BASIS_BASE_TIME_RATE_EUR_PER_MIN = 0.19
 
 
 def apply_subscription_discount(
@@ -1515,6 +1591,9 @@ def apply_subscription_discount(
     distance_km: float,
     portfolio: list[dict],
     fare_class: str = "spar",
+    local_tariff: bool = False,
+    non_db_operator: bool = False,
+    duration_min: float = 0.0,
 ) -> float:
     """Apply subscription discounts to a single trip's estimated (marginal) price.
 
@@ -1525,6 +1604,26 @@ def apply_subscription_discount(
     derive_projected_trips_from_history) must be scored against the Flexpreis rate, not
     silently assumed to be Sparpreis — otherwise every BahnCard tier looks identical on
     trips that were never actually priced that way.
+
+    local_tariff=True marks a trip priced under a Verkehrsverbund/city-transit fare (see
+    ProjectedTrip.tariff — currently only the synthesized home-city commute) rather than a
+    real DB ticket. A BahnCard has no authority over a city-transit fare at all, so its
+    percentage discount and its unlimited_long_distance/unlimited_regional flags must not
+    apply — only a benefit that is genuinely valid on local transit
+    (Deutschlandticket's unlimited_regional specifically) may discount it. Without this, a
+    BahnCard's Sparpreis/Flexpreis discount rate was applied to the commute exactly as if
+    it were a real long-distance-rail-tariff Nahverkehr ticket, inflating that BahnCard's
+    reported "discount value" by whatever the commute's own price contributes — for a
+    persona whose projected trips are dominated by the commute (as most personas' are),
+    this was the single largest input to the reported figure.
+
+    non_db_operator=True marks a trip whose contributing historical trips were run by a
+    non-DB rail operator (e.g. FlixTrain — see ProjectedTrip.non_db_operator /
+    _dominant_operator_is_non_db()). Neither a BahnCard's discount nor a Deutschlandticket's
+    coverage apply — both are benefits DB grants on DB-ticketed travel, and a non-DB
+    operator honours neither. Without this, a route actually run by FlixTrain was
+    re-projected as a generic rail_intercity alternative and discounted by a BahnCard
+    exactly as if it were a real DB fare.
 
     Car-share pricing here is the gross per-km/unlock/protection price with NO monthly
     credit applied — the credit is a portfolio-level annual budget, not a per-trip
@@ -1547,13 +1646,17 @@ def apply_subscription_discount(
     itself carries those fees (see _MILES_BASIS_* above). Starting from the bare per-km rate
     instead priced "no subscription" cheaper than every paid tier's actual walk-up cost,
     which made a paid tier's credit or per-km discount structurally unable to ever win
-    regardless of how much car-share the persona actually uses.
+    regardless of how much car-share the persona actually uses. duration_min adds MILES's
+    per-minute component (see _MILES_BASIS_BASE_TIME_RATE_EUR_PER_MIN) on top of the per-km
+    rate — every catalog car-share tier's discount_time_pct benefit exists to discount
+    exactly this, and was otherwise applied to nothing at all. Ignored for every other mode.
 
     Returns the discounted price. The cheapest applicable discount wins.
     """
     if mode == "car_share":
         best_price = round(
             _MILES_BASIS_BASE_KM_RATE_EUR * distance_km
+            + _MILES_BASIS_BASE_TIME_RATE_EUR_PER_MIN * duration_min
             + _MILES_BASIS_UNLOCK_FEE_EUR
             + _MILES_BASIS_PROTECTION_FEE_EUR,
             2,
@@ -1566,8 +1669,20 @@ def apply_subscription_discount(
         benefits = sub.get("benefits", {})
 
         if sub_mode == "rail" and mode in ("rail_intercity", "rail_regional"):
+            if non_db_operator:
+                # A BahnCard's discount and a Deutschlandticket's coverage are both DB-only
+                # benefits — a non-DB operator (e.g. FlixTrain) honours neither.
+                continue
+
             if benefits.get("unlimited_regional") and mode == "rail_regional":
                 best_price = min(best_price, 0.0)
+
+            if local_tariff:
+                # A city-transit fare has no BahnCard-eligible ticket to discount and no
+                # long-distance leg to cover — only the unlimited_regional check above
+                # (Deutschlandticket) applies here.
+                continue
+
             if benefits.get("unlimited_long_distance") and mode == "rail_intercity":
                 best_price = min(best_price, 0.0)
 
@@ -1582,11 +1697,15 @@ def apply_subscription_discount(
         elif sub_mode == "car_share" and mode == "car_share":
             base_km = benefits.get("base_km_rate_eur", _MILES_BASIS_BASE_KM_RATE_EUR)
             disc_km = benefits.get("discount_km_pct", 0)
+            disc_time = benefits.get("discount_time_pct", 0)
             unlock = benefits.get("unlock_fee_eur_per_trip", _MILES_BASIS_UNLOCK_FEE_EUR)
             protection = benefits.get("protection_plus_eur_per_trip", _MILES_BASIS_PROTECTION_FEE_EUR)
 
             km_cost = base_km * (1 - disc_km / 100) * distance_km
-            trip_cost = km_cost + unlock + protection
+            time_cost = (
+                _MILES_BASIS_BASE_TIME_RATE_EUR_PER_MIN * (1 - disc_time / 100) * duration_min
+            )
+            trip_cost = km_cost + time_cost + unlock + protection
             best_price = min(best_price, round(trip_cost, 2))
 
     return round(best_price, 2)
@@ -1639,6 +1758,8 @@ def _mode_shares(
     fare_class: str,
     frequency_per_year: float,
     weights: dict | None,
+    local_tariff: bool = False,
+    non_db_operator: bool = False,
 ) -> list[tuple[dict, float, float]]:
     """Split a trip's frequency across its mode alternatives by a logit mode share over
     generalized cost, instead of an all-or-nothing pick. Without this, a persona's time
@@ -1664,6 +1785,13 @@ def _mode_shares(
     against total realized car-share spend, not per route (see apply_subscription_discount's
     docstring for why).
 
+    local_tariff and non_db_operator are forwarded to apply_subscription_discount
+    unchanged — see that function's docstring (a city-transit fare, currently only the
+    synthesized commute, that a BahnCard has no authority over; and a non-DB rail operator
+    such as FlixTrain, which honours neither a BahnCard nor a Deutschlandticket). Each
+    alternative's own duration_min is forwarded too, so a car_share alternative's per-minute
+    tariff component (and its tier-specific discount_time_pct) is priced correctly.
+
     Returns a list of (alt_dict, discounted_price, share) tuples, shares summing to 1.0.
     """
     priced: list[tuple[dict, float]] = []
@@ -1671,7 +1799,8 @@ def _mode_shares(
         alt_dict = alt if isinstance(alt, dict) else alt.model_dump()
         discounted = apply_subscription_discount(
             alt_dict["mode"], alt_dict["estimated_price_eur"], alt_dict["distance_km"],
-            portfolio, fare_class=fare_class,
+            portfolio, fare_class=fare_class, local_tariff=local_tariff,
+            non_db_operator=non_db_operator, duration_min=alt_dict.get("duration_min", 0.0),
         )
         priced.append((alt_dict, discounted))
 
@@ -1779,7 +1908,9 @@ def simulate_portfolio(subscription_ids: list[str], weights: dict | None = None)
             continue
 
         shares = _mode_shares(
-            alts, portfolio, trip.fare_class, trip.frequency_per_year, weights
+            alts, portfolio, trip.fare_class, trip.frequency_per_year, weights,
+            local_tariff=(trip.tariff == "local"),
+            non_db_operator=trip.non_db_operator,
         )
 
         annual_cost = sum(price * share for _, price, share in shares) * trip.frequency_per_year
@@ -2043,12 +2174,6 @@ def optimize_all_categories() -> dict:
         "sustainability_weight": pw.get("sustainability", 0.33),
     }
 
-    current_raw = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
-    current_ids = sorted(
-        s["id"] for s in current_raw.get("subscriptions", []) if s["id"] in catalog_by_id
-    )
-    current_key = tuple(current_ids)
-
     SKIP_IDS = {
         "enterprise_plus", "enterprise_silver", "enterprise_gold", "enterprise_platinum",
         "lh_miles_member", "lh_miles_frequent_traveller", "lh_miles_senator", "lh_miles_hon_circle",
@@ -2065,6 +2190,39 @@ def optimize_all_categories() -> dict:
         return (lo is None or age >= lo) and (hi is None or age <= hi)
 
     chooseable = [o for o in catalog_raw["options"] if o["id"] not in SKIP_IDS and _age_ok(o)]
+    chooseable_ids = {o["id"] for o in chooseable}
+
+    current_raw = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
+    current_ids = sorted(
+        s["id"] for s in current_raw.get("subscriptions", []) if s["id"] in catalog_by_id
+    )
+    # The matching key used to dedup the current portfolio against the generated candidate
+    # surface (cands below, which never contains a SKIP_IDS id) is NOT simply current_ids —
+    # a currently-held free automatic tier that's excluded from the candidate surface for
+    # having nothing to decide about (e.g. Enterprise Silver, a €0/mo loyalty perk — see
+    # SKIP_IDS' own comment) would otherwise never match any generated candidate's key, so
+    # the current portfolio got appended as a SEPARATE, category="current" entry sitting
+    # right alongside its own twin (e.g. "BahnCard 50" and "BahnCard 50 + Enterprise
+    # Silver") with an identical simulated cost/time/CO2 — a tie the stable sort resolved
+    # in favor of the twin lacking category="current", so a recommendation could point at a
+    # non-current row whose diff-vs-current computation (main.py's added/removed sets) then
+    # found nothing to add or remove, rendering as an actionable "recommended" alternative
+    # whose consequence text is literally "No change." A held id that carries a real
+    # nonzero cost (e.g. a 1st-class BahnCard) is kept in the key regardless of whether the
+    # candidate surface offers it — dropping a real cost from the matching identity would
+    # misrepresent what the user actually pays, not just relabel it.
+    def _match_key(ids: list[str]) -> tuple:
+        """Same filtering current_key applies, for comparing ANY entry's subscription_ids
+        against current_key on equal terms — every entry built from `cands` already
+        consists only of chooseable ids, so this is a no-op for them; it only ever changes
+        the current-portfolio entry's own ids (see current_key's comment above)."""
+        return tuple(sorted(
+            sid for sid in ids
+            if sid in chooseable_ids
+            or catalog_by_id.get(sid, {}).get("monthly_cost_eur", 0) > 0
+        ))
+
+    current_key = _match_key(current_ids)
 
     rail = [o for o in chooseable if o["mode"] == "rail"]
     miles_opts = [o for o in chooseable if o["mode"] == "car_share"]
@@ -2085,7 +2243,11 @@ def optimize_all_categories() -> dict:
     rail_choices: list[tuple[str, list[str]]] = [("", [])]
     rail_choices += [(o["product"], [o["id"]]) for o in rail]
     rail_choices += [
-        (f"{bc['product']} + Deutschlandticket", [bc["id"], dt["id"]])
+        # dt["product"], not a hardcoded "Deutschlandticket" — the catalog's actual product
+        # name ("Deutschland-Ticket", with a hyphen) is what this label reaches the user as
+        # (main.py's "Switch to {label}"/break_even text), and product names are otherwise
+        # always required to be copied verbatim from the catalog.
+        (f"{bc['product']} + {dt['product']}", [bc["id"], dt["id"]])
         for bc in bc_opts for dt in dt_opts
     ]
     car_share_choices: list[tuple[str, list[str]]] = [("", [])]
@@ -2162,7 +2324,12 @@ def optimize_all_categories() -> dict:
         for r in scoring["ranked_portfolios"]
     }
     for e in entries:
-        e["score"] = rank_map.get(tuple(sorted(e["subscription_ids"])), 999)
+        # A missing rank_map entry should never happen (every entry here came from the same
+        # simulation pass compute_portfolio_score just scored) — float("inf") makes that
+        # failure mode sort LAST if it ever did occur, instead of a low sentinel like 999
+        # (well within real generalized-cost scores) sorting an un-scored entry FIRST and
+        # silently becoming the recommendation.
+        e["score"] = rank_map.get(tuple(sorted(e["subscription_ids"])), float("inf"))
     entries.sort(key=lambda e: e["score"])
 
     # --- Compute deltas vs recommended (#1) and vs the user's current setup ---
@@ -2176,11 +2343,11 @@ def optimize_all_categories() -> dict:
     # negative = better than current (cheaper / faster / less CO2).
     rec = entries[0]
     current_ref = next(
-        (e for e in entries if tuple(sorted(e["subscription_ids"])) == current_key), None
+        (e for e in entries if _match_key(e["subscription_ids"]) == current_key), None
     )
     for e in entries:
         e["is_recommended"] = (e is rec)
-        e["is_current"] = (tuple(sorted(e["subscription_ids"])) == current_key)
+        e["is_current"] = (_match_key(e["subscription_ids"]) == current_key)
         e["delta_cost_eur"] = round(e["total_annual_cost_eur"] - rec["total_annual_cost_eur"], 2)
         e["delta_time_min"] = round(e["total_annual_time_min"] - rec["total_annual_time_min"], 1)
         e["delta_co2_kg"] = round(e["total_annual_co2_kg"] - rec["total_annual_co2_kg"], 3)

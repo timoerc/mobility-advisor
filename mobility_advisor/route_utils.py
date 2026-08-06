@@ -65,6 +65,32 @@ MODE_SPEED_KMH = {
 
 FLIGHT_OVERHEAD_MIN = 120  # check-in, security, boarding, taxi
 
+# Generous lat/lng bounding box for Germany (includes a margin so a border-adjacent city
+# like Basel or Freiburg doesn't misclassify on rounding). Used only to pick which single
+# flight alternative (flight_domestic vs flight_short_haul) a route gets — see
+# is_domestic_flight_route() — not for any pricing or CO2 decision.
+_GERMANY_LAT_RANGE = (47.2, 55.15)
+_GERMANY_LNG_RANGE = (5.5, 15.2)
+
+
+def is_in_germany(lng: float, lat: float) -> bool:
+    """Whether a (lng, lat) coordinate pair falls within Germany's bounding box."""
+    lat_lo, lat_hi = _GERMANY_LAT_RANGE
+    lng_lo, lng_hi = _GERMANY_LNG_RANGE
+    return lat_lo <= lat <= lat_hi and lng_lo <= lng <= lng_hi
+
+
+def is_domestic_flight_route(
+    orig_coords: tuple[float, float], dest_coords: tuple[float, float]
+) -> bool:
+    """Whether both endpoints of a route lie inside Germany, i.e. this route should get a
+    flight_domestic alternative rather than flight_short_haul. See
+    compute_route_alternatives() — exactly one of the two flight modes is offered per
+    route, never both (both were previously offered unconditionally on every route
+    >=400km, which duplicated flight demand in mode-share selection — see
+    _MODE_DISTANCE_FILTERS' docstring comment)."""
+    return is_in_germany(*orig_coords) and is_in_germany(*dest_coords)
+
 
 # ── Location cleaning ────────────────────────────────────────────────────────
 

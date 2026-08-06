@@ -352,9 +352,11 @@ row itself) — these are the ones that describe "vs. your current setup", alrea
 signed on every row including the recommended one. Negative = better than current (cheaper /
 faster / less CO2); positive = worse than current.
 
-Step 3 — also output the result's break_even list verbatim (one entry per single-subscription
-candidate — a BahnCard tier, the Deutschlandticket, or a car-share membership, each held
-alone): label, annual_fee_eur, discount_value_eur, net_eur, breaks_even. This is the
+Step 3 — also output the result's break_even list verbatim (one entry per non-baseline
+candidate optimize_all_categories() simulated — a single BahnCard tier or Deutschlandticket,
+a single car-share membership, a BahnCard+Deutschlandticket combo, a rail+car-share combo, or
+the user's current portfolio, each scored as one combined figure against holding nothing):
+label, annual_fee_eur, discount_value_eur, net_eur, breaks_even. This is the
 forward-looking answer to "does this subscription pay for itself" — annual_fee_eur is what it
 costs, discount_value_eur is how much cheaper the projected year's trips (rail fares or
 car-share rides, whichever mode the candidate applies to) become by holding it, and net_eur is
