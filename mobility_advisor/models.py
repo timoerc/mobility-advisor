@@ -340,6 +340,13 @@ class Recommendation(BaseModel):
     reasoning: list[str]
     assumptions: list[str] = []
     alternatives: list[Alternative]
+    # Deterministic warnings from the trip-projection engine (tools.py) — malformed travel
+    # history entries (null costs, empty/unknown modes), travel-reduction damping applied,
+    # rail-fare calibration notes, uncorroborated calendar demand caps, etc. Populated from
+    # optimize_all_categories()'s persisted `warnings` list, not from the LLM narration, so a
+    # persona whose history has data-quality issues (e.g. Lena's) always surfaces them
+    # regardless of what the communicator's prose happens to mention.
+    dataQualityWarnings: list[str] = []
 
     @model_validator(mode="after")
     def _validate_alternatives_shape(self) -> "Recommendation":

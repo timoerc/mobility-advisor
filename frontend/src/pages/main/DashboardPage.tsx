@@ -77,6 +77,23 @@ export function DashboardPage({
         )}
       </div>
 
+      {/* Data quality warnings — deterministic, from the trip-projection engine, not the
+          narrative text, so they surface even if the LLM's prose doesn't mention them */}
+      {rec.dataQualityWarnings && rec.dataQualityWarnings.length > 0 && (
+        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex flex-col gap-2">
+          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide m-0">
+            Data quality notes
+          </h2>
+          <ul className="m-0 pl-4 flex flex-col gap-1.5">
+            {rec.dataQualityWarnings.map((w, i) => (
+              <li key={i} className="text-xs text-amber-700 leading-relaxed">
+                {w}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Mobility archetype */}
       {mobilityArchetype && (
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3">

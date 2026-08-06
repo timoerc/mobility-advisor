@@ -82,8 +82,19 @@ def _load_home_city() -> str:
     on disk without restarting the backend process, so any value cached at import time goes
     stale the moment a second persona is activated in the same running server — exactly the
     scenario the demo personas exist to exercise live.
+
+    Called from an InstructionProvider, which runs on every Forecaster invocation — a
+    missing or truncated persona.json previously raised straight out of json.loads() here,
+    killing the pipeline before the Forecaster stage could even start (analyst's output
+    would already be on disk, but the run would never reach the optimizer). Falls back to
+    "" (the same default a present-but-empty profileData.location.home_city would already
+    produce) so a corrupt/missing file degrades to "no known home city" instead of a hard
+    crash.
     """
-    prefs = json.loads((_DATA_DIR / "persona.json").read_text())
+    try:
+        prefs = json.loads((_DATA_DIR / "persona.json").read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return ""
     return prefs.get("profileData", {}).get("location", {}).get("home_city", "")
 
 
@@ -238,8 +249,8 @@ You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 Context from upstream agents:
-- Analyst finding: {{analysis}}
-- Forecaster outlook: {{forecast}}
+- Analyst finding: {{annual_analysis}}
+- Forecaster outlook: {{annual_forecast}}
 
 Your job: propose exactly ONE concrete contract change that maximizes value for the user.
 Address the user directly as "you"/"your" throughout your output — not by name.
@@ -297,7 +308,7 @@ added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a Ba
 date_to="{_REVIEW_YEAR}-12-31" (this report is scoped to {_REVIEW_YEAR} only), then state its
 "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
 
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{analysis}}.
+**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{annual_analysis}}.
 
 **What stays and why:**
 - [subscription] — [one-line justification with the key metric]
@@ -502,7 +513,17 @@ Keep the output concise — bullet points, no prose paragraphs. Report only what
 Your output is consumed by downstream agents, not displayed to the user. Write it as a clean structured report. Do not include questions, offers, follow-up prompts, or any conversational phrase at the end.
 """,
     tools=[load_annual_analyst_context],
-    output_key="analysis",
+    # Namespaced distinctly from the regular pipeline's analyst_agent output_key="analysis"
+    # — both pipelines used to write "analysis"/"forecast"/"recommendation", which is a
+    # no-op collision when /api/analyze and /api/annual-report each build a fresh
+    # InMemoryRunner + session, but NOT when the coordinator routes to either pipeline as
+    # an AgentTool inside /api/chat's one persistent InMemorySessionService per session_id
+    # (see main.py's _chat_service). Ask for an optimization then an annual report in the
+    # same chat, and the second run's stages would silently overwrite the first's keys —
+    # or, if a stage produced empty output (the exact failure _with_pipeline_retry exists
+    # to paper over on the other two entry points, which /api/chat doesn't have), the
+    # downstream agent would read the PREVIOUS run's leftover value instead of failing.
+    output_key="annual_analysis",
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
 )
 
@@ -512,7 +533,7 @@ annual_forecaster_agent = LlmAgent(
     description="Forecasts the user's forward mobility demand for the next 3–6 months based on their calendar.",
     instruction=_annual_forecaster_instruction,
     tools=[load_forecaster_context],
-    output_key="forecast",
+    output_key="annual_forecast",  # see annual_analyst_agent's output_key comment above
     generate_content_config=build_content_config(_SHORT_REPORT_TOKENS),
     include_contents="none",
 )
@@ -525,7 +546,7 @@ annual_optimizer_agent = LlmAgent(
         "over the past 12 months", f"in {_REVIEW_YEAR}"
     ),
     tools=[load_annual_optimizer_context, compute_co2_impact_kg],
-    output_key="recommendation",
+    output_key="annual_recommendation",  # see annual_analyst_agent's output_key comment above
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
 )
@@ -547,8 +568,23 @@ def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
     contradictions in earlier reports (a "savings" figure in one section disagreeing
     with a "net loss" verdict for the same subscription in another). The LLM's job
     here is narration grounded in numbers it is handed, not computation.
+
+    compute_annual_report_stats() is called here AND again independently by main.py's
+    /api/annual-report (to render the placeholder tables), so a genuinely broken
+    dataset fails either way — this call is not guarded into a silent fallback. The
+    try/except below exists only to re-raise with a clear pointer to where the failure
+    actually happened: an unguarded exception here previously surfaced as an opaque
+    crash inside this InstructionProvider callback (a stage with no tools of its own,
+    so nothing about the failure looked related to the stats computation at all) before
+    main.py's broad except in /api/annual-report turned it into a 500 either way.
     """
-    stats = compute_annual_report_stats()
+    try:
+        stats = compute_annual_report_stats()
+    except Exception as exc:
+        raise RuntimeError(
+            f"annual_communicator_instruction: compute_annual_report_stats() failed "
+            f"while building this stage's instruction: {exc}"
+        ) from exc
     by_mode_rows = [r for r in stats["by_mode"] if r["mode"] != "Total"]
     top_emitter = max(by_mode_rows, key=lambda r: r["co2_kg"]) if by_mode_rows else None
     top_emitter_share_pct = (
@@ -561,13 +597,13 @@ You are the Annual Report agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
 The Optimizer has produced this recommendation:
-{{recommendation}}
+{{annual_recommendation}}
 
 The Analyst produced this usage report:
-{{analysis}}
+{{annual_analysis}}
 
 The Forecaster produced this outlook:
-{{forecast}}
+{{annual_forecast}}
 
 Authoritative figures for {_REVIEW_YEAR}, computed in code (use these exact numbers in your
 prose below — never recompute, re-derive, or contradict them):
@@ -631,15 +667,15 @@ execution is mocked/pending (the normal case), write exactly:
 > **Actions taken this year:** None.
 > **Pending proposal:** awaiting your approval (see below).
 
-Then include the optimizer's proposed change from {{recommendation}} as a single bullet. If
-{{recommendation}} indicates a change was actually approved/executed, state that instead under
+Then include the optimizer's proposed change from {{annual_recommendation}} as a single bullet. If
+{{annual_recommendation}} indicates a change was actually approved/executed, state that instead under
 "Actions taken this year" and only list remaining open proposals under "Pending proposal".
 
 ---
 
 ## 6. Forward Outlook
 
-Summarise {{forecast}} in 2–3 sentences: what demand signals suggest about the next quarter and whether the current portfolio still fits.
+Summarise {{annual_forecast}} in 2–3 sentences: what demand signals suggest about the next quarter and whether the current portfolio still fits.
 
 ---
 

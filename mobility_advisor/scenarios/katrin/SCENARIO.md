@@ -1,43 +1,49 @@
-# Scenario 04 — Neither Card Breaks Even: Cancel Both Rail Subscriptions
+# Scenario 04 — Fare-Class-Driven Upgrade: BahnCard 50, Drop the Deutschland-Ticket
 
 **Persona:** Katrin Berger — Düsseldorf, BahnCard 25 + Deutschland-Ticket.
-**Tests:** Break-even math against real trip volume, and that the generalized-cost model
-(cost + time + CO2, weighted by the persona's own priorities) can outrank a subscription on
-cost and time even when it's the only dimension that comes out worse.
-**Expected result:** Recommend cancelling both the BahnCard 25 and the Deutschland-Ticket —
-neither pays for itself at her current travel volume.
+**Tests:** Break-even math against real trip volume, and that BahnCard tier selection is
+driven by the route's dominant *fare class* (Sparpreis vs. Flexpreis — see
+`_dominant_fare_class`/`apply_subscription_discount` in `tools.py`), not by cost alone.
+**Expected result:** Upgrade to **BahnCard 50** and cancel the **Deutschland-Ticket** — BC50's
+50%-off-Flexpreis rate dominates her Flexpreis-heavy long-distance spend, and once BC50 is
+held the Deutschland-Ticket's flat €756/year fee no longer earns back its keep on top of it.
 
 ## Summary
 
-Katrin Berger holds a **BahnCard 25** and a **Deutschland-Ticket**. Run against the
-deterministic optimizer, neither breaks even: the BahnCard 25's Flexpreis/Sparpreis discount
-is worth **€54.49/year** against a **€111/year** fee (net **−€56.51**), and the
-Deutschland-Ticket's regional coverage is worth **€0** against its **€756/year** fee (its 3
-regional legs in the trip history were already free-adjacent local hops, not journeys that
-would otherwise cost real money). A BahnCard 50 fares worse still — €118.26/year of discount
-value against a €243.96/year fee (net **−€125.70**).
+Katrin Berger holds a **BahnCard 25** and a **Deutschland-Ticket**. Her 10 long-distance
+Intercity legs (5 round trips: Düsseldorf ↔ Berlin / München / Hamburg / Frankfurt / Stuttgart)
+are all booked **Flexpreis** — BahnCard 50 discounts Flexpreis by 50% vs. BahnCard 25's 25%,
+so the fare-class distinction, not raw cost, decides which card wins here. Run against the
+deterministic optimizer, upgrading to **BahnCard 50 alone** (dropping the Deutschland-Ticket)
+is the clear winner: **−€237.20/year cheaper, 3.9 min/year faster, and 5.9 kg CO2/year
+greener** than her current setup — all three dimensions agree, so no preference-weight
+tie-break is needed even though her priorities (cost 0.3 / time 0.5 / sustainability 0.2) are
+time-dominant.
 
-Cancelling both drops annual cost from **€1,099.95 to €287.44** (**−€812.51/year**). The
-generalized-cost model — which reallocates trip mode-share by the persona's own cost/time/CO2
-weights when a subscription's discount disappears — also comes out **17.7 minutes/year
-faster** (rail becomes relatively less price-competitive without a card, so a sliver of trip
-share shifts to a quicker alternative on a few routes), at a cost of **+15.1 kg CO2/year**.
-With her priorities weighted cost 0.3 / time 0.5 / sustainability 0.2, the two
-highest-weighted dimensions (time, then cost) both favor cancelling, and sustainability — her
-lowest-weighted dimension — is the only one that argues to keep a subscription. That's not
-enough to flip the recommendation.
+The Deutschland-Ticket does technically break even on its own (+€11.65/year against its
+€756/year fee, from her 3 regional legs plus a share of local/commute demand) — but stacked on
+top of BahnCard 50 it stops paying for itself: BahnCard 50 already discounts most of what the
+Deutschland-Ticket would additionally cover, so the combined portfolio (**€1,742.99/year**)
+costs **€181.18/year more** than BahnCard 50 alone (**€1,561.81/year**). This is why the
+optimizer's break-even table (which prices each candidate against the "no subscriptions"
+baseline in isolation) and the full portfolio ranking (which prices every combination against
+each other) can disagree on a combo even though neither is wrong — the break-even table answers
+"does this pay for itself on its own", the ranking answers "is this combination the cheapest
+way to cover the same demand."
 
 This supersedes the scenario's original design, which targeted the **earlier, LLM-driven**
-optimizer's prompt-embedded PREFERENCE WEIGHTING reasoning: with that optimizer, Katrin's
-BC25/BC50 cost math landed almost exactly on the crossover point (a ~€1/year wash), so her
-time-dominant priority profile was needed to break the tie toward upgrading to BahnCard 50.
-The current deterministic pipeline scores portfolios (and BahnCard ROI) differently enough
-that the €1/year wash no longer occurs — both cards are unambiguously net losses at her usage,
-so cost alone already picks a winner before preference-weighting has anything to break a tie
-over. The per-route fare-class detection this scenario originally exercised
-(`_dominant_fare_class`/`apply_subscription_discount` in `tools.py`, Flexpreis discounted at
-BC50's 50% vs. BC25's 25%) is still live and still shapes the break-even numbers above — it's
-just no longer close enough to be the deciding factor.
+optimizer's prompt-embedded PREFERENCE WEIGHTING reasoning and, in a since-corrected revision,
+briefly recommended cancelling both subscriptions outright. That intermediate result was an
+artifact of two now-fixed engine bugs, not a real finding about Katrin's usage:
+1. The rail-fare calibration ratio (fitted against her real Flexpreis fares) was being applied
+   to the synthetic home-city commute leg as well as her real intercity routes — inflating her
+   ~8km commute to ~€5.29/leg (vs. an uncalibrated ~€2.03) and swamping the ranking with
+   fabricated commute cost that had nothing to do with her actual rail card usage.
+2. The commute and other local/regional aggregates were, like every persona's, incorrectly
+   damped by unrelated life-event signals in some builds of the engine.
+With both fixed, her real signal — 10 Flexpreis-booked long-distance legs — decides the
+recommendation cleanly, and BahnCard 50 wins on fare class exactly as this scenario was
+originally designed to demonstrate.
 
 ---
 
@@ -47,20 +53,24 @@ Reproduced directly via `optimize_all_categories()` against this scenario's fixt
 
 | Portfolio | Subs €/yr | Trips €/yr | Total €/yr | Time min/yr | CO2 kg/yr |
 |---|---|---|---|---|---|
-| **No subscriptions (recommended)** | 0 | 287.44 | **287.44** | 1,259.1 | 229.347 |
-| BahnCard 25 + Deutschland-Ticket (current) | 867.00 | 232.95 | 1,099.95 | 1,276.8 | 214.21 |
-| Deutschland-Ticket only | 756.00 | 287.44 | 1,043.44 | 1,259.1 | 229.347 |
-| BahnCard 25 + MILES Basis | 111.00 | 232.95 | 343.95 | 1,276.8 | 214.21 |
-| MILES Silber Pass | 119.88 | 287.44 | 407.32 | 1,259.1 | 229.347 |
+| **BahnCard 50 (recommended)** | 243.96 | 1,317.85 | **1,561.81** | 5,265.3 | 770.407 |
+| BahnCard 25 + Deutschland-Ticket (current) | 818.88 | 980.13 | 1,799.01 | 5,269.2 | 776.271 |
+| BahnCard 50 + Deutschland-Ticket | 999.96 | 743.03 | 1,742.99 | 5,265.3 | 770.407 |
+| BahnCard 25 alone | 62.88 | 1,554.95 | 1,617.83 | 5,269.2 | 776.271 |
+| No subscriptions | 0 | 1,976.15 | 1,976.15 | 5,340.1 | 801.52 |
 
-Recommended vs. current: **−€812.51/year, −17.7 min/year (faster), +15.1 kg CO2/year
-(dirtier)**.
+Recommended vs. current: **−€237.20/year, −3.9 min/year (faster), −5.864 kg CO2/year
+(greener)**. All three dimensions favor the upgrade — there is no trade-off to name.
 
 | Break-even (single subscription, forward-looking) | Annual fee | Discount value | Net | Breaks even? |
 |---|---|---|---|---|
-| Deutschland-Ticket | €756.00 | €0.00 | **−€756.00** | No |
-| BahnCard 25 (2. Klasse, Standard, Jahresabo) | €111.00 | €54.49 | **−€56.51** | No |
-| BahnCard 50 (2. Klasse, Standard, Jahresabo) | €243.96 | €118.26 | **−€125.70** | No |
+| BahnCard 50 (2. Klasse, Standard, Jahresabo) | €243.96 | €658.30 | **+€414.34** | Yes |
+| BahnCard 25 (2. Klasse, Standard, Jahresabo) | €62.88 | €421.20 | **+€358.32** | Yes |
+| Deutschland-Ticket | €756.00 | €767.65 | **+€11.65** | Yes, barely |
+
+BahnCard 50's discount value (€658.30) is roughly 55% higher than BahnCard 25's (€421.20) on
+the *same* trip set — almost exactly the 50%-vs-25% Flexpreis discount ratio the two cards
+carry, confirming the fare-class mechanism (not a raw-cost tie-break) is what separates them.
 
 ---
 
@@ -71,10 +81,9 @@ Recommended vs. current: **−€812.51/year, −17.7 min/year (faster), +15.1 k
 - **current_subscriptions.json** — BahnCard 25 (Standard) + Deutschland-Ticket. BC25 renews
   `2026-11-30`, Deutschland-Ticket `2026-07-01`.
 - **travel_history_raw.json** — 10 long-distance Intercity legs (5 round trips: Düsseldorf ↔
-  Berlin / München / Hamburg / Frankfurt / Stuttgart), all **Flexpreis**, summing to €268 in
-  `cost_eur` (BC25-discounted). Plus 3 short regional legs at €0 (covered by the
-  Deutschland-Ticket) — too few and too low-value to justify the ticket's €756/year fee on
-  their own.
+  Berlin / München / Hamburg / Frankfurt / Stuttgart), all **Flexpreis**, summing to **€968.00**
+  in `cost_eur` (already BC25-discounted at 25% off). Plus 3 short regional legs at €0
+  (covered by the Deutschland-Ticket).
 - **calendar_events_live.json** — continued long-distance client trips (Berlin/München/
   Stuttgart), several explicitly noted as *likely to move* — reinforcing the flexibility need.
   No life-event / portfolio-reset signals.
@@ -90,35 +99,33 @@ Recommended vs. current: **−€812.51/year, −17.7 min/year (faster), +15.1 k
 
 | Agent | Expected Action |
 |---|---|
-| **Analyst** | Reports BahnCard 25 usage: ~€268 discounted long-distance spend, 10 long-distance legs, all Flexpreis; regional legs covered by the D-Ticket. States renewal dates for both subscriptions. |
+| **Analyst** | Reports BahnCard 25 usage: ~€968 BC25-discounted long-distance spend, 10 long-distance legs, all Flexpreis; regional legs covered by the D-Ticket. States renewal dates for both subscriptions. |
 | **Forecaster** | Continued long-distance demand on the Düsseldorf corridors; flags several trips as date-uncertain. **No life-event signals detected.** |
-| **Optimizer** | Calls `optimize_all_categories()`, which ranks "No subscriptions" first. Reports the break-even table showing both BC25 and the Deutschland-Ticket as net losses (BC50 worse still). Outputs both delta families verbatim — vs.-recommended and vs.-current — so the Communicator doesn't have to hand-negate a sign. |
-| **Communicator** | Presents cancelling both subscriptions as recommended, "Keep current setup" as an alternative. States all three dimensions using the vs.-current deltas: cheaper (−€813/yr), faster (−18 min/yr), more CO2 (+15 kg/yr) — and names time and cost, not sustainability, as the dimensions that decided it. Action-by dates for both current subscriptions' renewals. |
+| **Optimizer** | Calls `optimize_all_categories()`, which ranks "BahnCard 50" first. Reports the break-even table showing BahnCard 50's discount value clearly outweighing BahnCard 25's on the same Flexpreis-heavy trip set. Outputs both delta families verbatim — vs.-recommended and vs.-current — so the Communicator doesn't have to hand-negate a sign. |
+| **Communicator** | Presents upgrading to BahnCard 50 (and cancelling the Deutschland-Ticket) as recommended, "Keep current setup" as an alternative. States all three dimensions using the vs.-current deltas: cheaper (−€237/yr), faster (−4 min/yr), greener (−6 kg CO2/yr) — no trade-off framing needed since all three agree. Action-by dates for both current subscriptions' renewals. |
 
-**Expected recommendation:** Cancel **BahnCard 25** and the **Deutschland-Ticket**, saving
-€812.51/year, driven by both subscriptions running a net loss against actual usage — not a
-preference-weight tie-break.
+**Expected recommendation:** Upgrade to **BahnCard 50** and cancel the **Deutschland-Ticket**,
+saving €237.20/year, driven by BahnCard 50's 50%-off-Flexpreis rate against her Flexpreis-heavy
+long-distance travel — a fare-class distinction, not a raw cost comparison.
 
 ---
 
 ## What a Passing Run Looks Like
 
-- The Optimizer's break-even table shows both current subscriptions as net losses (negative
-  `net_eur`), and BahnCard 50 as an even larger loss.
-- It recommends cancelling both, quoting cost, time, AND CO2 for the recommended option —
-  not cost alone.
-- The CO2 and travel-time direction words match their signs: cost and time both improve
-  (cheaper, faster); CO2 gets worse (more) — the report must not describe this backwards
-  (e.g. "greener" or "slower") relative to the tiles.
-- It notes that sustainability — her lowest-weighted priority — is the one dimension arguing
-  to keep a subscription, and that it isn't enough to outweigh the cost + time verdict.
+- The Optimizer's break-even table shows BahnCard 50's discount value clearly ahead of
+  BahnCard 25's on the same trip set (roughly the 50%-vs-25% Flexpreis ratio).
+- It recommends BahnCard 50 (with the Deutschland-Ticket dropped), quoting cost, time, AND CO2
+  for the recommended option — not cost alone.
+- The CO2 and travel-time direction words match their signs: all three dimensions improve
+  (cheaper, faster, greener) — the report must not describe any of them backwards relative to
+  the tiles.
+- It attributes the upgrade to fare class (Flexpreis discount rate), not merely "it's cheaper."
 
 ## What a Failing Run Looks Like
 
-- Recommends upgrading to BahnCard 50 (that was the old LLM-optimizer's answer for this
-  scenario; the current deterministic pipeline's break-even math no longer supports it).
+- Recommends BahnCard 25 (tie-breaking on raw cost without engaging the fare-class mechanism),
+  or recommends cancelling both subscriptions outright (the since-corrected intermediate
+  result — see Summary above for the two engine bugs that produced it).
 - States a euro saving without also stating the CO2 and travel-time deltas.
-- Describes the CO2 or travel-time change in the wrong direction relative to the numbers
-  (e.g. claims cancelling is "greener" when it actually adds +15 kg CO2/year, or "slower"
-  when it's actually 18 min/year faster).
+- Describes the CO2 or travel-time change in the wrong direction relative to the numbers.
 - Fires a "hold pending decision" candidate (there is no portfolio-reset life event).

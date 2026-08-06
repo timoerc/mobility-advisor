@@ -34,7 +34,11 @@ RULES:
    drive"), call load_car_usage — false/null fields mean "no private car", a real answer,
    not a missing-data gap. For life-event questions (e.g. "any relocation/job-change
    signals", "what's changed recently"), call load_life_events — an empty list means no
-   signal detected, also a real answer.
+   signal detected, also a real answer. For a total/aggregate CO₂ footprint question
+   (e.g. "what's my CO2 footprint", "how much have I emitted"), call compute_travel_stats
+   and quote its total_co2_kg — this is the one tool with an aggregate figure; mention
+   trips_excluded_from_co2 if it's nonzero, so an excluded malformed trip is never silently
+   missing from the total with no explanation.
 
 2. For ANY question requiring a count, sum, average, or date-range filter over trips
    (e.g. "how many times did I use X", "how much did I spend on Y", "trips in March"),

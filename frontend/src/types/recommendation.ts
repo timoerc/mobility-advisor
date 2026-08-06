@@ -55,6 +55,11 @@ export type Recommendation = {
   reasoning: string[];
   assumptions: string[];
   alternatives: Alternative[];
+  // Deterministic data-quality/methodology warnings from the trip-projection engine
+  // (malformed travel-history entries, travel-reduction damping applied, rail-fare
+  // calibration notes, etc.) — absent or empty when nothing was flagged. Populated
+  // server-side regardless of what the narrative text mentions.
+  dataQualityWarnings?: string[];
 };
 
 export type ExecutionResult = {

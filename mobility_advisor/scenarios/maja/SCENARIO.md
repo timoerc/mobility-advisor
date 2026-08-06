@@ -19,24 +19,29 @@ All figures use BC50/BC25's **25% Sparpreis** discount rate — the rate that ac
 | Metric | Value |
 |---|---|
 | BC50 annual card cost | €244 (€20.33 × 12) |
-| BC25 annual card cost | €111 (€9.25 × 12) |
+| BC25 annual card cost | €62.88 (€5.24 × 12) |
 | Actual discounted DB spend (5 DB trips) | €111.70 |
 | Implied full-price equivalent | €111.70 ÷ 0.75 = €148.93 |
 | Discount value realized (identical for both cards — both give 25% on Sparpreis) | €148.93 × 0.25 = €37.23 |
 | Net loss from holding BC50 vs. no card | €37.23 − €244 = **−€206.77/year** |
-| Net loss from holding BC25 vs. no card | €37.23 − €111 = **−€73.77/year** |
+| Net loss from holding BC25 vs. no card | €37.23 − €62.88 = **−€25.65/year** |
 
-BC50 loses €133/year (its fee delta) more than BC25 for identical benefit — it is dominated regardless of any other assumption.
+BC50 loses €181/year (its fee delta) more than BC25 for identical benefit — it is dominated regardless of any other assumption.
 
-**Full-portfolio result (the deterministic optimizer's actual output — projects ALL of Maja's recurring routes forward 12 months, not just the 5 raw DB trips, so total rail volume is higher than the table above):**
+**Full-portfolio result (the deterministic optimizer's actual output — projects ALL of Maja's recurring routes forward 12 months, including her synthetic home-city commute demand, not just the 5 raw DB trips, so total rail volume is higher than the table above):**
 
 | Portfolio | Annual cost |
 |---|---|
-| BahnCard 25 — **recommended** | €898.06 |
-| No subscriptions | €931.76 (+€33.70 vs. BC25) |
-| BahnCard 50 (status quo) | €1,031.02 (+€132.96 vs. BC25) |
+| BahnCard 25 — **recommended** | €1,384.61 |
+| BahnCard 50 (status quo) | €1,565.69 (+€181.08 vs. BC25) |
+| No subscriptions | €1,633.22 (+€248.61 vs. BC25) |
 
-Once the forward-projected trip set (which includes recurring routes beyond the literal 5 historical DB trips) is priced at calibrated fares, BC25's €111 fee is narrowly earned back — full cancellation is a close second, not a clear winner, but BC50 is unambiguously the worst option by a wide margin. Either "downgrade to BC25" or "cancel" is an acceptable top recommendation; **keeping BC50 is not**.
+On the forward-projected trip set, BC25 clearly earns back its fee: its break-even table entry
+shows €311.49 of discount value against a €62.88 fee (net **+€248.61/year**), and BC25 beats
+both "no subscriptions" and BC50 outright on the full portfolio ranking — this is not a close
+call. BC50 remains unambiguously the worst option by a wide margin. Downgrading to BC25 is the
+clear top recommendation; full cancellation is a distant, dominated second (it forgoes BC25's
+real positive net value); **keeping BC50 is not competitive at all**.
 
 ---
 
@@ -56,14 +61,14 @@ Once the forward-projected trip set (which includes recurring routes beyond the 
 |---|---|
 | **Analyst** | Flags that BC50's discount value on the 5 raw DB trips (€37.23) is far below its card cost (€244), and that BC50 and BC25 unlock the identical discount on Sparpreis fares. Notes no long-distance demand signal in calendar beyond what history projects. |
 | **Optimizer** | Ranks BahnCard 25 above both "no subscriptions" and BahnCard 50; BahnCard 50 is the clear loser regardless of ranking method. Recommends BC25. |
-| **Communicator** | Drafts recommendation: downgrade to BC25 (or cancel) before `next_renewal_date` (`2026-12-31`). States why BC50 specifically is dominated (same discount, higher fee) and the annual saving vs. keeping the card (~€133/year). |
+| **Communicator** | Drafts recommendation: downgrade to BC25 before `next_renewal_date` (`2026-12-31`). States why BC50 specifically is dominated (same discount, higher fee) and the annual saving vs. keeping the card (~€181/year). |
 
 ---
 
 ## What a Passing Run Looks Like
 
-- Final output explicitly recommends downgrading to BC25 or cancelling BC50 outright — either is acceptable
-- Includes a savings estimate vs. keeping BC50 (~€133/year for BC25; ~€100–133/year for full cancellation)
+- Final output recommends downgrading to BC25 (the numerically best option, and the deterministic optimizer's actual pick) — recommending full cancellation instead is a lesser pass, since it beats BC50 but is still ~€249/year worse than BC25 on the current fixture
+- Includes a savings estimate vs. keeping BC50 (~€181/year for BC25)
 - Includes the cancellation/downgrade deadline: "Act before **31 December 2026** to avoid auto-renewal"
 - States why BC50 specifically loses to BC25 (same 25% Sparpreis discount, higher fee)
 - No uncertainty flags — the signal is unambiguous

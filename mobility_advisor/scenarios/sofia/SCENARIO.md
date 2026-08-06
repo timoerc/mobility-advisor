@@ -34,8 +34,9 @@ biggest one.
 | Why not stay on Basis | Full km-tariff every ride, no credit, no discount |
 
 The 2 long-distance rail legs (Berlin↔Hamburg, ~€75 full price, no BahnCard) are far too few
-to justify a BahnCard (BC25 break-even ≈ €444 full-price spend) — so the rail side needs no
-change; the opportunity is purely the car-share membership.
+to justify a BahnCard (BC25's €62.88/year fee ÷ 25% Sparpreis discount rate ≈ €252 full-price
+spend needed to break even) — so the rail side needs no change; the opportunity is purely the
+car-share membership.
 
 ---
 

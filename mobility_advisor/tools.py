@@ -516,7 +516,12 @@ def _dominant_fare_class(ticket_types: list[str | None]) -> str:
 
 
 _RAIL_FARE_CALIBRATION_MIN_TRIPS = 2
-_RAIL_FARE_CALIBRATION_CLAMP = (0.3, 3.0)
+# Tightened from (0.3, 3.0): now that the ratio is only ever applied to rail_intercity
+# alternatives (see _apply_rail_calibration), a 3x swing has no regional trip to hide
+# behind — it would scale a persona's entire long-distance rail pricing by 3x off as few as
+# _RAIL_FARE_CALIBRATION_MIN_TRIPS=2 observed fares. No real Sparpreis/Flexpreis spread on
+# the same route class plausibly exceeds ~2.5x.
+_RAIL_FARE_CALIBRATION_CLAMP = (0.5, 2.5)
 # How far beyond the farthest calibrated trip the ratio is still trusted to extrapolate.
 # A ratio fitted on 300-450km domestic Sparpreis fares says nothing about a 2000km+ route
 # (no realistic single-ticket DB fare exists at that distance) — applying it there has
@@ -629,17 +634,26 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
 def _apply_rail_calibration(
     alternatives: list[dict], ratio: float, max_distance_km: float
 ) -> list[dict]:
-    """Scale a route's rail_intercity/rail_regional alternatives' estimated_price_eur by
-    the calibration ratio from _rail_fare_calibration_ratio(), for alternatives at or
-    under max_distance_km only — see that function's docstring for why calibration must
-    not extrapolate past the distance range it was fitted on. Non-rail alternatives
-    (car_rental, flight, ...) are untouched — the calibration is derived from, and only
-    validated against, observed rail fares.
+    """Scale a route's rail_intercity alternatives' estimated_price_eur by the calibration
+    ratio from _rail_fare_calibration_ratio(), for alternatives at or under max_distance_km
+    only — see that function's docstring for why calibration must not extrapolate past the
+    distance range it was fitted on.
+
+    rail_regional is deliberately excluded, not just distance-guarded: the ratio is fitted
+    exclusively against DB Sparpreis/Flexpreis intercity fares (_rail_fare_calibration_ratio
+    filters to those), which say nothing about a regional/short-hop fare structure. Applying
+    it to rail_regional used to inflate the synthetic home-city commute — a fixed ~8km leg
+    that dominates >90% of every persona's projected trips (see
+    _build_commute_aggregate_trip) — by whatever ratio an unrelated set of long-distance
+    fares happened to produce (observed up to 2.6x in one persona), which then decided the
+    whole portfolio ranking. Non-rail alternatives (car_rental, flight, ...) are untouched
+    either way — the calibration is derived from, and only validated against, observed rail
+    fares.
     """
     if ratio == 1.0:
         return alternatives
     for alt in alternatives:
-        if alt.get("mode") in ("rail_intercity", "rail_regional") and alt.get("distance_km", 0) <= max_distance_km:
+        if alt.get("mode") == "rail_intercity" and alt.get("distance_km", 0) <= max_distance_km:
             alt["estimated_price_eur"] = round(alt["estimated_price_eur"] * ratio, 2)
     return alternatives
 
@@ -687,8 +701,6 @@ def _travel_reduction_factor() -> tuple[float, list[str]]:
 def _build_local_aggregate_trip(
     local_aggregate: list[dict],
     reduction_factor: float,
-    calibration_ratio: float,
-    calibration_max_dist: float,
 ) -> tuple[dict | None, str]:
     """Build one synthetic "local/regional travel" ProjectedTrip from routes that were each
     seen too rarely (<2/yr) individually to qualify on their own, following the same
@@ -697,7 +709,9 @@ def _build_local_aggregate_trip(
     Frequency-weights the aggregate distance across the contributing routes, then prices
     rail_regional/car_share/car_private alternatives directly at that distance — mirroring
     derive_car_usage_trips()'s per-bucket pricing — rather than trying to average distinct
-    real routes' alternatives together.
+    real routes' alternatives together. No calibration ratio is applied here — the ratio is
+    fitted against intercity fares only and this aggregate is regional by construction (see
+    _apply_rail_calibration's docstring).
 
     Returns (trip_dict_or_None, warning). trip is None (with an empty warning) if the
     damped total frequency rounds to 0 — a travel-reduction signal can legitimately zero
@@ -719,11 +733,9 @@ def _build_local_aggregate_trip(
     alternatives: list[dict] = []
     for mode in modes:
         co2_mode = "rail" if mode.startswith("rail") else mode
-        rail_trip_type = "Intercity" if mode == "rail_intercity" else "Regional" if mode == "rail_regional" else None
+        rail_trip_type = "Regional" if mode == "rail_regional" else None
         co2 = co2_kg_for_mode(co2_mode, avg_dist, trip_type=rail_trip_type)
         price = estimate_trip_price(mode, avg_dist)
-        if mode in ("rail_intercity", "rail_regional") and avg_dist <= calibration_max_dist:
-            price = round(price * calibration_ratio, 2)
         dur = estimate_duration_min(mode, avg_dist)
         alt = RouteAlternative(
             mode=mode,
@@ -758,9 +770,107 @@ _TYPICAL_URBAN_COMMUTE_KM = 8.0
 _WORKING_WEEKS_PER_YEAR = 46  # 52 weeks minus ~4 weeks statutory vacation and public holidays
 
 
-def _build_commute_aggregate_trip(
-    reduction_factor: float, calibration_ratio: float, calibration_max_dist: float
+# Same-city trips actually booked on one of these modes are the only ones folded into the
+# intra-city aggregate below. A trip recorded as plain "rail" between two stops in the same
+# city is ordinary Deutschlandticket-covered local transit (already free-by-construction in
+# the fixtures) and carries no signal for evaluating a car-share/rail subscription; a
+# malformed entry (empty or unrecognized mode — see load_travel_history's
+# data_quality_warnings) is excluded the same way it already is from every other aggregate.
+_INTRA_CITY_CAR_MODES = {"car_share", "car_rental", "car_private"}
+
+
+def _build_intra_city_aggregate_trip(
+    intra_city_trips: list[dict],
+    data_window_months: float,
 ) -> tuple[dict | None, str]:
+    """Build one synthetic "intra-city travel" ProjectedTrip from trips whose origin and
+    destination normalize to the same city (see _normalize_to_city) — most commonly
+    car-share hops between districts of one city, which _route_key() has no directional
+    route to key on and which derive_projected_trips_from_history() used to discard
+    entirely before this existed.
+
+    Without this, a persona whose real usage is mostly intra-city car-sharing (e.g. MILES
+    rides entirely within Berlin) had zero projected car-share demand: nothing for any
+    MILES tier's monthly credit or per-km discount to be priced against, making every paid
+    tier look like a pure net loss regardless of how much the persona actually rides.
+
+    Only trips booked on a mode in _INTRA_CITY_CAR_MODES are aggregated. The alternative set
+    offered is deliberately car_share/car_private ONLY — no rail_regional option, unlike
+    _build_local_aggregate_trip()/_build_commute_aggregate_trip(). Those two model genuinely
+    substitutable local/commute demand, where offering a cheap regional-rail alternative is
+    the whole point (see their docstrings). An intra-city car-share trip is different: the
+    persona already had access to whatever free/cheap local transit their current
+    subscriptions cover and chose to pay for a car anyway — a same-city car-share ride
+    usually means carrying something, an odd-hours trip, or a route transit doesn't serve
+    well. Modeling it as rail-substitutable would let the simulator "solve" it by routing
+    100% of the demand onto free regional transit, which is exactly the failure this
+    function exists to avoid: it reproduces the original bug (car-share demand invisible to
+    every MILES tier) one layer downstream, just from an econometric artifact instead of a
+    dropped trip.
+
+    Distance is each trip's own recorded distance_km (falling back to
+    _TYPICAL_URBAN_COMMUTE_KM when absent), frequency-weighted-averaged across the
+    contributing trips — the same approach _build_local_aggregate_trip() uses for
+    rarely-seen inter-city routes, adapted here since every contributing trip counts
+    equally (there is no per-route <2/yr threshold to weight by).
+
+    Not damped by any travel_reduction signal and not rail-fare-calibrated — this is local
+    travel by construction (see _apply_rail_calibration's docstring and
+    derive_projected_trips_from_history's docstring for why local demand is exempt).
+
+    Returns (trip_dict_or_None, warning). None (with an empty warning) if there are no
+    qualifying intra-city trips, or the annualized frequency rounds to 0.
+    """
+    car_trips = [t for t in intra_city_trips if t.get("mode") in _INTRA_CITY_CAR_MODES]
+    if not car_trips:
+        return None, ""
+
+    dists = [t.get("distance_km") or _TYPICAL_URBAN_COMMUTE_KM for t in car_trips]
+    avg_dist = round(sum(dists) / len(dists), 1)
+    ticket_types = [t.get("ticket_type") for t in car_trips]
+    fare_class = _dominant_fare_class(ticket_types)
+
+    annual_freq = round(len(car_trips) * 12 / data_window_months)
+    if annual_freq < 1:
+        return None, ""
+
+    owns_car = load_car_usage().get("owns_car", False)
+    modes = ["car_share"] + (["car_private"] if owns_car else [])
+    alternatives: list[dict] = []
+    for mode in modes:
+        co2 = co2_kg_for_mode(mode, avg_dist)
+        price = estimate_trip_price(mode, avg_dist)
+        dur = estimate_duration_min(mode, avg_dist)
+        alt = RouteAlternative(
+            mode=mode,
+            distance_km=avg_dist,
+            duration_min=round(dur, 1),
+            co2_kg=round(co2, 3),
+            estimated_price_eur=round(price, 2),
+        )
+        alternatives.append(alt.model_dump())
+
+    trip = ProjectedTrip(
+        route=f"Intra-city car travel ({len(car_trips)} trip(s) observed, aggregated)",
+        origin="various",
+        destination="various",
+        frequency_per_year=annual_freq,
+        source="history",
+        category="intra_city_aggregate",
+        distance_km=avg_dist,
+        alternatives=alternatives,
+        fare_class=fare_class,
+    )
+    warning = (
+        f"Aggregated {len(car_trips)} same-city car-share/car-rental trip(s) "
+        f"(avg ~{avg_dist}km) into one projected intra-city trip ({annual_freq}/yr) instead "
+        f"of dropping them — this is the demand a car-share membership actually prices "
+        f"against. No rail alternative is offered for it (see this function's docstring)."
+    )
+    return trip.model_dump(), warning
+
+
+def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None, str]:
     """Synthesize the recurring home-city commute as a projected local-travel trip.
 
     travel_history_raw.json only ever records inter-city trips — a daily commute within
@@ -774,6 +884,15 @@ def _build_commute_aggregate_trip(
     distance for urban regional-transit commuters at roughly 8-10km, rounded down here.
     frequency_per_year counts one-way legs (there + back per office day), matching the
     convention derive_projected_trips_from_history already uses for real routes.
+
+    Callers should normally pass reduction_factor=1.0 — a travel_reduction life-event signal
+    (see _travel_reduction_factor) describes a change to *inter-city* travel (a project
+    ending, a client engagement winding down); it says nothing about whether the persona
+    still goes into their home-city office, so damping the commute alongside long-distance
+    routes conflated two unrelated kinds of demand. The parameter is kept so the caller
+    decides explicitly rather than this function silently assuming either way. No rail-fare
+    calibration ratio is applied here either — the ratio is fitted against intercity fares
+    only and this is a fixed regional leg (see _apply_rail_calibration's docstring).
 
     Returns (None, "") if the persona has no office_days at all (fully remote).
     """
@@ -797,8 +916,6 @@ def _build_commute_aggregate_trip(
         rail_trip_type = "Regional" if mode == "rail_regional" else None
         co2 = co2_kg_for_mode(co2_mode, dist, trip_type=rail_trip_type)
         price = estimate_trip_price(mode, dist)
-        if mode == "rail_regional" and dist <= calibration_max_dist:
-            price = round(price * calibration_ratio, 2)
         dur = estimate_duration_min(mode, dist)
         alt = RouteAlternative(
             mode=mode,
@@ -843,9 +960,21 @@ def derive_projected_trips_from_history() -> dict:
     actually does. A long-distance route seen only once is still dropped — a real one-off
     trip is not recurring demand a subscription decision should be based on.
 
+    A trip whose origin and destination normalize to the SAME city (e.g. a MILES car-share
+    hop between two Berlin districts) is not part of any inter-city route at all — it is
+    folded into a separate "intra-city travel" aggregate (see
+    _build_intra_city_aggregate_trip) instead of being discarded. Silently dropping these
+    used to leave personas whose real usage is dominated by intra-city car-sharing (rides
+    entirely within one city) with no car-share demand for any MILES tier's credit/discount
+    to be priced against at all.
+
     Each route's dominant fare class (Sparpreis vs. Flexpreis) is derived from its trips'
     ticket_type text, and the projected frequency is damped when a near-term
-    travel_reduction life-event signal exists (see _travel_reduction_factor()).
+    travel_reduction life-event signal exists (see _travel_reduction_factor()) — but only
+    for long-distance routes (> _RAIL_DISTANCE_THRESHOLD_KM). A travel_reduction signal
+    describes a change to inter-city travel (a project ending, a client engagement winding
+    down); it says nothing about whether the persona still commutes locally or runs local
+    errands, so regional/local/intra-city/commute demand is left undamped.
 
     Writes results to data/_projected_trips_history.json and returns a summary.
     """
@@ -853,10 +982,12 @@ def derive_projected_trips_from_history() -> dict:
     trips = history["trips"]
 
     route_counts: dict[tuple[str, str], dict] = {}
+    intra_city_trips: list[dict] = []
     for trip in trips:
         origin_city = _normalize_to_city(trip["origin"])
         dest_city = _normalize_to_city(trip["destination"])
         if origin_city.lower() == dest_city.lower():
+            intra_city_trips.append(trip)
             continue
         key = _route_key(origin_city, dest_city)
 
@@ -886,7 +1017,20 @@ def derive_projected_trips_from_history() -> dict:
         data_window_months = max(1, round((latest - earliest).days / 30.44))
 
     projected: list[dict] = []
-    warnings: list[str] = list(reduction_warnings) + list(calibration_warnings)
+    # data_quality_warnings from load_travel_history() (null costs, empty/unknown modes —
+    # see _travel_history_result) must be carried forward here, not dropped: this
+    # ProjectedTripSet's warnings list is the only channel merge_projected_trip_sets()
+    # aggregates from, which is in turn the only channel that reaches
+    # _optimization_results.json and, from there, the Recommendation the user sees (see
+    # optimize_all_categories() and main.py's Recommendation.dataQualityWarnings). Without
+    # this, a persona whose history has malformed entries (e.g. Lena's null-cost/empty-mode
+    # trips) got a pipeline run that silently analyzed only the clean subset with no visible
+    # trace of what was excluded or why.
+    warnings: list[str] = (
+        list(history.get("data_quality_warnings", []))
+        + list(reduction_warnings)
+        + list(calibration_warnings)
+    )
     # Below-threshold regional routes, collected for the aggregate step below instead of
     # being individually dropped — see the docstring.
     local_aggregate: list[dict] = []
@@ -920,7 +1064,17 @@ def derive_projected_trips_from_history() -> dict:
                 })
             continue
 
-        annual_freq = round(annual_freq * reduction_factor)
+        # Damping only applies beyond the regional threshold — a travel_reduction signal
+        # is about inter-city travel dropping off, not local/regional routes (see the
+        # docstring above).
+        if dist_km > _RAIL_DISTANCE_THRESHOLD_KM:
+            annual_freq = round(annual_freq * reduction_factor)
+        if annual_freq == 0:
+            # A damped-to-zero long-distance route contributes nothing and should not
+            # linger in the projected set (it previously did — merge_projected_trip_sets
+            # and simulate_portfolio would carry a 0/yr "route" through the whole pipeline).
+            continue
+
         fare_class = _dominant_fare_class(info["ticket_types"])
         alternatives = _apply_rail_calibration(
             result.get("alternatives", []), calibration_ratio, calibration_max_dist
@@ -939,16 +1093,26 @@ def derive_projected_trips_from_history() -> dict:
         projected.append(trip.model_dump())
 
     if local_aggregate:
-        agg_trip, agg_warning = _build_local_aggregate_trip(
-            local_aggregate, reduction_factor, calibration_ratio, calibration_max_dist
-        )
+        # Exempt from travel_reduction damping (factor=1.0) — see the docstring above and
+        # _build_local_aggregate_trip's.
+        agg_trip, agg_warning = _build_local_aggregate_trip(local_aggregate, 1.0)
         if agg_trip is not None:
             projected.append(agg_trip)
             warnings.append(agg_warning)
 
-    commute_trip, commute_warning = _build_commute_aggregate_trip(
-        reduction_factor, calibration_ratio, calibration_max_dist
-    )
+    if intra_city_trips:
+        # Also exempt from damping — same-city travel, not the inter-city travel a
+        # travel_reduction signal describes.
+        intra_trip, intra_warning = _build_intra_city_aggregate_trip(
+            intra_city_trips, data_window_months
+        )
+        if intra_trip is not None:
+            projected.append(intra_trip)
+            warnings.append(intra_warning)
+
+    # Exempt from travel_reduction damping (factor=1.0) — see the docstring above and
+    # _build_commute_aggregate_trip's.
+    commute_trip, commute_warning = _build_commute_aggregate_trip(1.0)
     if commute_trip is not None:
         projected.append(commute_trip)
         warnings.append(commute_warning)
@@ -1136,7 +1300,10 @@ def derive_car_usage_trips() -> dict:
                 rail_trip_type = "Intercity" if mode == "rail_intercity" else "Regional"
             co2 = co2_kg_for_mode(co2_mode, dist, trip_type=rail_trip_type)
             price = estimate_trip_price(mode, dist)
-            if mode in ("rail_intercity", "rail_regional") and dist <= calibration_max_dist:
+            # Calibration is fitted against intercity fares only (see
+            # _apply_rail_calibration's docstring) — the "short" category's rail_regional
+            # alternative must not inherit a ratio derived from unrelated long-distance fares.
+            if mode == "rail_intercity" and dist <= calibration_max_dist:
                 price *= calibration_ratio
             dur = estimate_duration_min(mode, dist)
 
@@ -1334,6 +1501,14 @@ def merge_projected_trip_sets() -> dict:
 # than left half-wired.
 
 
+# MILES Basis catalog defaults (mobility_catalog.json's miles_basis benefits) — the floor
+# every car-share ride costs even with NO subscription held. Named here so the walk-up
+# floor below and the existing per-tier .get(..., default) fallbacks stay in sync.
+_MILES_BASIS_BASE_KM_RATE_EUR = 0.79
+_MILES_BASIS_UNLOCK_FEE_EUR = 1.0
+_MILES_BASIS_PROTECTION_FEE_EUR = 3.9
+
+
 def apply_subscription_discount(
     mode: str,
     estimated_price_eur: float,
@@ -1364,9 +1539,27 @@ def apply_subscription_discount(
     competing routes to influence which mode each one picks would require solving one
     joint allocation across the whole trip set, not pricing routes independently.
 
+    For car_share specifically, the starting best_price is NOT estimated_price_eur (the
+    bare per-km curve from estimate_trip_price, which price_factors.json's own note says
+    excludes per-trip unlock/protection fees "applied separately … in
+    apply_subscription_discount"). Car-sharing has no truly card-free walk-up rate — using a
+    service like MILES at all requires at least the free Basis-tier membership, which
+    itself carries those fees (see _MILES_BASIS_* above). Starting from the bare per-km rate
+    instead priced "no subscription" cheaper than every paid tier's actual walk-up cost,
+    which made a paid tier's credit or per-km discount structurally unable to ever win
+    regardless of how much car-share the persona actually uses.
+
     Returns the discounted price. The cheapest applicable discount wins.
     """
-    best_price = estimated_price_eur
+    if mode == "car_share":
+        best_price = round(
+            _MILES_BASIS_BASE_KM_RATE_EUR * distance_km
+            + _MILES_BASIS_UNLOCK_FEE_EUR
+            + _MILES_BASIS_PROTECTION_FEE_EUR,
+            2,
+        )
+    else:
+        best_price = estimated_price_eur
 
     for sub in portfolio:
         sub_mode = sub.get("mode")
@@ -1387,10 +1580,10 @@ def apply_subscription_discount(
                 best_price = min(best_price, discounted)
 
         elif sub_mode == "car_share" and mode == "car_share":
-            base_km = benefits.get("base_km_rate_eur", 0.79)
+            base_km = benefits.get("base_km_rate_eur", _MILES_BASIS_BASE_KM_RATE_EUR)
             disc_km = benefits.get("discount_km_pct", 0)
-            unlock = benefits.get("unlock_fee_eur_per_trip", 1.0)
-            protection = benefits.get("protection_plus_eur_per_trip", 3.9)
+            unlock = benefits.get("unlock_fee_eur_per_trip", _MILES_BASIS_UNLOCK_FEE_EUR)
+            protection = benefits.get("protection_plus_eur_per_trip", _MILES_BASIS_PROTECTION_FEE_EUR)
 
             km_cost = base_km * (1 - disc_km / 100) * distance_km
             trip_cost = km_cost + unlock + protection
@@ -1826,6 +2019,15 @@ def optimize_all_categories() -> dict:
     if not merged_path.exists():
         return {"status": "error", "error": "Run merge_projected_trip_sets first"}
 
+    # merge_projected_trip_sets() already aggregates every upstream warning (history's
+    # data_quality_warnings, travel_reduction/calibration notices, local/commute/intra-city
+    # aggregation notes, calendar dedup/uncorroborated-demand caps) into one list — carried
+    # through here into _optimization_results.json since that file (not any of the
+    # `_projected_trips_*` scratch files) is what main.py reads to build the Recommendation
+    # the user actually sees. Without this, e.g. Lena's malformed-trip warnings were
+    # generated correctly but had no path to the user-facing report at all.
+    warnings = json.loads(merged_path.read_text(encoding="utf-8")).get("warnings", [])
+
     catalog_raw = json.loads((_STATIC / "mobility_catalog.json").read_text(encoding="utf-8"))
     catalog_by_id = {opt["id"]: opt for opt in catalog_raw["options"]}
 
@@ -2061,6 +2263,7 @@ def optimize_all_categories() -> dict:
         "scenarios": [_slim(e) for e in shown],
         "all_ranked": [_slim(e) for e in entries],
         "break_even": break_even,
+        "warnings": warnings,
     }
     _atomic_write_json(_DATA / "_optimization_results.json", output)
 
@@ -2071,6 +2274,7 @@ def optimize_all_categories() -> dict:
         "weights": weights,
         "scenarios": [_slim(e) for e in shown],
         "break_even": break_even,
+        "warnings": warnings,
     }
 
 
@@ -2183,7 +2387,7 @@ def _travel_history_result(trips: list) -> dict:
 
 
 def load_travel_history() -> dict:
-    """Load Maja's 12-month travel history from the mock data store.
+    """Load the active user's 12-month travel history from the mock data store.
 
     Returns a dict with key 'trips', a list of past trips each containing:
     date (str), mode (str), origin (str), destination (str), distance_km (float),
@@ -2307,10 +2511,12 @@ def compute_travel_stats(
     origin_filter: str | None = None,
     destination_filter: str | None = None,
 ) -> dict:
-    """Aggregate Maja's travel history: trip counts, total spend, and distance, with optional filters.
+    """Aggregate the active persona's travel history: trip counts, total spend, distance,
+    and CO2, with optional filters.
 
     Use this for ANY counting, summing, or date-range question about trips — never tally
-    the travel history JSON yourself.
+    the travel history JSON yourself, and never use outside knowledge of CO2 factors for a
+    "what's my footprint" question — this is the one aggregation tool that has one.
 
     Args:
         subscription_or_provider: Optional filter, e.g. "BahnCard 50" or "Deutsche Bahn".
@@ -2325,8 +2531,13 @@ def compute_travel_stats(
             name (case-insensitive). Pass None for no filter.
 
     Returns a dict with keys: trip_count (int), total_spend_eur (float, sums only trips with
-    non-null cost_eur), total_distance_km (float), trips_missing_cost (int, count of matched
-    trips with null cost_eur), matched_filters (dict echoing the filters applied),
+    non-null cost_eur), total_distance_km (float, sums only trips with non-null distance_km),
+    total_co2_kg (float, sums only trips with non-null co2_emission_kg AND a recognized mode
+    — an empty/unknown mode is excluded here the same way load_travel_history's own
+    data_quality_warnings already say it is), trips_missing_cost/trips_missing_distance (int,
+    count of matched trips excluded from the respective sum for a null value),
+    trips_excluded_from_co2 (int, count excluded from total_co2_kg for either a null value or
+    an empty/unrecognized mode), matched_filters (dict echoing the filters applied),
     subscription_renewal (dict with next_renewal_date/billing_cycle, or null — set when
     subscription_or_provider matches an entry in current_subscriptions.json by the same
     substring rule), and data_quality_warnings (list[str], unfiltered passthrough from
@@ -2357,8 +2568,20 @@ def compute_travel_stats(
 
     matched = [trip for trip in trips if matches(trip)]
     total_spend_eur = sum(trip.cost_eur for trip in matched if trip.cost_eur is not None)
-    total_distance_km = sum(trip.distance_km for trip in matched)
+    # distance_km is float | None on the Trip model (a null value is possible, e.g. one of
+    # Lena's malformed history entries) — unguarded, a single such trip raised TypeError
+    # here even though the analogous cost_eur sum right above was always guarded.
+    total_distance_km = sum(trip.distance_km for trip in matched if trip.distance_km is not None)
     trips_missing_cost = sum(1 for trip in matched if trip.cost_eur is None)
+    trips_missing_distance = sum(1 for trip in matched if trip.distance_km is None)
+    total_co2_kg = sum(
+        trip.co2_emission_kg for trip in matched
+        if trip.co2_emission_kg is not None and trip.mode in _KNOWN_MODES
+    )
+    trips_excluded_from_co2 = sum(
+        1 for trip in matched
+        if trip.co2_emission_kg is None or trip.mode not in _KNOWN_MODES
+    )
 
     subscription_renewal = None
     if needle is not None:
@@ -2374,7 +2597,10 @@ def compute_travel_stats(
         "trip_count": len(matched),
         "total_spend_eur": round(total_spend_eur, 2),
         "total_distance_km": round(total_distance_km, 2),
+        "total_co2_kg": round(total_co2_kg, 3),
         "trips_missing_cost": trips_missing_cost,
+        "trips_missing_distance": trips_missing_distance,
+        "trips_excluded_from_co2": trips_excluded_from_co2,
         "matched_filters": {
             "subscription_or_provider": subscription_or_provider,
             "mode": mode,
@@ -2853,7 +3079,7 @@ def apply_subscription_change(
     new_product: str | None = None,
     as_of: date | None = None,
 ) -> dict:
-    """Apply one confirmed change to Maja's active subscriptions. The sole writer of current_subscriptions.json.
+    """Apply one confirmed change to the active user's subscriptions. The sole writer of current_subscriptions.json.
 
     Only call this after the user has explicitly instructed a specific change — never to
     evaluate whether a change is a good idea. mobility_catalog.json and every other

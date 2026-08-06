@@ -48,6 +48,60 @@ def test_fare_class_defaults_to_spar_when_unspecified():
     assert default_price == spar_price
 
 
+# ── apply_subscription_discount: car-share has no card-free walk-up rate ───────────
+
+
+def test_car_share_no_subscription_uses_miles_basis_walkup_floor():
+    # Regression guard: estimated_price_eur (the bare per-km synthetic curve from
+    # estimate_trip_price, which price_factors.json's own note says excludes per-trip
+    # fees) must NOT be the starting price for car_share — holding zero subscriptions
+    # still costs at least a MILES Basis-equivalent walk-up fare (base rate + unlock +
+    # protection), since there is no way to book a MILES ride without at least that. The
+    # old behaviour (bare per-km rate, no fees) priced "no subscription" cheaper than any
+    # real paid tier's walk-up cost, making every paid tier's discount structurally unable
+    # to ever win.
+    bare_synthetic_price = 5.0  # deliberately far below any real walk-up fare
+    price = tools.apply_subscription_discount("car_share", bare_synthetic_price, 10.0, [])
+    expected_floor = round(
+        tools._MILES_BASIS_BASE_KM_RATE_EUR * 10.0
+        + tools._MILES_BASIS_UNLOCK_FEE_EUR
+        + tools._MILES_BASIS_PROTECTION_FEE_EUR,
+        2,
+    )
+    assert price == expected_floor
+    assert price > bare_synthetic_price
+
+
+def test_car_share_paid_tier_still_undercuts_the_walkup_floor():
+    # A paid tier with a real per-km discount or credit must still be able to win against
+    # the walk-up floor — the floor raises the baseline "no subscription" price, it must
+    # not also raise the price when a genuinely cheaper tier is held.
+    miles_gold = {
+        "mode": "car_share",
+        "benefits": {
+            "base_km_rate_eur": 0.79, "discount_km_pct": 15,
+            "unlock_fee_eur_per_trip": 1.0, "protection_plus_eur_per_trip": 0.0,
+        },
+    }
+    price = tools.apply_subscription_discount("car_share", 5.0, 10.0, [miles_gold])
+    assert price == pytest.approx(0.79 * 0.85 * 10 + 1.0, abs=0.01)
+    walkup_floor = round(
+        tools._MILES_BASIS_BASE_KM_RATE_EUR * 10.0
+        + tools._MILES_BASIS_UNLOCK_FEE_EUR
+        + tools._MILES_BASIS_PROTECTION_FEE_EUR,
+        2,
+    )
+    assert price < walkup_floor
+
+
+def test_non_car_share_mode_still_uses_estimated_price_eur_as_floor():
+    # The walk-up floor is car_share-specific — a rail/flight/bus alternative with no
+    # matching subscription in the portfolio must still start from its own
+    # estimated_price_eur, unaffected by this change.
+    price = tools.apply_subscription_discount("rail_intercity", 42.5, 400, [])
+    assert price == 42.5
+
+
 # ── _dominant_fare_class ──────────────────────────────────────────────────────────
 
 
@@ -494,9 +548,7 @@ def test_local_aggregate_trip_created_for_subthreshold_regional_routes():
         {"distance_km": 37.0, "freq": 1, "ticket_types": ["Deutschland-Ticket"]},
         {"distance_km": 26.0, "freq": 1, "ticket_types": ["Deutschland-Ticket"]},
     ]
-    trip, warning = tools._build_local_aggregate_trip(
-        local_routes, reduction_factor=1.0, calibration_ratio=1.0, calibration_max_dist=1000.0
-    )
+    trip, warning = tools._build_local_aggregate_trip(local_routes, reduction_factor=1.0)
     assert trip is not None
     assert trip["frequency_per_year"] == 3
     assert trip["origin"] == "various"
@@ -507,9 +559,7 @@ def test_local_aggregate_trip_created_for_subthreshold_regional_routes():
 
 def test_local_aggregate_trip_none_when_damped_to_zero():
     local_routes = [{"distance_km": 40.0, "freq": 1, "ticket_types": [None]}]
-    trip, warning = tools._build_local_aggregate_trip(
-        local_routes, reduction_factor=0.0, calibration_ratio=1.0, calibration_max_dist=1000.0
-    )
+    trip, warning = tools._build_local_aggregate_trip(local_routes, reduction_factor=0.0)
     assert trip is None
     assert warning == ""
 
@@ -520,9 +570,7 @@ def test_commute_aggregate_trip_from_office_days(isolated_data_dir):
     persona["profileData"]["commute"] = {"office_days": ["mon", "tue", "wed", "thu"], "wfh_days": ["fri"]}
     persona_path.write_text(json.dumps(persona), encoding="utf-8")
 
-    trip, warning = tools._build_commute_aggregate_trip(
-        reduction_factor=1.0, calibration_ratio=1.0, calibration_max_dist=1000.0
-    )
+    trip, warning = tools._build_commute_aggregate_trip(reduction_factor=1.0)
     assert trip is not None
     assert trip["frequency_per_year"] == 4 * tools._WORKING_WEEKS_PER_YEAR * 2
     assert trip["origin"] == "various"
@@ -536,9 +584,163 @@ def test_commute_aggregate_trip_none_when_fully_remote(isolated_data_dir):
     persona["profileData"]["commute"] = {"office_days": [], "wfh_days": ["mon", "tue", "wed", "thu", "fri"]}
     persona_path.write_text(json.dumps(persona), encoding="utf-8")
 
-    trip, warning = tools._build_commute_aggregate_trip(1.0, 1.0, 1000.0)
+    trip, warning = tools._build_commute_aggregate_trip(1.0)
     assert trip is None
     assert warning == ""
+
+
+# ── _build_intra_city_aggregate_trip: same-city trips (Sofia-shaped regression) ────────
+
+
+def test_intra_city_aggregate_trip_created_from_car_share_trips(isolated_data_dir):
+    # Sofia-shaped regression: derive_projected_trips_from_history() used to drop every
+    # same-city trip outright (origin/destination normalize to the same city, so
+    # _route_key groups them with nothing), leaving a car-share-heavy persona with zero
+    # projected car-share demand — no MILES tier's credit/discount had anything to be
+    # priced against.
+    car_trips = [
+        {"distance_km": 5.4, "ticket_type": "Pay-per-use", "mode": "car_share"}
+        for _ in range(14)
+    ]
+    trip, warning = tools._build_intra_city_aggregate_trip(car_trips, data_window_months=11)
+    assert trip is not None
+    assert trip["origin"] == "various"
+    assert trip["category"] == "intra_city_aggregate"
+    modes = {a["mode"] for a in trip["alternatives"]}
+    assert modes == {"car_share"}
+    # No rail_regional alternative — see the function's docstring on why offering one
+    # would let the simulator "solve" this demand back onto free regional transit.
+    assert "rail_regional" not in modes
+    assert "14 same-city car-share" in warning
+
+
+def test_intra_city_aggregate_trip_excludes_non_car_modes(isolated_data_dir):
+    # Same-city trips recorded as plain "rail" (ordinary Deutschlandticket-covered local
+    # transit) or a malformed mode (empty string / unrecognized value — the same kind
+    # load_travel_history already flags via data_quality_warnings) must not be folded in:
+    # they carry no car-share-subscription signal, and a malformed mode should not silently
+    # count as demand for anything.
+    mixed_trips = [
+        {"distance_km": 5.0, "ticket_type": None, "mode": "car_share"},
+        {"distance_km": 3.0, "ticket_type": "Deutschland-Ticket", "mode": "rail"},
+        {"distance_km": 4.0, "ticket_type": None, "mode": ""},
+        {"distance_km": 6.0, "ticket_type": None, "mode": "hovercraft"},
+    ]
+    trip, warning = tools._build_intra_city_aggregate_trip(mixed_trips, data_window_months=12)
+    assert trip is not None
+    assert "1 same-city car-share" in warning  # only the single car_share trip counted
+
+
+def test_intra_city_aggregate_trip_none_when_no_car_trips(isolated_data_dir):
+    non_car_trips = [
+        {"distance_km": 3.0, "ticket_type": "Deutschland-Ticket", "mode": "rail"},
+        {"distance_km": 4.0, "ticket_type": None, "mode": ""},
+    ]
+    trip, warning = tools._build_intra_city_aggregate_trip(non_car_trips, data_window_months=12)
+    assert trip is None
+    assert warning == ""
+
+
+def test_derive_projected_trips_from_history_folds_same_city_trips_into_intra_city_aggregate(
+    isolated_data_dir, monkeypatch
+):
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+    history = {"trips": [
+        {
+            "date": f"2025-0{i}-01", "mode": "car_share", "origin": "Köln", "destination": "Köln",
+            "cost_eur": 12.0, "distance_km": 5.0, "provider": "MILES Mobility",
+            "ticket_type": "Pay-per-use",
+        }
+        for i in range(1, 4)
+    ]}
+    (isolated_data_dir / "travel_history_raw.json").write_text(json.dumps(history), encoding="utf-8")
+    (isolated_data_dir / "life_events.json").write_text(json.dumps({"events": []}), encoding="utf-8")
+
+    result = tools.derive_projected_trips_from_history()
+    assert result["status"] == "ok"
+    assert any("Intra-city" in r["route"] for r in result["routes"])
+
+    written = json.loads((isolated_data_dir / "_projected_trips_history.json").read_text(encoding="utf-8"))
+    intra_trip = next(t for t in written["trips"] if t.get("category") == "intra_city_aggregate")
+    assert {a["mode"] for a in intra_trip["alternatives"]} == {"car_share"}
+
+
+# ── derive_projected_trips_from_history: travel-reduction damping is scoped (A3/A4) ────
+
+
+def test_damping_applies_to_long_distance_but_not_regional_routes(isolated_data_dir, monkeypatch):
+    # A travel_reduction signal describes inter-city travel dropping off (a project
+    # ending, a client engagement winding down) — it says nothing about whether the
+    # persona still takes short regional trips, so only routes beyond
+    # _RAIL_DISTANCE_THRESHOLD_KM (100km) may be damped.
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+    long_distance_trips = [
+        {
+            "date": f"2025-0{i}-05", "mode": "rail", "origin": "Köln", "destination": "München",
+            "cost_eur": 80.0, "distance_km": 570, "provider": "Deutsche Bahn",
+            "ticket_type": "Sparpreis, 2. Klasse",
+        }
+        for i in range(1, 7)  # 6 occurrences
+    ]
+    regional_trips = [
+        {
+            "date": f"2025-0{i}-15", "mode": "rail", "origin": "Köln", "destination": "Bonn",
+            "cost_eur": 8.0, "distance_km": 30, "provider": "Deutsche Bahn",
+            "ticket_type": "Sparpreis, 2. Klasse",
+        }
+        for i in range(1, 7)  # 6 occurrences, same window
+    ]
+    history = {"trips": long_distance_trips + regional_trips}
+    (isolated_data_dir / "travel_history_raw.json").write_text(json.dumps(history), encoding="utf-8")
+    event_date = tools.MOCK_TODAY + timedelta(days=30)
+    _write_life_events(isolated_data_dir, [{
+        "category": "other", "summary": "Project ends, travel drops",
+        "event_date": event_date.isoformat(), "signals": ["travel_reduction"],
+        "source_mail_id": None, "detected_on": tools.MOCK_TODAY.isoformat(),
+    }])
+
+    result = tools.derive_projected_trips_from_history()
+    written = json.loads((isolated_data_dir / "_projected_trips_history.json").read_text(encoding="utf-8"))
+    # _route_key sorts alphabetically, so the Köln↔Bonn route may be written as
+    # "Bonn → Köln" rather than "Köln → Bonn" — match on route name instead of a fixed
+    # origin/destination order.
+    long_trip = next(t for t in written["trips"] if "München" in t["route"])
+    regional_trip = next(t for t in written["trips"] if "Bonn" in t["route"])
+
+    # Undamped frequency for both would be the same (6 occurrences over the same window);
+    # the long-distance route must come out damped, the regional route must not.
+    assert long_trip["frequency_per_year"] < regional_trip["frequency_per_year"]
+
+
+def test_damped_to_zero_long_distance_route_is_dropped(isolated_data_dir, monkeypatch):
+    # A route whose damped frequency rounds to 0 must not linger in the projected set —
+    # it would otherwise carry a 0/yr "route" through merge_projected_trip_sets and
+    # simulate_portfolio for no reason.
+    monkeypatch.setattr(tools, "ORS_API_KEY", "")
+    monkeypatch.setattr(tools, "driving_route", lambda *a, **kw: None)
+    history = {"trips": [
+        {
+            "date": f"2025-0{i}-05", "mode": "rail", "origin": "Köln", "destination": "München",
+            "cost_eur": 80.0, "distance_km": 570, "provider": "Deutsche Bahn",
+            "ticket_type": "Sparpreis, 2. Klasse",
+        }
+        for i in range(1, 3)  # 2 occurrences — annual_freq is already low pre-damping
+    ]}
+    (isolated_data_dir / "travel_history_raw.json").write_text(json.dumps(history), encoding="utf-8")
+    # An event 5 days out damps almost everything (factor ~= 5/365).
+    event_date = tools.MOCK_TODAY + timedelta(days=5)
+    _write_life_events(isolated_data_dir, [{
+        "category": "other", "summary": "Project ends abruptly",
+        "event_date": event_date.isoformat(), "signals": ["travel_reduction"],
+        "source_mail_id": None, "detected_on": tools.MOCK_TODAY.isoformat(),
+    }])
+
+    result = tools.derive_projected_trips_from_history()
+    assert not any(r["route"].endswith("→ München") for r in result["routes"])
+    written = json.loads((isolated_data_dir / "_projected_trips_history.json").read_text(encoding="utf-8"))
+    assert not any(t["destination"] == "München" for t in written["trips"])
 
 
 # ── _rail_fare_calibration_ratio: flat-rate-covered trips must not contaminate it (H2) ──

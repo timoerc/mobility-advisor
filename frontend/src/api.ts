@@ -76,9 +76,15 @@ export async function fetchAnalysisHistory(): Promise<AnalysisHistoryEntry[]> {
   return res.json() as Promise<AnalysisHistoryEntry[]>;
 }
 
-export async function sendMessage(sessionId: string, text: string): Promise<{ text: string; actionTaken: boolean }> {
-  const data = await post<{ text: string; action_taken: boolean }>("/chat", { session_id: sessionId, text });
-  return { text: data.text, actionTaken: data.action_taken };
+export async function sendMessage(
+  sessionId: string,
+  text: string,
+): Promise<{ text: string; actionTaken: boolean; ranOptimization: boolean }> {
+  const data = await post<{ text: string; action_taken: boolean; ran_optimization: boolean }>(
+    "/chat",
+    { session_id: sessionId, text },
+  );
+  return { text: data.text, actionTaken: data.action_taken, ranOptimization: data.ran_optimization };
 }
 
 export async function runAnnualReport(sessionId: string): Promise<Blob> {

@@ -42,6 +42,7 @@ from mobility_advisor.models import (
 )
 from mobility_advisor.pipeline import annual_report_pipeline, optimization_pipeline
 from mobility_advisor.report_pdf import render_annual_report_pdf
+from mobility_advisor.sub_agents import _MODEL as _PIPELINE_MODEL
 from mobility_advisor.tools import MOCK_TODAY, compute_annual_report_stats, detect_pending_portfolio_decision
 
 _DATA = Path(__file__).parent / "mobility_advisor" / "data"
@@ -57,7 +58,11 @@ _SCENARIO_FILES = [
     "analysis_history.json",
     "life_events.json",
 ]
-_MODEL_ID = "openai/OpenAI GPT OSS 120b KI:Inferenz.nrw"
+# Derived from sub_agents._MODEL (the pipeline agents' own LiteLlm instance), not a second
+# hardcoded copy of the model string — main.py's two non-agent JSON-extraction calls
+# (_extract_verdict/_extract_recommendation_json) previously duplicated this literal
+# independently, so changing the pipeline's model left them silently pointed at the old one.
+_MODEL_ID = _PIPELINE_MODEL.model
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -211,7 +216,16 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
 
 
 def _activate_from_scenario(persona_id: str) -> bool:
-    """Copy all pipeline JSON files from scenarios/{persona_id}/ into data/."""
+    """Copy all pipeline JSON files from scenarios/{persona_id}/ into data/.
+
+    Also clears the derived _projected_trips_*/_optimization_results.json scratch files
+    (see _clear_optimization_scratch_files) — without this, switching personas left the
+    PREVIOUS persona's projected trips and optimization results sitting in data/, readable
+    by _build_alternatives_from_optimization() with no freshness check, until something
+    happened to regenerate them. A stale file "looking valid" is worse than one that's
+    simply absent, since absence correctly triggers the LLM-extraction fallback instead of
+    silently serving a different persona's numbers.
+    """
     scenario_dir = _SCENARIOS / persona_id
     if not scenario_dir.is_dir():
         return False
@@ -219,6 +233,7 @@ def _activate_from_scenario(persona_id: str) -> bool:
         src = scenario_dir / fname
         if src.exists():
             shutil.copy2(src, _DATA / fname)
+    _clear_optimization_scratch_files()
     return True
 
 
@@ -265,6 +280,9 @@ async def save_profile(payload: ProfilePayload):
         _atomic_write(_DATA / "calendar_events_live.json", {"events": []})
         _atomic_write(_DATA / "analysis_history.json", {"entries": []})
         _atomic_write(_DATA / "life_events.json", {"events": []})
+    # Same reasoning as _activate_from_scenario: this profile save just became the active
+    # persona/dataset, so any scratch files from whichever persona ran last must not linger.
+    _clear_optimization_scratch_files()
     return {"ok": True}
 
 
@@ -356,95 +374,81 @@ _JSON_SYSTEM_PROMPT = """
 Convert the mobility advisor's recommendation report into this exact JSON structure.
 Output ONLY valid JSON — no markdown fences, no surrounding text.
 
+The report follows a fixed structure — **Verdict:** / **Confidence:** / **Summary:** /
+**Reasoning:** (bullets) / **Assumptions:** (bullets) — and describes ONLY the recommended
+option compared against the user's current setup; it does not enumerate other candidates as
+separate labelled blocks. Reconstruct exactly two "alternatives" entries from it: one for the
+recommended option, one for the "Keep current setup" baseline it is compared against.
+
 {
-  "verdict": "<concise 8-10 word headline for the RECOMMENDED option, e.g. 'Your BahnCard 50 did not pay off this year'>",
-  "confidence": "<'high' if ROI is clear and unambiguous; 'medium' if borderline or uncertain; 'low' if highly uncertain>",
-  "summaryText": "<1-2 sentences summarising the key finding and saving for the RECOMMENDED option>",
+  "verdict": "<the report's Verdict line, verbatim>",
+  "confidence": "<the report's Confidence value: 'high' | 'medium' | 'low', lowercase>",
+  "summaryText": "<the report's Summary text, verbatim or condensed to 1-2 sentences>",
   "metrics": [
     {
       "value": <number>,
-      "unit": "<e.g. '€/year', 'trips', 'kg CO2'>",
+      "unit": "<e.g. '€/year', 'kg CO2/year', 'min/year'>",
       "direction": "<one of: 'save' | 'reduce' | 'extra_cost' | 'increase' | 'neutral'>",
-      "label": "<short label, e.g. 'Potential saving', 'Long-distance trips'>"
+      "label": "<short label, e.g. 'Potential saving', 'CO2 impact'>"
     }
   ],
-  "reasoning": ["<bullet 1>", "<bullet 2>", ...],
-  "assumptions": ["<assumption 1>", ...],
+  "reasoning": ["<one entry per bullet under Reasoning>"],
+  "assumptions": ["<one entry per bullet under Assumptions>"],
   "alternatives": [
     {
-      "id": "<short slug, e.g. 'cancel' or 'keep'>",
-      "name": "<human-readable name describing this OPTION, not just a product — see naming rules below>",
-      "annualCostEur": <total annual cost for this option in EUR — subscription cost PLUS trip cost if the report shows both; if only subscription cost is stated, use that>,
-      "savingsVsCurrentEur": <positive = saves vs current; negative = costs more vs current>,
-      "co2Impact": "<e.g. 'Neutral' or '-42 kg CO2/month'>",
-      "co2ImpactKg": <the signed kg/year number stated in this option's CO2 impact line;
-        positive = this option SAVES CO2 vs. current, negative = it emits MORE; 0 for
-        'Neutral' or the 'Keep current setup' row>,
-      "tradeoff": "<one sentence>",
-      "isRecommended": <true for exactly one alternative — the candidate the report marks Recommended — false for all others>,
+      "id": "recommended",
+      "name": "<what changes — see naming rules below>",
+      "annualCostEur": <the recommended option's total annual cost in EUR, from an
+        "Annual cost: €X" mention in the Summary or Reasoning>,
+      "savingsVsCurrentEur": <the report's stated "Saving vs. current: €Y/year" figure;
+        negate it if the report frames this option as costing MORE than current>,
+      "co2Impact": "<e.g. 'Neutral' or '-38 kg CO2/year', from the report's CO2 impact line>",
+      "co2ImpactKg": <that same figure's signed number — positive = this option SAVES CO2
+        vs. current, negative = it emits MORE; 0 if the report doesn't state one>,
+      "tradeoff": "<one sentence, from the trade-off bullet in Reasoning>",
+      "isRecommended": true,
       "action": {
-        "title": "<imperative sentence, e.g. 'Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)'>",
-        "description": "<1-2 sentences with action details and deadline>",
-        "consequence": "<what changes in the user's portfolio once this is applied, e.g. 'Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.' If this is a swap/replace, this field is what tells the execution step which current subscription to remove — it must always name that exact subscription, not just the new product. Do not say the change requires separate/manual action or 'awaits approval' — confirming applies it immediately in this prototype>"
+        "title": "<imperative sentence naming the concrete change, e.g. 'Switch to
+          BahnCard 25 (2. Klasse, Standard, Jahresabo)'>",
+        "description": "<1-2 sentences with action details>",
+        "consequence": "<what changes in the user's portfolio once applied — name the
+          exact subscription(s) added/removed, copied verbatim from the report. Do not
+          say the change requires separate/manual approval — confirming applies it
+          immediately in this prototype>"
       }
+    },
+    {
+      "id": "keep",
+      "name": "Keep current setup",
+      "annualCostEur": <the recommended entry's annualCostEur minus its
+        savingsVsCurrentEur — i.e. what the current setup costs today>,
+      "savingsVsCurrentEur": 0,
+      "co2Impact": "Neutral",
+      "co2ImpactKg": 0,
+      "tradeoff": "No change to cost or emissions",
+      "isRecommended": false,
+      "action": null
     }
   ]
 }
 
 Rules:
-- The report contains 1 or 2 candidate "Option:" blocks (each optionally suffixed " — Recommended").
-  Produce exactly one "alternatives" entry per Option block — with "action" set to that
-  option's title/description/consequence derived from its "Change"/"Action by" lines, and
-  isRecommended true only for the option suffixed " — Recommended" — PLUS always exactly one
-  additional entry for the status-quo baseline:
-    - id: a short slug like "keep"
-    - name: the literal string "Keep current setup" — never the product name, even though the
-      product being kept is the same one named elsewhere
-    - annualCostEur: the report's total annual cost for the current setup (subscription + trip costs if both are shown; "Your current setup" monthly figure x 12 if only monthly is shown)
-    - savingsVsCurrentEur: 0
-    - co2Impact: "Neutral"
-    - co2ImpactKg: 0
-    - isRecommended: false
-    - action: JSON null (not an object, not omitted)
-  HOLD OPTION: if one of the "Option:" blocks is a "Hold pending decision" / no-change option
-  (its Change line says to make no change or hold everything as-is, it shows a "Revisit by:"
-  line instead of an "Action by … auto-renewal" line, and its saving is €0.00), emit its
-  alternatives entry with "action": null — accepting it executes nothing, it is a deliberate
-  wait — with annualCostEur = the current-setup annual figure, savingsVsCurrentEur = 0,
-  co2Impact "Neutral", co2ImpactKg 0, id "hold", and a name like "Hold pending decision".
-  Set its isRecommended to true if that block is the one suffixed " — Recommended". This is
-  the one case where a recommended alternative legitimately carries a null action, and it is
-  separate from (and in addition to) the "Keep current setup" baseline row above.
-  Never produce more than 2 alternatives with a non-null "action". If the report somehow
-  contains more than 2 Option blocks, use only the first 2.
-- Exactly one alternative must have isRecommended: true. Its action must be non-null UNLESS it
-  is the "Hold pending decision" no-change option described above, whose action is null.
-- metrics must include at minimum: the monthly or annual saving (direction 'save') for the
-  RECOMMENDED alternative, and CO2 impact (direction 'reduce' or 'neutral')
-- for each alternative with a non-null action: annualCostEur is the TOTAL annual cost
-  (subscription fees + trip costs). If the report shows "Annual cost: €X (subscriptions: €Y +
-  trips: €Z)", use X. If only monthly subscription cost is shown, multiply by 12. savingsVsCurrentEur
-  will be recomputed server-side as (keep_cost - annualCostEur), so extract annualCostEur accurately
-- alternatives[].name must always describe the ACTION for that row, never a bare product name
-  on its own — two rows must never end up with an identical name just because they both
-  reference the same product. Prefix with the verb that matches what actually happens to that
-  product in this option: "Cancel <product>" (pure cancellation, nothing added), "Switch to
-  <product>" / "Downgrade to <product>" / "Upgrade to <product>" (swap/replace), "Add
-  <product>" (new subscription, nothing removed). Example: if an option cancels "BahnCard 50
-  (2. Klasse, Standard, Jahresabo)" with nothing replacing it, that row's name is "Cancel
-  BahnCard 50 (2. Klasse, Standard, Jahresabo)" — NOT "BahnCard 50 (2. Klasse, Standard,
-  Jahresabo)" (which would be indistinguishable from the status-quo row keeping that same card)
-- all numbers must come verbatim from the report below — never invent figures
-- co2ImpactKg's sign must match that option's own "CO₂ impact" line: positive for a stated
-  saving, negative for a stated increase, 0 for "Neutral" — never copy one option's CO2
-  figure onto another
-- product/subscription names (in every alternative's action.title/description/consequence, and
-  in alternatives[].name) must be copied verbatim and in full from the report below, e.g.
-  "BahnCard 25 (2. Klasse, Standard, Jahresabo)" — never shorten to a generic name like
-  "BahnCard 25"; this name is executed literally if the user picks that alternative, so an
-  underspecified name breaks execution for ANY alternative, not just the recommended one
-- if a field value cannot be determined from the report below, use a sensible default (e.g.
-  'Neutral' for co2Impact, 0 for co2ImpactKg, [] for assumptions)
+- Exactly one alternative — the "recommended" entry — has isRecommended: true and a non-null
+  action. The "keep" entry always has isRecommended: false and action: null. (This fallback
+  path has no way to reconstruct a distinct "Hold pending decision" option from the report
+  text — that case is handled deterministically upstream, before this extraction ever runs.)
+- All numbers must come verbatim from the report below — never invent figures. If a number
+  genuinely cannot be determined, use a sensible default (0 for a cost/CO2 figure, "Neutral"
+  for co2Impact, [] for assumptions) rather than guessing.
+- alternatives[0].name must describe the ACTION, not a bare product name — e.g. "Switch to
+  BahnCard 25 (2. Klasse, Standard, Jahresabo)", "Cancel BahnCard 50 (2. Klasse, Standard,
+  Jahresabo)", "Add MILES Silber Pass" — matching whichever verb (switch/cancel/add/upgrade/
+  downgrade) the report's own language uses for this change.
+- Subscription/product names (in action.title/description/consequence and in
+  alternatives[0].name) must be copied verbatim and in full from the report — never
+  shortened (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)", not "BahnCard 25") — this
+  name is executed literally if the user picks this alternative.
+- confidence must be exactly "high", "medium", or "low", lowercase.
 """.strip()
 
 
@@ -453,11 +457,15 @@ def _clamp_actionable_alternatives(
 ) -> Recommendation:
     """Defensively enforce the product cap of `max_actionable` actionable alternatives.
 
-    The prompt already asks for this cap, but nothing stops the LLM from overshooting —
-    this guarantees the API response can never violate it regardless of what the LLM
-    returns. Keeps the recommended alternative, then earlier non-recommended actionable
-    alternatives up to the cap (in original order), then all keep-current-setup row(s)
-    (action is None) unchanged.
+    On the deterministic path (_build_alternatives_from_optimization), optimize_all_
+    categories() can surface up to 5 scenarios, so the default cap here matches that. On
+    the LLM-extraction fallback path (_extract_recommendation_json), _JSON_SYSTEM_PROMPT
+    only ever asks for one actionable alternative (the report itself only ever describes
+    one recommended option — see that prompt's own docstring-equivalent comment), so this
+    is normally a no-op there; it exists as a hard backstop regardless of what either path
+    actually returns. Keeps the recommended alternative, then earlier non-recommended
+    actionable alternatives up to the cap (in original order), then all keep-current-setup
+    row(s) (action is None) unchanged.
     """
     actionable = [a for a in rec.alternatives if a.action is not None]
     if len(actionable) <= max_actionable:
@@ -496,6 +504,18 @@ def _load_optimization_weights() -> dict | None:
     if not opt_path.exists():
         return None
     return json.loads(opt_path.read_text(encoding="utf-8")).get("weights")
+
+
+def _load_optimization_warnings() -> list[str]:
+    """Deterministic warnings optimize_all_categories() persisted for this run — malformed
+    travel-history entries, travel-reduction damping, rail-fare calibration notes, etc. (see
+    tools.py's derive_projected_trips_from_history/merge_projected_trip_sets). Empty list
+    when no deterministic run has happened yet (LLM-extraction fallback path), matching
+    Recommendation.dataQualityWarnings's default."""
+    opt_path = _DATA / "_optimization_results.json"
+    if not opt_path.exists():
+        return []
+    return json.loads(opt_path.read_text(encoding="utf-8")).get("warnings", [])
 
 
 def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
@@ -735,6 +755,15 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         # CO2 impact vs. current setup (positive = saves CO2), consistent with
         # savingsVsCurrentEur's baseline.
         co2_impact_kg = round(-d_co2, 1)
+        # The human-readable string uses the opposite sign convention from co2ImpactKg —
+        # it shows the raw emissions delta (d_co2: negative = fewer emissions = greener),
+        # matching the tradeoff text's own "+X kg CO₂ per year"/"-X kg CO₂ per year"
+        # phrasing above. Previously wrapped in abs(...), which made an option emitting 40
+        # kg MORE than current render identically to one saving 40 kg — the same string for
+        # opposite outcomes, on a field that's part of the wire contract (persisted into
+        # analysis_history.json) even though today's frontend doesn't render it.
+        d_co2_rounded = round(d_co2)
+        co2_impact_str = f"{d_co2_rounded:+d} kg CO₂/year" if d_co2_rounded != 0 else "Neutral"
 
         slug = "_".join(s["subscription_ids"]) if s["subscription_ids"] else "none"
 
@@ -744,7 +773,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             annualCostEur=s["total_annual_cost_eur"],
             savingsVsCurrentEur=round(keep_cost - s["total_annual_cost_eur"], 2),
             co2ImpactKg=co2_impact_kg,
-            co2Impact=f"{abs(round(co2_impact_kg))} kg CO₂/year" if co2_impact_kg != 0 else "Neutral",
+            co2Impact=co2_impact_str,
             tradeoff=tradeoff,
             isRecommended=s.get("is_recommended", False),
             action=ProposedAction(
@@ -787,13 +816,29 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
 
     # Ensure exactly one recommended and one keep row
     has_recommended = any(a.isRecommended for a in alts)
-    has_keep = any(a.action is None for a in alts)
+    # Deliberately excludes the recommended row itself: when the current/baseline portfolio
+    # is ALSO the top-ranked candidate, the loop above emits a single row with id="keep",
+    # action=None, isRecommended=True — that row satisfies `a.action is None` but is not a
+    # separate baseline to compare against. Without the `and not a.isRecommended` exclusion,
+    # has_keep was True here even though no non-recommended no-action row exists, so the
+    # append below never ran — leaving Recommendation with a null-action recommended row and
+    # no other no-action row for its validator's "deliberate hold" exception to match against
+    # (see models.py's _validate_alternatives_shape), which raised ValueError and turned into
+    # an HTTP 500 on every "current setup is already optimal" result — exactly the "Do
+    # Nothing" case the coordinator's own instructions advertise as a valid outcome.
+    has_keep = any(a.action is None and not a.isRecommended for a in alts)
 
     if not has_recommended and alts:
         alts[0].isRecommended = True
     if not has_keep:
+        # The recommended row may itself already use id="keep" (the is_keep branch above,
+        # when the current portfolio is also the top-ranked candidate) — this baseline row
+        # must not collide with it, or Recommendation's unique-ids validator rejects the
+        # whole result.
+        existing_ids = {a.id for a in alts}
+        baseline_id = "keep_baseline" if "keep" in existing_ids else "keep"
         alts.append(Alternative(
-            id="keep",
+            id=baseline_id,
             name="Keep current setup",
             annualCostEur=keep_cost,
             savingsVsCurrentEur=0,
@@ -836,6 +881,66 @@ Rules:
 """.strip()
 
 
+def _parse_json_response(text: str) -> dict:
+    """Extract a JSON object from an LLM completion's raw text.
+
+    Brace-scans for the outermost {...} span instead of only stripping a LEADING markdown
+    fence (```/```json). The old approach — `if text.startswith("```")` — was defeated by
+    any preamble before the fence (e.g. "Here is the JSON:\n```json\n{...}\n```", which
+    GPT-OSS-120B being a reasoning model produces more often than not) or a label variant
+    like "```JSON"/"``` json" the exact `startswith("json")` check didn't catch, either of
+    which fed the whole prose blob straight into json.loads and raised JSONDecodeError on a
+    completion that was otherwise perfectly parseable. Brace-scanning is agnostic to
+    whatever wrapping the model used around the object.
+    """
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        # No object-shaped span at all — let json.loads raise its own clear error against
+        # the original text rather than silently returning something empty.
+        return json.loads(text)
+    return json.loads(text[start : end + 1])
+
+
+_VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
+
+
+def _normalize_confidence_and_lists(parsed: dict) -> dict:
+    """Coerce an LLM-extracted dict's confidence/reasoning/assumptions into the shapes
+    downstream code expects, in place, tolerating small deviations a completion can
+    introduce without failing the whole extraction over what is narration, not numbers:
+
+    - confidence not exactly "high"/"medium"/"low" (wrong case, or a synonym like
+      "moderate") would otherwise raise a pydantic ValidationError deep inside
+      Recommendation construction — there is no `.get(..., default)` fallback for an
+      out-of-range Literal value, only for a missing key.
+    - reasoning/assumptions returned as a single string instead of a list.
+    """
+    confidence = str(parsed.get("confidence", "medium")).strip().lower()
+    parsed["confidence"] = confidence if confidence in _VALID_CONFIDENCE_LEVELS else "medium"
+    for key in ("reasoning", "assumptions"):
+        value = parsed.get(key)
+        if isinstance(value, str):
+            parsed[key] = [value]
+    return parsed
+
+
+def _parse_verdict_response(text: str) -> dict:
+    """Synchronous core of _extract_verdict(), split out so it's directly unit-testable
+    without an async LLM call: brace-scans, normalizes confidence/reasoning/assumptions,
+    then drops an empty-string verdict/summaryText so the caller's `.get(key, default)`
+    fallback kicks in — `.get` only catches a MISSING key, not "", so a blank string would
+    otherwise render as a blank dashboard headline instead of the intended fallback (e.g.
+    analyze()'s `verdict.get("verdict", rec_alt.name)`).
+    """
+    parsed = _normalize_confidence_and_lists(_parse_json_response(text))
+    if not (parsed.get("verdict") or "").strip():
+        parsed.pop("verdict", None)
+    if not (parsed.get("summaryText") or "").strip():
+        parsed.pop("summaryText", None)
+    return parsed
+
+
 async def _extract_verdict(report_text: str) -> dict:
     """Extract only qualitative fields from the communicator's text output."""
     response = await litellm.acompletion(
@@ -847,12 +952,7 @@ async def _extract_verdict(report_text: str) -> dict:
         temperature=0.0,
     )
     text = response.choices[0].message.content.strip()
-    if text.startswith("```"):
-        parts = text.split("```")
-        text = parts[1] if len(parts) > 1 else text
-        if text.startswith("json"):
-            text = text[4:].lstrip("\n")
-    return json.loads(text)
+    return _parse_verdict_response(text)
 
 
 async def _extract_recommendation_json(report_text: str) -> Recommendation:
@@ -865,17 +965,9 @@ async def _extract_recommendation_json(report_text: str) -> Recommendation:
         temperature=0.0,
     )
     text = response.choices[0].message.content.strip()
-    # Strip markdown code fences if the model wraps its output
-    if text.startswith("```"):
-        parts = text.split("```")
-        text = parts[1] if len(parts) > 1 else text
-        if text.startswith("json"):
-            text = text[4:].lstrip("\n")
-    parsed = json.loads(text)
+    parsed = _normalize_confidence_and_lists(_parse_json_response(text))
     recommendation = Recommendation.model_validate(parsed)
-    recommendation = _normalize_keep_current_setup(recommendation)
-    recommendation = _enforce_hold_when_decision_pending(recommendation)
-    return _clamp_actionable_alternatives(recommendation)
+    return _finalize_recommendation(recommendation)
 
 
 def _load_optimization_context() -> tuple[float | None, float | None, float | None, dict | None]:
@@ -1041,6 +1133,31 @@ def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     return rec
 
 
+def _finalize_recommendation(rec: Recommendation) -> Recommendation:
+    """Run the standard post-construction mutation chain, then re-validate the result as a
+    whole — the one place both /api/analyze's deterministic path and
+    _extract_recommendation_json's LLM-extraction fallback path finish building a
+    Recommendation, so both get the same guarantee.
+
+    Recommendation has no validate_assignment=True, so _normalize_keep_current_setup,
+    _enforce_hold_when_decision_pending, and _clamp_actionable_alternatives each mutate an
+    already-validated model without _validate_alternatives_shape (the model_validator
+    enforcing unique ids / exactly one recommended / at least one keep row) ever running
+    again. Turning validate_assignment on would not reliably fix this either: two of the
+    three functions mutate nested Alternative objects' own fields in place (never
+    reassigning any of Recommendation's own top-level fields), and the ONE reassignment
+    _enforce_hold_when_decision_pending performs only happens on the rare pending-decision
+    path — the ordinary case (no pending decision, alternatives at or under the cap) would
+    still trigger zero revalidation. Round-tripping through model_dump()/model_validate()
+    here instead re-runs every validator unconditionally against the mutation chain's final
+    state, regardless of which functions did or didn't reassign anything.
+    """
+    rec = _normalize_keep_current_setup(rec)
+    rec = _enforce_hold_when_decision_pending(rec)
+    rec = _clamp_actionable_alternatives(rec)
+    return Recommendation.model_validate(rec.model_dump())
+
+
 # ── Pipeline retry helper ─────────────────────────────────────────────────────
 
 _MAX_PIPELINE_ATTEMPTS = 2
@@ -1134,7 +1251,18 @@ async def analyze(req: AnalyzeRequest):
     try:
         det_alts = _build_alternatives_from_optimization()
         if det_alts is not None:
-            verdict = await _extract_verdict(report_text)
+            try:
+                verdict = await _extract_verdict(report_text)
+            except Exception as exc:
+                # The deterministic alternatives (det_alts) are the load-bearing artifact
+                # here — already fully computed and persisted to _optimization_results.json.
+                # The verdict is decorative narration on top of them, and every field below
+                # already has a sensible fallback (rec_alt.name, "medium", ""/[]). A parse
+                # hiccup on this one call must not throw away an entire completed
+                # four-stage pipeline run — see _parse_json_response's docstring for how
+                # often this backend needs the tolerance this is guarding against.
+                print(f"Warning: verdict extraction failed, using deterministic fallbacks: {exc}")
+                verdict = {}
             rec_alt = next((a for a in det_alts if a.isRecommended), det_alts[0])
             metrics = _build_headline_metrics(det_alts, detect_pending_portfolio_decision())
             rec = Recommendation(
@@ -1145,10 +1273,9 @@ async def analyze(req: AnalyzeRequest):
                 reasoning=verdict.get("reasoning", []),
                 assumptions=verdict.get("assumptions", []),
                 alternatives=det_alts,
+                dataQualityWarnings=_load_optimization_warnings(),
             )
-            rec = _normalize_keep_current_setup(rec)
-            rec = _enforce_hold_when_decision_pending(rec)
-            rec = _clamp_actionable_alternatives(rec)
+            rec = _finalize_recommendation(rec)
         else:
             rec = await _extract_recommendation_json(report_text)
     except Exception as exc:
@@ -1317,7 +1444,18 @@ async def execute(req: ExecuteRequest):
                 newest.revertSnapshot = previous_subscriptions
                 _save_history(hist)
             else:
+                # The subscription mutation already happened (success is True) — that
+                # can't be undone here — but it can no longer be tied to an analysis
+                # history entry, most likely because a newer analysis ran in between this
+                # change being proposed and confirmed. Surfacing this only via a server log
+                # left the user with an applied change that silently can never be reverted
+                # through the history UI, with the response still claiming plain success.
                 print(f"Warning: applied change but could not record it against analysis {req.analysis_id}")
+                reply = (
+                    f"{reply}\n\n(Note: this change was applied, but could not be linked "
+                    f"to its originating analysis — likely because a newer analysis ran in "
+                    f"the meantime. It will not appear as revertible in your history.)"
+                )
 
     return {"success": success, "message": reply}
 
@@ -1533,6 +1671,17 @@ def _has_function_call(event) -> bool:
 
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
+    # Unlike /api/analyze, this endpoint didn't clear the trip-projection/optimization
+    # scratch files before running — and derive_projected_trips_from_calendar() APPENDS to
+    # _projected_trips_calendar.json rather than overwriting it. Activate persona B, then
+    # ask "is my setup optimal?" in chat, and persona A's calendar-derived routes (still on
+    # disk from whenever they were last written) got merged into B's run. Clearing here
+    # matches /api/analyze's own _clear_optimization_scratch_files() call and is safe even
+    # when this message doesn't touch optimization at all: the coordinator may or may not
+    # route to optimization_pipeline, but no other code path depends on these files
+    # surviving between requests (main._build_alternatives_from_optimization() is only ever
+    # read back within the same /api/analyze call that wrote them).
+    _clear_optimization_scratch_files()
     svc = _chat_service(req.session_id)
     runner = Runner(
         agent=root_agent,
@@ -1553,6 +1702,7 @@ async def chat(req: ChatRequest):
     last_text = ""
     fallback_text = ""
     action_taken = False
+    ran_optimization = False
     async for event in runner.run_async(
         user_id="user",
         session_id=req.session_id,
@@ -1561,13 +1711,24 @@ async def chat(req: ChatRequest):
             parts=[gtypes.Part(text=req.text)],
         ),
     ):
+        function_calls = event.get_function_calls() or []
         # The coordinator routing to execution_agent at all is treated as a possible data
         # mutation (execution_agent's only tool is apply_subscription_change) — callers use
         # this to invalidate anything cached from stale subscription data, e.g. the annual
         # report. Coarser than checking the inner tool call itself, but that call happens
         # inside the wrapped AgentTool and isn't visible as a separate event here.
-        if any(call.name == "execution_agent" for call in event.get_function_calls() or []):
+        if any(call.name == "execution_agent" for call in function_calls):
             action_taken = True
+        # Whether the coordinator actually routed to the full optimization pipeline this
+        # turn — the frontend used to guess this by regexing the USER's own message
+        # (/full.?analysis|run analysis|analyse|analyze/i against req.text) to decide
+        # whether to navigate to the analysis screen, independently of what the coordinator
+        # actually did. "Don't run a full analysis, just tell me the date" matched that
+        # regex and navigated away from the answer despite the coordinator correctly
+        # routing to LOOKUP instead. Exposing the real routing decision here lets the
+        # frontend react to what happened, not to a guess about the user's wording.
+        if any(call.name == "optimization_pipeline" for call in function_calls):
+            ran_optimization = True
 
         if event.is_final_response():
             t = _collect_text(event)
@@ -1582,4 +1743,4 @@ async def chat(req: ChatRequest):
     if not reply:
         raise HTTPException(status_code=500, detail="Agent produced no response")
 
-    return {"text": reply, "action_taken": action_taken}
+    return {"text": reply, "action_taken": action_taken, "ran_optimization": ran_optimization}

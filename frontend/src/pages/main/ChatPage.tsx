@@ -31,17 +31,20 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
     setThinking(true);
 
     try {
-      const { text: response, actionTaken } = await sendMessage(sessionId, text);
+      const { text: response, actionTaken, ranOptimization } = await sendMessage(sessionId, text);
 
-      // Let the backend handle run-analysis requests too, but also honour the
-      // local trigger so the UI transitions immediately after the agent replies.
-      const wantsAnalysis = /full.?analysis|run analysis|analyse|analyze/i.test(text);
       setThinking(false);
       setMessages((m) => [
         ...m,
         { role: "agent", text: response, id: crypto.randomUUID() },
       ]);
-      if (wantsAnalysis) {
+      // Navigate based on what the coordinator actually did this turn (ran_optimization,
+      // set server-side from whether it called the optimization_pipeline tool) — not a
+      // regex guess against the user's own wording. The old regex
+      // (/full.?analysis|run analysis|analyse|analyze/i) matched phrasing like "don't run
+      // a full analysis, just tell me X" and navigated away from the answer even though
+      // the coordinator correctly routed that to a lookup instead.
+      if (ranOptimization) {
         window.setTimeout(onRunAnalysis, 900);
       }
       if (actionTaken) {

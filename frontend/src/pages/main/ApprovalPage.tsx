@@ -22,7 +22,12 @@ export function ApprovalPage({ action, onConfirm, onCancel }: ApprovalPageProps)
           <p className="text-sm text-gray-700 leading-relaxed m-0">{action.description}</p>
         </div>
         <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0 mb-1">What will NOT happen automatically</p>
+          {/* action.consequence states plainly what DOES change once confirmed (e.g. "Your
+              BahnCard 50 will be cancelled and BahnCard 25 will start in its place") — both
+              producers of this field write it that way, and the yellow note below says
+              confirming applies the change immediately. A "will NOT happen" heading here
+              said the opposite of what the paragraph beneath it states. */}
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0 mb-1">What changes if you confirm</p>
           <p className="text-sm text-gray-500 leading-relaxed m-0">{action.consequence}</p>
         </div>
       </div>

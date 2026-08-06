@@ -12,7 +12,15 @@ from .sub_agents import (
 )
 
 optimization_pipeline = SequentialAgent(
-    name="mobility_advisor_pipeline",
+    # Matches the Python variable name and every reference to it in agent.py's
+    # COORDINATOR_INSTRUCTION ("Call optimization_pipeline", etc.) — AgentTool derives the
+    # tool name the coordinator LLM actually sees from agent.name, not from the Python
+    # variable it's assigned to, so a mismatch here left the model bridging "call
+    # optimization_pipeline" against a tool literally named "mobility_advisor_pipeline"
+    # from context alone. Every other agent in this file already follows var-name ==
+    # agent.name == instruction text (annual_report_pipeline, qa_agent, execution_agent,
+    # reject_agent) — this was the one exception.
+    name="optimization_pipeline",
     description=(
         "Run the full four-stage portfolio review (analyst, forecaster, optimizer, "
         "communicator) and return the final user-facing recommendation report. Use this "

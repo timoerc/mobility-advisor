@@ -67,17 +67,23 @@ def test_no_match_returns_null_renewal(happy_path):
 
 
 def test_filter_by_origin(happy_path):
+    # Only the Enterprise car-rental (Frankfurt Hauptbahnhof -> München Hauptbahnhof)
+    # originates in Frankfurt — the MILES car-share trip was originally an intra-Frankfurt
+    # hop left over from a different persona's template despite Maja being Köln-based (see
+    # test_same_city_car_trips_are_not_orphaned_in_a_different_city), and has since been
+    # re-homed to Köln in the fixture.
     result = tools.compute_travel_stats(origin_filter="Frankfurt")
-    assert result["trip_count"] == 2
-    assert result["total_spend_eur"] == pytest.approx(213.91)
-    assert result["total_distance_km"] == pytest.approx(403.3)
+    assert result["trip_count"] == 1
+    assert result["total_spend_eur"] == pytest.approx(189.99)
+    assert result["total_distance_km"] == pytest.approx(397.1)
 
 
 def test_filter_by_destination(happy_path):
-    result = tools.compute_travel_stats(destination_filter="Frankfurt")
+    # The same car-rental trip is the only one destined for München.
+    result = tools.compute_travel_stats(destination_filter="München")
     assert result["trip_count"] == 1
-    assert result["total_spend_eur"] == pytest.approx(23.92)
-    assert result["total_distance_km"] == pytest.approx(6.2)
+    assert result["total_spend_eur"] == pytest.approx(189.99)
+    assert result["total_distance_km"] == pytest.approx(397.1)
 
 
 def test_filter_by_subscription_and_origin(happy_path):
@@ -101,3 +107,33 @@ def test_data_quality_warnings_passthrough(failure_recovery):
 def test_warnings_passthrough_unaffected_by_filter(failure_recovery):
     result = tools.compute_travel_stats(mode="rail")
     assert len(result["data_quality_warnings"]) == 6
+
+
+# ── total_co2_kg (C-section: qa_agent CO2 questions had no aggregation tool at all) ──
+
+
+def test_total_co2_kg_sums_all_clean_trips(happy_path):
+    # Every one of Maja's 10 trips has a valid mode and a non-null co2_emission_kg.
+    result = tools.compute_travel_stats()
+    assert result["total_co2_kg"] == pytest.approx(588.0)
+    assert result["trips_excluded_from_co2"] == 0
+
+
+def test_total_co2_kg_excludes_malformed_and_unrecognized_modes(failure_recovery):
+    # Lena's fixture: 4 trips with an empty ("") or unrecognized ("hovercraft") mode, plus
+    # one car_share trip whose co2_emission_kg is itself null — all 5 must be excluded from
+    # the sum, matching load_travel_history's own data_quality_warnings text ("excluded
+    # from CO₂ ... aggregations") rather than raising or silently treating them as 0.
+    result = tools.compute_travel_stats()
+    assert result["trips_excluded_from_co2"] == 5
+    assert result["total_co2_kg"] == pytest.approx(156.462)
+
+
+def test_null_distance_does_not_raise(failure_recovery):
+    # Regression: total_distance_km used to sum trip.distance_km unguarded, unlike the
+    # analogous cost_eur sum right above it — a single trip with a null distance_km raised
+    # TypeError inside qa_agent's most-used tool. Lena's malformed entries include some with
+    # null distance_km; this must not raise, and must count them separately.
+    result = tools.compute_travel_stats()  # would raise before the fix, if any are null
+    assert isinstance(result["total_distance_km"], float)
+    assert result["trips_missing_distance"] >= 0

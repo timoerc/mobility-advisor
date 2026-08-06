@@ -120,6 +120,60 @@ def test_history_is_anchored_at_home_city(persona):
 
 
 @pytest.mark.parametrize("persona", _PERSONAS)
+def test_same_city_car_trips_are_not_orphaned_in_a_different_city(persona):
+    """A car_share/car_rental trip whose origin and destination normalize to the SAME city
+    (a local hop, not business travel to a hub) must not be the ONLY appearance of that
+    city anywhere in the persona's history — that's the same class of Frankfurt-template
+    leftover test_history_is_anchored_at_home_city already guards against for whole-history
+    anchoring, but scoped to same-city trips specifically: since
+    derive_projected_trips_from_history() (tools.py) now folds these into a projected
+    "intra-city travel" aggregate that feeds the deterministic optimizer, an orphaned
+    same-city trip fabricates local car-share demand in a city the persona has no other
+    connection to at all (see scenarios/maja/travel_history_raw.json's fixed MILES entry,
+    originally an intra-Frankfurt hop for a Köln-based persona with no other Frankfurt
+    trip anywhere in her history).
+
+    Deliberately does not require the same-city trip's city to equal home_city — a persona
+    with a real secondary hub (e.g. frequent business travel to one other city) may
+    plausibly run local errands there too. The bar is only "this city appears elsewhere in
+    the history", so a true one-off leftover (no other trip touches that city) is caught
+    without flagging a persona whose hub-city pattern is already established elsewhere in
+    the same fixture.
+    """
+    history = _load(persona, "travel_history_raw.json")
+    all_cities: set[str] = set()
+    same_city_trips: list[tuple[str, str]] = []
+    for trip in history["trips"]:
+        origin = trip.get("origin")
+        dest = trip.get("destination")
+        if not origin or not dest:
+            continue
+        origin_city = _normalize_to_city(origin)
+        dest_city = _normalize_to_city(dest)
+        all_cities.add(origin_city)
+        all_cities.add(dest_city)
+        if trip.get("mode") in ("car_share", "car_rental") and origin_city.lower() == dest_city.lower():
+            same_city_trips.append((trip["date"], origin_city))
+
+    for date, city in same_city_trips:
+        other_appearances = sum(
+            1
+            for trip in history["trips"]
+            if trip is not None
+            and (
+                _normalize_to_city(trip.get("origin", "")) == city
+                or _normalize_to_city(trip.get("destination", "")) == city
+            )
+            and not (trip.get("mode") in ("car_share", "car_rental") and trip["date"] == date)
+        )
+        assert other_appearances > 0, (
+            f"{persona}: same-city {trip.get('mode')} trip on {date} is in {city!r}, which "
+            f"appears nowhere else in travel_history_raw.json — looks like an orphaned "
+            f"leftover from a different persona's template rather than real local travel"
+        )
+
+
+@pytest.mark.parametrize("persona", _PERSONAS)
 def test_office_day_events_fall_on_declared_office_days(persona):
     """A "weekly office day" calendar event dated on a persona's own wfh_day is the same
     class of authoring slip as the home-city mismatch — it contradicts data the fixture

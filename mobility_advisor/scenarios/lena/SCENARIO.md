@@ -72,9 +72,9 @@ applicable discount is BC50's **25% Sparpreis rate**, not its 50% Flexpreis rate
   Discount value realized: €590.67 × 0.25 = €147.67
   BC50 Young breakeven threshold: €122.04 ÷ 0.25 = €488.16 (full-price spend) — exceeded
   → Net vs. holding nothing: €147.67 − €122.04 = +€25.63/year. BahnCard 50 Young pays for
-    itself on clean data. Recommendation: retain — but note BahnCard 25 Young (€69.96/yr,
-    identical 25% Sparpreis discount) would net +€77.71/year on the same usage, a further
-    €52/year better; a thorough Optimizer should surface the downgrade even though BC50
+    itself on clean data. Recommendation: retain — but note BahnCard 25 Young (€41.90/yr,
+    identical 25% Sparpreis discount) would net +€105.77/year on the same usage, a further
+    €80/year better; a thorough Optimizer should surface the downgrade even though BC50
     Young itself isn't a net loss.
   → Next renewal: 15 January 2027 (from next_renewal_date in subscription data)
 
