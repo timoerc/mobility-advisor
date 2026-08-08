@@ -28,20 +28,33 @@ All figures use BC50/BC25's **25% Sparpreis** discount rate — the rate that ac
 
 BC50 loses €181/year (its fee delta) more than BC25 for identical benefit — it is dominated regardless of any other assumption.
 
-**Full-portfolio result (the deterministic optimizer's actual output — projects ALL of Maja's recurring routes forward 12 months, including her synthetic home-city commute demand, not just the 5 raw DB trips, so total rail volume is higher than the table above):**
+**Full-portfolio result (the deterministic optimizer's actual output, reproduced directly via
+`optimize_all_categories()` — projects ALL of Maja's recurring routes forward 12 months,
+including her synthetic home-city commute demand, not just the 5 raw DB trips, so total rail
+volume is higher than the table above):**
 
 | Portfolio | Annual cost |
 |---|---|
-| BahnCard 25 — **recommended** | €1,384.61 |
-| BahnCard 50 (status quo) | €1,565.69 (+€181.08 vs. BC25) |
-| No subscriptions | €1,633.22 (+€248.61 vs. BC25) |
+| BahnCard 25 — **recommended** | €1,306.08 |
+| BahnCard 50 (status quo) | €1,487.16 (+€181.08 vs. BC25) |
+| No subscriptions | €1,394.31 (+€88.23 vs. BC25) |
+| BahnCard 25 + Deutschland-Ticket | €1,315.04 (+€8.96 vs. BC25) |
+| Deutschland-Ticket alone | €1,403.27 (+€97.19 vs. BC25) |
 
 On the forward-projected trip set, BC25 clearly earns back its fee: its break-even table entry
-shows €311.49 of discount value against a €62.88 fee (net **+€248.61/year**), and BC25 beats
+shows €151.11 of discount value against a €62.88 fee (net **+€88.23/year**), and BC25 beats
 both "no subscriptions" and BC50 outright on the full portfolio ranking — this is not a close
 call. BC50 remains unambiguously the worst option by a wide margin. Downgrading to BC25 is the
 clear top recommendation; full cancellation is a distant, dominated second (it forgoes BC25's
 real positive net value); **keeping BC50 is not competitive at all**.
+
+*(Regenerated 2026-08-08 directly against `optimize_all_categories()`. The BC25-vs-BC50 delta
+is unchanged at €181.08/year — that comparison only depends on the two cards' fee difference on
+identical discounted demand — but the absolute totals and the break-even discount value dropped
+from an earlier snapshot of this table, mainly because a since-fixed engine bug was letting a
+BahnCard's percentage discount leak onto Maja's synthetic home-city commute leg, which is a
+local-tariff fare no BahnCard actually discounts — see `katrin/SCENARIO.md`'s Summary for the
+full description of that bug. The qualitative recommendation is unaffected.)*
 
 ---
 

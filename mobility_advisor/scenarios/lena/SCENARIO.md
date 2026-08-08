@@ -64,23 +64,40 @@ Analysis is based on the remaining 14 trips (70% of history).
 RECOMMENDATION (PARTIAL DATA)
 ==============================
 Based on clean data subset (14 trips). Lena holds BahnCard 50 **Young** (€10.17/mo =
-€122.04/yr, the age-eligible tier, not the €244/yr standard adult fee), and all her
-tickets are Sparpreis (`ticket_type` contains "Sparpreis, BahnCard 50"), so the
-applicable discount is BC50's **25% Sparpreis rate**, not its 50% Flexpreis rate:
-  BC50 Young discounted DB spend: €443.00 over 12 months
-  Implied full-price equivalent: €443.00 ÷ 0.75 = €590.67
-  Discount value realized: €590.67 × 0.25 = €147.67
-  BC50 Young breakeven threshold: €122.04 ÷ 0.25 = €488.16 (full-price spend) — exceeded
-  → Net vs. holding nothing: €147.67 − €122.04 = +€25.63/year. BahnCard 50 Young pays for
-    itself on clean data. Recommendation: retain — but note BahnCard 25 Young (€41.90/yr,
-    identical 25% Sparpreis discount) would net +€105.77/year on the same usage, a further
-    €80/year better; a thorough Optimizer should surface the downgrade even though BC50
-    Young itself isn't a net loss.
+€122.04/yr, the age-eligible tier, not the €244/yr standard adult fee) plus a
+Deutschland-Ticket, and all her tickets are Sparpreis (`ticket_type` contains "Sparpreis,
+BahnCard 50"), so the applicable discount is BC50's **25% Sparpreis rate**, not its 50%
+Flexpreis rate. Reproduced directly via `optimize_all_categories()` against the full
+forward-projected trip set (not just the 14 clean raw trips — it also includes her synthetic
+home-city commute demand):
+
+| Portfolio | Total €/yr |
+|---|---|
+| BahnCard 25 Young — **recommended** | 2,130.97 |
+| BahnCard 50 Young + Deutschland-Ticket (current) | 2,220.09 (+€89.12 vs. recommended) |
+| No subscriptions | 2,126.19 (−€4.78 vs. recommended) |
+| BahnCard 25 Young + Deutschland-Ticket | 2,139.93 (+€8.96 vs. recommended) |
+| Deutschland-Ticket alone | 2,135.15 (+€4.18 vs. recommended) |
+
+  → BahnCard 25 Young break-even: fee €41.88, discount value €37.10, net **−€4.78/year** — a
+    marginal net loss on its own, but still €89.12/year cheaper than the current BC50 Young +
+    Deutschland-Ticket combo, because BC50 Young's higher fee and the Deutschland-Ticket's flat
+    €756/year fee both cost more than the regional/commute demand they cover is worth at her
+    usage level. All five candidates in the table above land within ~€90 of each other — this
+    is a low-stakes, near-flat comparison, not a dramatic overspend.
   → Next renewal: 15 January 2027 (from next_renewal_date in subscription data)
 
-Note: If the 6 flagged entries include significant rail spend, the actual BC50 Young
-benefit may be higher. Data quality fix recommended before the 2027-01-15 renewal deadline.
+Note: If the 6 flagged entries include significant rail spend, the ranking above could shift.
+Data quality fix recommended before the 2027-01-15 renewal deadline.
 ```
+
+*(Numeric section regenerated 2026-08-08 directly against `optimize_all_categories()`. This
+supersedes an earlier hand-calculated version of this table, which priced BC50 Young against
+its 14 raw historical trips only and concluded "retain" — the full projected-year trip set the
+deterministic engine now prices, including Lena's synthetic home-city commute, shows BahnCard
+25 Young alone as marginally cheaper than the current BC50 Young + Deutschland-Ticket combo.
+The qualitative point of this scenario — data-quality warnings must not block a recommendation
+— is unaffected by which specific card comes out ahead.)*
 
 ---
 

@@ -29,8 +29,8 @@ Six self-contained fixture sets live under `mobility_advisor/scenarios/`, each i
 | Persona | Holds | Tests | Expected result |
 |---|---|---|---|
 | `maja` | BahnCard 50 + Enterprise Silver | Basic over-subscription detection | Downgrade BC50 → BC25 (Enterprise Silver is a free automatic tier, untouched either way) |
-| `katrin` | BahnCard 25 + Deutschland-Ticket | Preference-weighting tiebreak on a cost near-wash | Keep BahnCard 25, drop the Deutschland-Ticket (her regional travel doesn't cover its fee) |
-| `sofia` | Deutschland-Ticket + MILES Basis | The "add/upgrade a product" case | Upgrade MILES Basis → Silber, right tier |
+| `katrin` | BahnCard 25 + Deutschland-Ticket | Fare-class-driven upgrade (Flexpreis-heavy long-distance travel) | Upgrade to BahnCard 50, saving €318/yr; Deutschland-Ticket kept by a near-tie |
+| `sofia` | Deutschland-Ticket + MILES Basis | The "add/upgrade a product" case | Add BahnCard 25, upgrade MILES Basis → Silber, drop the Deutschland-Ticket |
 | `tobias` | BahnCard 50 + Deutschland-Ticket | Forward signal overriding a strong historical ROI | Downgrade/cancel BC50 ahead of renewal |
 | `stefan` | Car + BC50 + Deutschland-Ticket + MILES Silber | Hedging under genuine ambiguity (possible relocation) | Conditional recommendation, not a single confident action |
 | `lena` | BahnCard 50 Young + Deutschland-Ticket | Graceful degradation on corrupted trip data | Completes with a Data Quality Warnings section, never crashes |
@@ -107,8 +107,13 @@ mobility_advisor/
 ├── pipeline.py            # optimization_pipeline, annual_report_pipeline (SequentialAgents)
 ├── sub_agents.py          # analyst, forecaster, optimizer, communicator, annual_communicator
 ├── qa_agent.py / execution_agent.py / reject_agent.py
-├── tools.py                # loader + compute functions over the mock data
+├── tools.py                # loader + compute functions + the deterministic optimizer engine
 ├── models.py                # Pydantic models for all fixtures
+├── route_utils.py            # ORS geocoding/routing, CO2 + price curve helpers
+├── distance_enricher.py      # offline distance/CO2 enrichment for travel history
+├── outlook_calendar.py       # MSAL-based live Outlook calendar ingestion
+├── mail_processor.py / mail_filter.py   # ETL over mail_raw.json feeding life-event extraction
+├── life_event_extractor.py   # distills life_events.json signals from processed mail
 ├── report_pdf.py            # Markdown -> PDF for the annual report (WeasyPrint)
 ├── templates/                # annual_report.html / .css
 ├── static/mobility_catalog.json   # market catalog (shared across all personas)

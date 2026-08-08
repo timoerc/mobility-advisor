@@ -48,7 +48,7 @@ Persona completion state is stored in `localStorage` under the key `persona:{id}
 
 ### Phase 2 — Onboarding (`OnboardingFlow`)
 
-Shown only when the selected persona has not yet completed onboarding (`onboardingComplete === false`). A self-contained multi-step wizard (steps 0–10) with a progress bar, skip logic, and prev/next navigation. Collects: personal profile, location, car ownership, data integrations, mobility subscriptions, AHP priority weights, monthly budget, and free-text notes.
+Shown only when the selected persona has not yet completed onboarding (`onboardingComplete === false`). A self-contained multi-step wizard (steps 0–9) with a progress bar, skip logic, and prev/next navigation. Collects: personal profile, location, car ownership, data integrations, mobility subscriptions, AHP priority weights, and free-text notes.
 
 On completion, `onboardingComplete` is set to `true` in `localStorage` and the collected data is saved as the persona's profile. The user transitions directly to Phase 3.
 
@@ -103,28 +103,34 @@ frontend/
 │   │   ├── MetricTile.tsx       # Single metric value tile (savings, CO₂, etc.)
 │   │   ├── AlternativeRow.tsx   # Contract alternative comparison card
 │   │   ├── ChatBubble.tsx       # Agent or user message bubble
-│   │   └── ChatInput.tsx        # Sticky textarea + send button bar
+│   │   ├── ChatInput.tsx        # Sticky textarea + send button bar
+│   │   ├── Combobox.tsx         # Searchable single-select combobox (typed input, constrained choice)
+│   │   ├── OutcomeBadge.tsx     # Pending / kept current / executed badge (History tab)
+│   │   └── StatTile.tsx         # Absolute-value stat tile (home dashboard stat row) — neutral sibling of MetricTile
 │   │
 │   └── pages/
 │       ├── login/
 │       │   └── PseudoLoginPage.tsx
 │       ├── 0_LogoIntroPage.tsx        # Onboarding pages live directly under pages/
-│       ├── 1_AgentIntroPage.tsx       # Numbering prefix makes step order immediately visible
-│       ├── 2_PersonalProfilePage.tsx
-│       ├── 3_LocationCommutePage.tsx
-│       ├── 4_CarProfilePage.tsx
+│       ├── 1_AgentIntroPage.tsx       # Filename prefixes are historical and no longer track
+│       ├── 2_PersonalProfilePage.tsx  # runtime step order exactly (BudgetPage was removed
+│       ├── 3_LocationCommutePage.tsx  # without renumbering the rest) — see Onboarding Steps
+│       ├── 4_CarProfilePage.tsx       # below for the actual step sequence App.tsx renders.
 │       ├── 5_MobilityStackPage.tsx
-│       ├── 6_BudgetPage.tsx
 │       ├── 7_PrioritiesPage.tsx
 │       ├── 8_IntegrationsPage.tsx
 │       ├── 9_NotesPage.tsx
 │       ├── 10_FinalPage.tsx
 │       └── main/
+│           ├── HomePage.tsx
 │           ├── AnalysisPage.tsx
 │           ├── DashboardPage.tsx
 │           ├── ApprovalPage.tsx
+│           ├── ExecutingPage.tsx
 │           ├── ConfirmationPage.tsx
-│           └── ChatPage.tsx
+│           ├── ChatPage.tsx
+│           ├── HistoryPage.tsx
+│           └── AnnualReportPage.tsx
 ```
 
 ---
@@ -171,11 +177,15 @@ CSS animations (`logoReveal`, `cursorBlink`) and the SVG-mask nav arrow (`.nav-a
 | 5 | `IntegrationsPage` | Data source connections (all mock) | Yes |
 | 6 | `MobilityStackPage` | Active subscriptions (rail, carsharing, micro) | Yes |
 | 7 | `PrioritiesPage` | Cost / Time / CO₂ AHP weights (3 Likert questions) | No |
-| 8 | `BudgetPage` | Monthly mobility budget (€) | No |
-| 9 | `NotesPage` | Free-text notes for the agent | Yes |
-| 10 | `FinalPage` | Completion + JSON profile download | — |
+| 8 | `NotesPage` | Free-text notes for the agent | Yes |
+| 9 | `FinalPage` | Completion + JSON profile download | — |
 
-Step 10 shows a "Start analysis →" button instead of a Continue arrow. Clicking it marks onboarding complete in `localStorage` and transitions to the main app.
+Step 9 shows a "Start analysis →" button instead of a Continue arrow. Clicking it marks onboarding complete in `localStorage` and transitions to the main app.
+
+A standalone monthly-budget onboarding step (`BudgetPage`) existed at an earlier point and has
+since been removed; the step numbers above are the current runtime sequence (`App.tsx`'s
+`renderStep` switch), not the numeric prefixes on the page filenames themselves — see the
+Directory Structure note above.
 
 ---
 
@@ -248,7 +258,7 @@ After onboarding completes, `classifyArchetype()` in `src/mobility-archetypes.ts
 | `rail_commuter` | BahnCard held, DB connected, no car |
 | `multimodal` | 3+ subscriptions across ≥2 categories |
 | `eco_pioneer` | Sustainability priority > 40% |
-| `budget_optimizer` | Cost priority > 40%, low monthly budget |
+| `budget_optimizer` | Cost priority > 40% (partial credit above 30%), student employment status |
 | `remote_native` | 4+ WFH days, low office attendance |
 
 Each archetype carries a `name`, `tagline`, `description`, `portfolioInsights` (3 data-backed bullet points), and a `source` citation. These are displayed as a card on the dashboard. The classification is pure client-side logic — no backend call is made.
@@ -276,7 +286,7 @@ See the [root README](../README.md#running-the-full-stack) for how to start the 
 
 ### Completed
 
-- Pseudo login with 3 demo personas (Maja Hoffmann, Stefan Kurz, Lena Brandt)
+- Pseudo login with 6 demo personas (Maja Hoffmann, Stefan Kurz, Lena Brandt, Katrin Berger, Tobias Wolf, Sofia Ricci)
 - Full 11-step onboarding wizard with progress bar, skip logic, back navigation, and typewriter animations
 - `localStorage` persistence of onboarding completion per persona; returning personas skip straight to the dashboard
 - **ProfileDropdown** — avatar initials button opens a panel with deep-links to Edit preferences, Edit profile, Mobility modes, Re-do onboarding, and Switch profile; deep-links show a "Save & return →" footer so users exit back to where they were

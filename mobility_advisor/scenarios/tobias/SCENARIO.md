@@ -14,8 +14,9 @@
 
 **Persona:** Tobias Wolf — Frankfurt, BahnCard 50 + Deutschland-Ticket, weekly Frankfurt–Munich commuter.
 **Tests:** Whether a forward signal (staffing email) overrides a strong historical ROI.
-**Expected result:** Recommend downgrading BahnCard 50 → BahnCard 25 (and dropping the
-Deutschland-Ticket) ahead of renewal, despite history alone saying "keep."
+**Expected result:** Recommend downgrading BahnCard 50 → BahnCard 25 ahead of renewal, despite
+history alone saying "keep." Whether the Deutschland-Ticket is kept alongside the downgrade is
+a near-tie on the current numbers (€6.44/year) — see Numeric Rationale below.
 
 ## Summary
 
@@ -35,42 +36,51 @@ the mail and life-event data, not in the trip history.
 
 ## Numeric Rationale
 
-Reproduced directly via `optimize_all_categories()` against this scenario's fixture data — the
-Optimizer prices trips at their actual fare class (Sparpreis, in this case) and BahnCard rate,
-not a flat `cost_eur × 2` heuristic.
+Reproduced directly via `optimize_all_categories()` against this scenario's fixture data
+(regenerated 2026-08-08) — the Optimizer prices trips at their actual fare class (Sparpreis, in
+this case) and BahnCard rate, not a flat `cost_eur × 2` heuristic.
 
 | Portfolio | Annual cost |
 |---|---|
-| **BahnCard 25 (recommended)** | **€747.98** |
-| BahnCard 50 + Deutschland-Ticket (current) | €1,115.68 |
-| Deutschland-Ticket only | €910.33 |
-| No subscriptions | €914.73 |
-| BahnCard 50 alone | €929.06 |
+| **BahnCard 25 + Deutschland-Ticket (recommended)** | **€1,163.17** |
+| BahnCard 50 + Deutschland-Ticket (current) | €1,344.25 (+€181.08 vs. recommended) |
+| No subscriptions | €1,226.63 (+€63.46 vs. recommended) |
+| BahnCard 25 alone | €1,169.61 (+€6.44 vs. recommended) |
+| Deutschland-Ticket alone | €1,215.03 (+€51.86 vs. recommended) |
 
-Recommended vs. current: **−€367.70/year**. The travel-reduction damping (factor ≈0.21, from
+Recommended vs. current: **−€181.08/year**. The travel-reduction damping (factor ≈0.21, from
 the staffing signal 78 days out) cuts his projected Frankfurt↔München frequency from 14
 undamped legs/year to a handful — well below what justifies BahnCard 50's fee, but still
-(barely) enough to justify BahnCard 25's much lower one. Note the recommended portfolio also
-drops the **Deutschland-Ticket**: once a BahnCard is held, its Sparpreis/Flexpreis discount
-already applies to his regional/commute demand too (BahnCard discounts are not restricted to
-long-distance trips), so the Deutschland-Ticket's flat €756/year fee no longer earns its keep
-on top — this is a genuine finding from the corrected engine, not the scenario's original
-design intent, which assumed the Deutschland-Ticket would always be retained for local
-coverage (see "What a Passing Run Looks Like" below).
+(barely) enough to justify BahnCard 25's much lower one. The top-ranked candidate keeps the
+**Deutschland-Ticket** alongside BahnCard 25, but only by €6.44/year over BahnCard 25 alone —
+essentially a tie, well within the model's own precision, so either reading is an acceptable
+pass (see "What a Passing Run Looks Like" below).
 
 | Break-even (single subscription, forward-looking) | Annual fee | Discount value | Net | Breaks even? |
 |---|---|---|---|---|
-| BahnCard 25 (2. Klasse, Standard, Jahresabo) | €62.88 | €229.63 | **+€166.75** | Yes |
-| Deutschland-Ticket | €756.00 | €760.40 | **+€4.40** | Yes, barely |
-| BahnCard 50 (2. Klasse, Standard, Jahresabo) | €243.96 | €229.63 | **−€14.33** | No |
+| BahnCard 25 + Deutschland-Ticket | €818.88 | €882.34 | **+€63.46** | Yes |
+| BahnCard 25 (2. Klasse, Standard, Jahresabo) | €62.88 | €119.90 | **+€57.02** | Yes |
+| Deutschland-Ticket | €756.00 | €767.60 | **+€11.60** | Yes, barely |
+| BahnCard 50 + Deutschland-Ticket | €999.96 | €882.34 | **−€117.62** | No |
+| BahnCard 50 (2. Klasse, Standard, Jahresabo) | €243.96 | €119.90 | **−€124.06** | No |
 
-BahnCard 50 is a net loss even before accounting for the forecast drop — the travel-reduction
-damping makes an already-marginal card unambiguously not worth it, while BahnCard 25's much
-lower fee still clears its own (lower) bar.
+BahnCard 50 is a net loss (alone or combined with the Deutschland-Ticket) even before separately
+accounting for the forecast drop — the travel-reduction damping makes an already-marginal card
+unambiguously not worth it, while BahnCard 25 (alone or combined) still clears its own
+(much lower) bar.
 
 History → keep BC50. Forecast → the card stops paying, and even BahnCard 25 only barely clears
 its own break-even once damped. The recommendation must be driven by the **forward** picture,
 dated against the **10 January 2027** renewal.
+
+*(Note: an earlier snapshot of this table showed BahnCard 25 alone — with the Deutschland-Ticket
+dropped — as the clear top pick, €187/year better than keeping the ticket. The current numbers,
+regenerated against the same `optimize_all_categories()` call, show the opposite ordering by a
+narrow €6.44/year: the Deutschland-Ticket is now kept in the top-ranked candidate. This reflects
+further engine fixes since that snapshot, not a change in Tobias's underlying data — see the
+commute-discount-leak and current-portfolio-dedup fixes noted in the git history. Given the
+margin involved, treat "drop the Deutschland-Ticket" and "keep it" as equally valid passes; the
+load-bearing finding this scenario tests is the BC50→BC25 downgrade itself.)*
 
 ---
 
@@ -103,18 +113,16 @@ dated against the **10 January 2027** renewal.
 |---|---|
 | **Analyst** | Reports BahnCard 50 as clearly worthwhile on history: ~€409 discounted long-distance spend, 14 long-distance legs. Regional legs covered by D-Ticket. Renewal `2027-01-10`. |
 | **Forecaster** | Surfaces the life-event signal: Munich project ends 31 Aug, local Frankfurt staffing from September → long-distance rail demand drops to near zero. Must state the concrete portfolio implication. |
-| **Optimizer** | Weighs the collapsing forward demand against the strong history and recommends **downgrading BahnCard 50 → BahnCard 25**, dropping the Deutschland-Ticket, before the 10 Jan 2027 renewal. Must **not** fire a "hold pending decision" candidate (no portfolio-reset signal). |
-| **Communicator** | Presents the downgrade as recommended, dated to the January renewal, explaining that the card paid off this year but won't next year — and, per the break-even table, that the Deutschland-Ticket no longer earns its keep once a BahnCard is held. |
+| **Optimizer** | Weighs the collapsing forward demand against the strong history and recommends **downgrading BahnCard 50 → BahnCard 25**, before the 10 Jan 2027 renewal. Whether the Deutschland-Ticket is kept alongside it is a near-tie (see Numeric Rationale) — the optimizer's current top pick keeps it. Must **not** fire a "hold pending decision" candidate (no portfolio-reset signal). |
+| **Communicator** | Presents the downgrade as recommended, dated to the January renewal, explaining that the card paid off this year but won't next year. |
 
 **Expected recommendation:** Downgrade **BahnCard 50 → BahnCard 25** before `2027-01-10`,
-driven by the forecast travel drop. The deterministic optimizer's actual pick also drops the
-Deutschland-Ticket (see Numeric Rationale) — a recommendation that retains the Deutschland-
-Ticket alongside BahnCard 25 is a lesser pass (still correctly downgrades BC50, but ~€187/year
-short of the optimizer's own numbers on this fixture). A recommendation to cancel BahnCard 50
-outright, rather than downgrade, is not a pass here — unlike the earlier LLM-driven design this
-scenario originally targeted, the deterministic engine's own numbers clearly favor downgrading
-to BC25 over cancelling it (BahnCard 25 alone: €747.98/year vs. €914.73/year for no
-subscriptions).
+driven by the forecast travel drop. Whether the Deutschland-Ticket is kept or dropped alongside
+the downgrade is a near-tie on the current numbers (€6.44/year apart, see Numeric Rationale) —
+either is an acceptable pass. A recommendation to cancel BahnCard 50 outright, rather than
+downgrade, is not a pass here — the deterministic engine's own numbers clearly favor downgrading
+to BC25 over cancelling it (BahnCard 25 + Deutschland-Ticket: €1,163.17/year vs. €1,226.63/year
+for no subscriptions).
 
 ---
 
@@ -125,21 +133,20 @@ subscriptions).
 - The Optimizer recommends **downgrading BahnCard 50 → BahnCard 25**, citing the **forward**
   demand drop — not the (positive) historical ROI — as the reason.
 - Action is tied to the **10 January 2027** renewal deadline.
-- The Deutschland-Ticket is dropped alongside the downgrade (its break-even table entry nets
-  only +€4.40/year once BahnCard 25 already discounts his regional/commute demand) — a run
-  that explicitly retains it with a stated reason is not wrong, just short of the optimizer's
-  own numbers on this fixture.
+- Whether the Deutschland-Ticket is kept or dropped alongside the downgrade is not load-bearing
+  (the two candidates are ~€6/year apart on the current numbers) — either is a pass as long as
+  the reasoning is consistent with which one is actually shown as recommended.
 
 ## What a Failing Run Looks Like
 
 - Recommends **keeping BahnCard 50** on the strength of past usage alone, ignoring the mail /
   forecast (the core failure this persona is designed to catch).
 - Recommends **cancelling BahnCard 50 outright** rather than downgrading it to BahnCard 25 —
-  the optimizer's own numbers favor downgrading (€747.98/year) over full cancellation
-  (€914.73/year) on this fixture.
+  the optimizer's own numbers favor downgrading (€1,163.17/year with the Deutschland-Ticket, or
+  €1,169.61/year without) over full cancellation (€1,226.63/year) on this fixture.
 - Treats the project-end signal as a portfolio-reset and fires a "hold / wait-and-see"
   recommendation instead of acting before the renewal.
-- Invents a relocation, or claims the Deutschland-Ticket cancellation is driven by a drop in
-  *local* travel (it isn't — local/commute travel continues; the Deutschland-Ticket loses value
-  because BahnCard 25's discount already covers that demand more cheaply once held, not because
-  the demand itself goes away).
+- Invents a relocation, or claims a stated Deutschland-Ticket cancellation is driven by a drop
+  in *local* travel (it isn't — local/commute travel continues; if the ticket is dropped, it's
+  because BahnCard 25's discount already covers that demand about as cheaply once held, not
+  because the demand itself goes away).
