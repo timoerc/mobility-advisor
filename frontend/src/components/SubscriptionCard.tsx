@@ -9,7 +9,7 @@ type SubscriptionCardProps = {
 
 export function SubscriptionCard({ entry, onRemove, onEdit }: SubscriptionCardProps) {
   return (
-    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
+    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 shadow-card">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-sm m-0 truncate">

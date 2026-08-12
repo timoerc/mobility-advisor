@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Integrations } from "../types";
+import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "../ui";
 
 type IntegrationsPageProps = {
   integrations: Integrations;
@@ -85,7 +86,7 @@ function ServiceRow({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200">
+    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200 shadow-card">
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm m-0">{label}</p>
         <p className="text-xs text-gray-400 m-0 leading-relaxed">{description}</p>
@@ -93,7 +94,7 @@ function ServiceRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`px-4 py-2 rounded-full text-sm font-semibold border-2 cursor-pointer transition-colors flex-shrink-0 ${
+        className={`px-4 py-2 rounded-full text-sm font-semibold border-2 cursor-pointer transition-colors duration-150 flex-shrink-0 active:scale-95 ${
           connected
             ? "bg-brand-red border-brand-red text-white"
             : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
@@ -183,7 +184,7 @@ export function IntegrationsPage({
                   onClick={() =>
                     connected ? disconnectProvider(name) : setConfirmingProvider(name)
                   }
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors ${
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors duration-150 active:scale-95 ${
                     connected
                       ? "bg-brand-red border-brand-red text-white"
                       : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700"
@@ -217,12 +218,12 @@ export function IntegrationsPage({
       {/* Connect confirmation dialog */}
       {confirmingProvider !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
           onClick={() => setConfirmingProvider(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col gap-4"
+            className="pop-in bg-white rounded-2xl shadow-pop p-6 w-full max-w-xs flex flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -234,18 +235,10 @@ export function IntegrationsPage({
               </p>
             </div>
             <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmingProvider(null)}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 bg-transparent border border-gray-200 rounded-full cursor-pointer"
-              >
+              <button type="button" onClick={() => setConfirmingProvider(null)} className={BTN_SECONDARY_SM}>
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={() => connectProvider(confirmingProvider)}
-                className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-full border-0 cursor-pointer hover:opacity-90"
-              >
+              <button type="button" onClick={() => connectProvider(confirmingProvider)} className={BTN_PRIMARY_SM}>
                 Connect ✓
               </button>
             </div>

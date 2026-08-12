@@ -1,4 +1,5 @@
 import type { ProposedAction } from "../../types/recommendation";
+import { CARD, BTN_PRIMARY, BTN_SECONDARY } from "../../ui";
 
 type ApprovalPageProps = {
   action: ProposedAction;
@@ -8,15 +9,15 @@ type ApprovalPageProps = {
 
 export function ApprovalPage({ action, onConfirm, onCancel }: ApprovalPageProps) {
   return (
-    <div className="flex flex-col gap-6 py-4">
+    <div className="flex flex-col gap-6 py-4 rise-in">
       <div>
         <p className="text-sm font-semibold text-brand-red uppercase tracking-wide m-0 mb-2">
           Proposed action
         </p>
-        <h1 className="text-3xl font-bold leading-tight text-[#1f1f1f] m-0">{action.title}</h1>
+        <h1 className="text-3xl font-bold leading-tight text-ink m-0">{action.title}</h1>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-4">
+      <div className={`${CARD} p-5 flex flex-col gap-4`}>
         <div>
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0 mb-1">What this means</p>
           <p className="text-sm text-gray-700 leading-relaxed m-0">{action.description}</p>
@@ -39,18 +40,10 @@ export function ApprovalPage({ action, onConfirm, onCancel }: ApprovalPageProps)
       </div>
 
       <div className="flex flex-col gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="w-full bg-brand-red text-white rounded-full px-8 py-3.5 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
-        >
+        <button type="button" onClick={onConfirm} className={`w-full ${BTN_PRIMARY}`}>
           Yes, proceed
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="w-full bg-white text-gray-600 rounded-full px-8 py-3.5 font-semibold hover:bg-gray-50 cursor-pointer border border-gray-300 text-sm transition-colors"
-        >
+        <button type="button" onClick={onCancel} className={`w-full ${BTN_SECONDARY}`}>
           Not now
         </button>
       </div>

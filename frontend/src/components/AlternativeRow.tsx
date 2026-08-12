@@ -115,16 +115,16 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
       ? "border-green-300 bg-green-50/60"
       : "border-gray-200"
     : selected
-      ? "border-brand-red bg-red-50 ring-2 ring-brand-red/30"
+      ? "border-brand-red bg-red-50 ring-2 ring-brand-red/30 shadow-card"
       : alt.isRecommended
-        ? "border-red-200 hover:border-brand-red/60"
-        : "border-gray-200 hover:border-gray-300";
+        ? "border-red-200 hover:border-brand-red/60 hover:shadow-lift hover:-translate-y-0.5"
+        : "border-gray-200 hover:border-gray-300 hover:shadow-lift hover:-translate-y-0.5";
 
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-sm text-[#1f1f1f]">{alt.name}</span>
+          <span className="font-semibold text-sm text-ink">{alt.name}</span>
           {alt.isRecommended && (
             <span className="text-xs bg-brand-red text-white rounded-full px-2 py-0.5 font-semibold">
               Recommended
@@ -142,7 +142,7 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-sm font-bold text-[#1f1f1f] m-0">
+          <p className="text-sm font-bold text-ink m-0">
             {alt.annualCostEur === 0 ? "€0 / year" : `€${alt.annualCostEur.toFixed(0)} / year`}
           </p>
           {!savingsNeutral && (
@@ -197,7 +197,7 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`w-full text-left rounded-xl border-2 p-4 flex flex-col gap-2 transition-colors cursor-pointer bg-white ${borderClass}`}
+      className={`w-full text-left rounded-xl border-2 p-4 flex flex-col gap-2 cursor-pointer bg-white active:translate-y-0 transition-[border-color,box-shadow,transform,background-color] duration-200 ease-soft ${borderClass}`}
     >
       {content}
     </button>

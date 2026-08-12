@@ -5,6 +5,8 @@ import { OutcomeBadge } from "../../components/OutcomeBadge";
 import { MetricTile } from "../../components/MetricTile";
 import { AlternativeRow } from "../../components/AlternativeRow";
 import type { AnalysisHistoryEntry } from "../../types/recommendation";
+import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "../../ui";
+import { Skeleton } from "../../components/Skeleton";
 
 type HistoryPageProps = {
   // Open an entry in the decision screen. Only ever wired to the newest, non-executed entry.
@@ -64,7 +66,7 @@ function HistoryCard({
 
   return (
     <div
-      className={`bg-white rounded-2xl overflow-hidden border ${
+      className={`bg-white rounded-2xl overflow-hidden border shadow-card transition-shadow duration-200 ${
         isNewest ? "border-brand-red/40 ring-1 ring-brand-red/10" : "border-gray-200"
       }`}
     >
@@ -97,7 +99,7 @@ function HistoryCard({
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <p className="font-semibold text-sm text-[#1f1f1f] m-0 leading-snug">{rec.verdict}</p>
+        <p className="font-semibold text-sm text-ink m-0 leading-snug">{rec.verdict}</p>
         <div className="flex items-center gap-2 flex-wrap">
           <ConfidenceBadge level={rec.confidence} />
           {isSuperseded ? (
@@ -170,11 +172,7 @@ function HistoryCard({
 
       {canDecide && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={onReview}
-            className="w-full bg-brand-red text-white rounded-full py-2.5 font-semibold hover:opacity-90 cursor-pointer"
-          >
+          <button type="button" onClick={onReview} className={`w-full ${BTN_PRIMARY_SM}`}>
             {ctaLabel} →
           </button>
         </div>
@@ -183,11 +181,7 @@ function HistoryCard({
       {canRevert && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
           {!confirming ? (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="w-full border border-gray-300 text-gray-700 rounded-full py-2.5 font-semibold hover:border-gray-400 cursor-pointer bg-white"
-            >
+            <button type="button" onClick={() => setConfirming(true)} className={`w-full ${BTN_SECONDARY_SM}`}>
               Revert this change
             </button>
           ) : (
@@ -200,16 +194,11 @@ function HistoryCard({
                   type="button"
                   disabled={reverting}
                   onClick={() => setConfirming(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 rounded-full py-2 font-semibold cursor-pointer bg-white disabled:opacity-50"
+                  className={`flex-1 ${BTN_SECONDARY_SM}`}
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  disabled={reverting}
-                  onClick={doRevert}
-                  className="flex-1 bg-brand-red text-white rounded-full py-2 font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                >
+                <button type="button" disabled={reverting} onClick={doRevert} className={`flex-1 ${BTN_PRIMARY_SM}`}>
                   {reverting ? "Reverting…" : "Revert"}
                 </button>
               </div>
@@ -256,8 +245,10 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
 
   if (entries === null) {
     return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3 py-12 text-center">
-        <p className="text-sm text-gray-400 m-0">Loading your analysis history…</p>
+      <div className="flex flex-col gap-3 py-4" aria-label="Loading your analysis history" role="status">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-2xl" />
+        ))}
       </div>
     );
   }
@@ -265,7 +256,7 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
   if (entries.length === 0) {
     return (
       <div className="min-h-[40vh] flex flex-col items-center justify-center gap-2 py-12 text-center">
-        <h2 className="text-lg font-bold text-[#1f1f1f] m-0">No analyses yet</h2>
+        <h2 className="text-lg font-bold text-ink m-0">No analyses yet</h2>
         <p className="text-sm text-gray-500 m-0 max-w-xs">
           Run your first analysis from Home and it'll show up here.
         </p>
@@ -274,7 +265,7 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 rise-in">
       <div>
         <h1 className="text-2xl font-bold leading-tight mb-1">History</h1>
         <p className="text-gray-500 text-sm m-0">Past analyses and the decisions you made.</p>

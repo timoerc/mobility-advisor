@@ -71,11 +71,11 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
           <ChatBubble key={msg.id} role={msg.role} text={msg.text} />
         ))}
         {thinking && (
-          <div className="flex items-end gap-2">
+          <div className="rise-in flex items-end gap-2">
             <div className="w-7 h-7 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
               <img src="/assets/advisor.svg" alt="" className="w-full h-full object-contain" />
             </div>
-            <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-gray-200">
+            <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-gray-200 shadow-card">
               <div className="flex gap-1 items-center">
                 {[0, 1, 2].map((i) => (
                   <span
@@ -90,12 +90,6 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
         )}
         <div ref={bottomRef} />
       </div>
-      <style>{`
-        @keyframes dotBounce {
-          0%, 60%, 100% { transform: translateY(0) }
-          30%            { transform: translateY(-5px) }
-        }
-      `}</style>
       <ChatInput onSend={handleSend} disabled={thinking} />
     </div>
   );

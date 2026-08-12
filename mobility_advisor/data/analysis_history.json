@@ -3,23 +3,17 @@
     {
       "id": "hist_maja_0001",
       "date": "2026-02-02",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Wanted to see how the rest of the year shaped up before making a change.",
+      "resolvedAt": "2026-02-02",
       "recommendation": {
         "verdict": "BahnCard 50 usage is off to a slow start this year",
         "confidence": "medium",
         "summaryText": "Only a couple of long-distance DB trips are logged so far in 2026 — discounted spend is well below what's needed to justify BahnCard 50's €244/year cost. Downgrading to BahnCard 25 would still cover your usage at less than half the price.",
         "metrics": [
-          {
-            "value": 133.0,
-            "unit": "€/year",
-            "direction": "save",
-            "label": "Potential saving vs. BahnCard 50"
-          },
-          {
-            "value": 0.0,
-            "unit": "kg CO2",
-            "direction": "neutral",
-            "label": "CO2 impact"
-          }
+          { "value": 133, "unit": "€/year", "direction": "save", "label": "Potential saving vs. BahnCard 50" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
         ],
         "reasoning": [
           "Only 2 long-distance rail trips have been recorded since January",
@@ -34,70 +28,46 @@
           {
             "id": "downgrade_bc25",
             "name": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 111.0,
-            "savingsVsCurrentEur": 133.0,
+            "annualCostEur": 111,
+            "savingsVsCurrentEur": 133,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Lower discount (25% vs. 50%) but still profitable at your current usage level.",
             "isRecommended": true,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
             "action": {
               "title": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
               "description": "Replace your BahnCard 50 with the cheaper BahnCard 25 tier before your next renewal.",
               "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
-            },
-            "addedProducts": [],
-            "removedProducts": []
+            }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
-            "annualCostEur": 244.0,
-            "savingsVsCurrentEur": 0.0,
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Keeps your existing discount tier in case travel picks up later in the year.",
             "isRecommended": false,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
-            "action": null,
-            "addedProducts": [],
-            "removedProducts": []
+            "action": null
           }
-        ],
-        "dataQualityWarnings": []
-      },
-      "outcome": "kept_current",
-      "resolvedAlternativeId": "keep",
-      "resolvedMessage": "Wanted to see how the rest of the year shaped up before making a change.",
-      "resolvedAt": "2026-02-02",
-      "revertSnapshot": null
+        ]
+      }
     },
     {
       "id": "hist_maja_0002",
       "date": "2026-04-14",
+      "outcome": "kept_current",
+      "resolvedAlternativeId": "keep",
+      "resolvedMessage": "Waiting to see if a possible Hamburg trip changes the picture before cancelling.",
+      "resolvedAt": "2026-04-14",
       "recommendation": {
         "verdict": "BahnCard 50 is on track to lose you money again this year",
         "confidence": "high",
         "summaryText": "Discounted DB spend through mid-April covers less than half of BahnCard 50's €244 annual cost. At this pace you're on track for a net loss of about €132 this year — cancelling would save the full card cost.",
         "metrics": [
-          {
-            "value": 244.0,
-            "unit": "€/year",
-            "direction": "save",
-            "label": "Potential saving"
-          },
-          {
-            "value": 0.0,
-            "unit": "kg CO2",
-            "direction": "neutral",
-            "label": "CO2 impact"
-          }
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
         ],
         "reasoning": [
           "Discounted DB spend year-to-date is far short of the €488 breakeven threshold",
@@ -112,70 +82,46 @@
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 0.0,
-            "savingsVsCurrentEur": 244.0,
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
             "isRecommended": true,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before the 31 December 2026 renewal date to avoid another year of card fees.",
               "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
-            },
-            "addedProducts": [],
-            "removedProducts": []
+            }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
-            "annualCostEur": 244.0,
-            "savingsVsCurrentEur": 0.0,
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Keeps the 50% Flexpreis discount in case a Hamburg trip materializes.",
             "isRecommended": false,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
-            "action": null,
-            "addedProducts": [],
-            "removedProducts": []
+            "action": null
           }
-        ],
-        "dataQualityWarnings": []
-      },
-      "outcome": "kept_current",
-      "resolvedAlternativeId": "keep",
-      "resolvedMessage": "Waiting to see if a possible Hamburg trip changes the picture before cancelling.",
-      "resolvedAt": "2026-04-14",
-      "revertSnapshot": null
+        ]
+      }
     },
     {
       "id": "hist_maja_0003",
       "date": "2026-06-02",
+      "outcome": "pending",
+      "resolvedAlternativeId": null,
+      "resolvedMessage": null,
+      "resolvedAt": null,
       "recommendation": {
         "verdict": "BahnCard 50 did not pay off this year",
         "confidence": "high",
         "summaryText": "Your discounted DB spend this year covers less than half of BahnCard 50's €244 cost — cancelling would save the full amount with no change to your travel pattern.",
         "metrics": [
-          {
-            "value": 244.0,
-            "unit": "€/year",
-            "direction": "save",
-            "label": "Potential saving"
-          },
-          {
-            "value": 0.0,
-            "unit": "kg CO2",
-            "direction": "neutral",
-            "label": "CO2 impact"
-          }
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
         ],
         "reasoning": [
           "5 DB trips this year produced €111.70 in discounted spend, far below the €488 breakeven threshold",
@@ -190,227 +136,31 @@
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 0.0,
-            "savingsVsCurrentEur": 244.0,
+            "annualCostEur": 0,
+            "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
             "isRecommended": true,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before 31 December 2026 to avoid auto-renewal and stop paying for a card you're not using enough.",
               "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
-            },
-            "addedProducts": [],
-            "removedProducts": []
+            }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
-            "annualCostEur": 244.0,
-            "savingsVsCurrentEur": 0.0,
+            "annualCostEur": 244,
+            "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
+            "co2ImpactKg": 0,
             "tradeoff": "Keeps the discount tier unchanged for now.",
             "isRecommended": false,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": null,
-            "action": null,
-            "addedProducts": [],
-            "removedProducts": []
+            "action": null
           }
-        ],
-        "dataQualityWarnings": []
-      },
-      "outcome": "pending",
-      "resolvedAlternativeId": null,
-      "resolvedMessage": null,
-      "resolvedAt": null,
-      "revertSnapshot": null
-    },
-    {
-      "id": "hist_ccd5ac28b8",
-      "date": "2026-06-15",
-      "recommendation": {
-        "verdict": "Switch to BahnCard 25 saves €181 per year",
-        "confidence": "high",
-        "summaryText": "Annual cost €1,128.32 (subscription €62.88 + trips €1,065.44); saves €181 / year versus your current BahnCard 50, with identical travel time and CO₂ impact.",
-        "metrics": [
-          {
-            "value": 181.0,
-            "unit": "€/year",
-            "direction": "save",
-            "label": "Potential saving"
-          }
-        ],
-        "reasoning": [
-          "Cost advantage: The BahnCard 25 portfolio is €181 cheaper than staying with BahnCard 50, while travel time (0 min) and CO₂ (0 kg) remain unchanged.",
-          "No trade‑off: All three dimensions point the same way – cheaper, same speed, same emissions.",
-          "Break‑even: The card’s annual fee (€62.88) is outweighed by its discount value (€91.82), giving a net benefit of €28.94 and a “break‑even” flag, i.e. the card pays for itself.",
-          "Continuity: This is the third review flagging the same move to BahnCard 25; you previously kept the recommendation in February and April."
-        ],
-        "assumptions": [
-          "Rail fares are based on the historical ticket class (Sparpreis/Flexpreis) for each trip.",
-          "Trip frequencies are extrapolated from your past travel data and calendar events.",
-          "The subscription fee used is the annual fee shown in the break‑even list; trip cost is the remainder of the total annual cost.",
-          "A subscription changes what each transport mode costs you; projected mode usage shifts in response (a gradual mode-share shift, not a hard switch), and travel time and CO2 follow. For this persona, time is valued at €3.56/hour and CO2 at €0.111/kg when weighing mode choice, derived from their stated cost/time/sustainability priorities."
-        ],
-        "alternatives": [
-          {
-            "id": "db_bc25_2nd_annual_standard",
-            "name": "Switch to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 1128.32,
-            "savingsVsCurrentEur": 181.08,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": -0.0,
-            "tradeoff": "€181 cheaper per year; BahnCard 25 (2. Klasse, Standard, Jahresabo) breaks even: €92 discount value vs. €63 fee",
-            "isRecommended": true,
-            "deltaCostVsRecommendedEur": 0.0,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": {
-              "costEur": -181.08,
-              "timeMin": 0.0,
-              "co2Kg": 0.0
-            },
-            "action": {
-              "title": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-              "description": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with BahnCard 25 (2. Klasse, Standard, Jahresabo). This changes your mobility portfolio.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
-            },
-            "addedProducts": [
-              "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
-            ],
-            "removedProducts": [
-              "BahnCard 50 (2. Klasse, Standard, Jahresabo)"
-            ]
-          },
-          {
-            "id": "db_bc25_2nd_annual_standard_db_deutschlandticket",
-            "name": "Switch to BahnCard 25 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket",
-            "annualCostEur": 1137.28,
-            "savingsVsCurrentEur": 172.12,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": -0.0,
-            "tradeoff": "€172 cheaper per year; BahnCard 25 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket breaks even: €839 discount value vs. €819 fee",
-            "isRecommended": false,
-            "deltaCostVsRecommendedEur": 8.96,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": {
-              "costEur": -172.12,
-              "timeMin": 0.0,
-              "co2Kg": 0.0
-            },
-            "action": {
-              "title": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with BahnCard 25 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket",
-              "description": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with BahnCard 25 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket. This changes your mobility portfolio.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket will start in its place."
-            },
-            "addedProducts": [
-              "BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-              "Deutschland-Ticket"
-            ],
-            "removedProducts": [
-              "BahnCard 50 (2. Klasse, Standard, Jahresabo)"
-            ]
-          },
-          {
-            "id": "none",
-            "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-            "annualCostEur": 1157.26,
-            "savingsVsCurrentEur": 152.14,
-            "co2Impact": "+68 kg CO₂/year",
-            "co2ImpactKg": -67.9,
-            "tradeoff": "€152 cheaper per year; -77 min travel time per year; +68 kg CO₂ per year; BahnCard 50 (2. Klasse, Standard, Jahresabo) runs a net loss: €92 discount value vs. €244 fee",
-            "isRecommended": false,
-            "deltaCostVsRecommendedEur": 28.94,
-            "deltaTimeVsRecommendedMin": -76.9,
-            "deltaCo2VsRecommendedKg": 67.94,
-            "deltaVsCurrent": {
-              "costEur": -152.14,
-              "timeMin": -76.9,
-              "co2Kg": 67.94
-            },
-            "action": {
-              "title": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
-              "description": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo). This changes your mobility portfolio.",
-              "consequence": "BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled."
-            },
-            "addedProducts": [],
-            "removedProducts": [
-              "BahnCard 50 (2. Klasse, Standard, Jahresabo)"
-            ]
-          },
-          {
-            "id": "db_deutschlandticket",
-            "name": "Switch to Deutschland-Ticket",
-            "annualCostEur": 1166.21,
-            "savingsVsCurrentEur": 143.19,
-            "co2Impact": "+68 kg CO₂/year",
-            "co2ImpactKg": -67.9,
-            "tradeoff": "€143 cheaper per year; -77 min travel time per year; +68 kg CO₂ per year; Deutschland-Ticket runs a net loss: €747 discount value vs. €756 fee",
-            "isRecommended": false,
-            "deltaCostVsRecommendedEur": 37.89,
-            "deltaTimeVsRecommendedMin": -76.9,
-            "deltaCo2VsRecommendedKg": 67.94,
-            "deltaVsCurrent": {
-              "costEur": -143.19,
-              "timeMin": -76.9,
-              "co2Kg": 67.94
-            },
-            "action": {
-              "title": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with Deutschland-Ticket",
-              "description": "Replace BahnCard 50 (2. Klasse, Standard, Jahresabo) with Deutschland-Ticket. This changes your mobility portfolio.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and Deutschland-Ticket will start in its place."
-            },
-            "addedProducts": [
-              "Deutschland-Ticket"
-            ],
-            "removedProducts": [
-              "BahnCard 50 (2. Klasse, Standard, Jahresabo)"
-            ]
-          },
-          {
-            "id": "keep",
-            "name": "Keep current setup",
-            "annualCostEur": 1309.4,
-            "savingsVsCurrentEur": 0.0,
-            "co2Impact": "Neutral",
-            "co2ImpactKg": 0.0,
-            "tradeoff": "No change to cost or emissions",
-            "isRecommended": false,
-            "deltaCostVsRecommendedEur": 181.08,
-            "deltaTimeVsRecommendedMin": 0.0,
-            "deltaCo2VsRecommendedKg": 0.0,
-            "deltaVsCurrent": {
-              "costEur": 0.0,
-              "timeMin": 0.0,
-              "co2Kg": 0.0
-            },
-            "action": null,
-            "addedProducts": [],
-            "removedProducts": []
-          }
-        ],
-        "dataQualityWarnings": [
-          "Rail prices calibrated to observed fares: synthetic price curve scaled 0.63x from 5 observed DB Sparpreis/Flexpreis trip(s) up to 902km; routes beyond that use the uncalibrated curve.",
-          "car_rental: driving route API failed, using heuristic",
-          "Aggregated 1 same-city car-share/car-rental trip(s) (avg ~6.2km) into one projected intra-city trip (2/yr) instead of dropping them — this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
-          "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data — travel history only records inter-city trips) — 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against."
         ]
-      },
-      "outcome": "pending",
-      "resolvedAlternativeId": null,
-      "resolvedMessage": null,
-      "resolvedAt": null,
-      "revertSnapshot": null
+      }
     }
   ]
 }

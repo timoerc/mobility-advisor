@@ -1,12 +1,12 @@
 import type { CarProfile } from "../types";
+import { INPUT } from "../ui";
 
 type CarProfilePageProps = {
   car: CarProfile;
   onChange: (car: CarProfile) => void;
 };
 
-const inputClass =
-  "border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100 bg-white";
+const inputClass = INPUT;
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-sm text-gray-700";
 
@@ -49,10 +49,10 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
             key={label}
             type="button"
             onClick={() => toggleCar(value)}
-            className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold cursor-pointer transition-colors ${
+            className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold cursor-pointer transition-colors duration-150 active:scale-[0.98] ${
               car.owns_car === value
-                ? "border-brand-red bg-red-50 text-brand-red"
-                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                ? "border-brand-red bg-red-50 text-brand-red shadow-card"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300"
             }`}
           >
             {label}

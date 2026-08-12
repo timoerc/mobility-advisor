@@ -1,4 +1,5 @@
 import type { CommutePattern, WeekDay } from "../types";
+import { INPUT } from "../ui";
 
 type LocationCommutePageProps = {
   homeCity: string;
@@ -51,7 +52,7 @@ export function LocationCommutePage({
           value={homeCity}
           onChange={(e) => onCityChange(e.target.value)}
           placeholder="e.g. Frankfurt"
-          className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100 bg-white"
+          className={INPUT}
         />
       </label>
 
@@ -70,10 +71,10 @@ export function LocationCommutePage({
                 key={id}
                 type="button"
                 onClick={() => toggleDay(id)}
-                className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold cursor-pointer transition-colors flex flex-col items-center gap-1 ${
+                className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold cursor-pointer transition-colors duration-150 active:scale-[0.98] flex flex-col items-center gap-1 ${
                   isWfh
-                    ? "border-brand-red bg-red-50 text-brand-red"
-                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    ? "border-brand-red bg-red-50 text-brand-red shadow-card"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300"
                 }`}
               >
                 <span>{label}</span>

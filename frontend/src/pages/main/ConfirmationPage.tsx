@@ -1,4 +1,5 @@
 import { TypewriterHeading } from "../../components/TypewriterHeading";
+import { BTN_PRIMARY_COMPACT } from "../../ui";
 
 type ConfirmationVariant = "executed" | "no-change";
 
@@ -25,9 +26,9 @@ export function ConfirmationPage({
   onBackToDashboard,
 }: ConfirmationPageProps) {
   return (
-    <div className="flex flex-col items-center gap-8 text-center py-12">
+    <div className="flex flex-col items-center gap-8 text-center py-12 rise-in">
       <div
-        className="w-20 h-20 bg-brand-red rounded-full flex items-center justify-center text-white text-3xl font-bold flex-shrink-0"
+        className="w-20 h-20 bg-brand-red rounded-full flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 shadow-lift"
         aria-hidden="true"
       >
         ✓
@@ -44,11 +45,7 @@ export function ConfirmationPage({
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={onBackToDashboard}
-        className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
-      >
+      <button type="button" onClick={onBackToDashboard} className={BTN_PRIMARY_COMPACT}>
         Back to dashboard
       </button>
     </div>
