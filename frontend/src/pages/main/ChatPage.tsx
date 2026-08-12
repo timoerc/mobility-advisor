@@ -14,6 +14,13 @@ type ChatPageProps = {
 const INITIAL_MESSAGE =
   "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.";
 
+const EXAMPLE_QUESTIONS = [
+  "What are my current mobility subscriptions?",
+  "Is my mobility setup optimal right now?",
+  "How much CO₂ have I emitted this year?",
+  "When does my BahnCard renew?",
+];
+
 export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "agent", text: INITIAL_MESSAGE, id: "init" },
@@ -90,6 +97,22 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
         )}
         <div ref={bottomRef} />
       </div>
+      {messages.length === 1 && !thinking && (
+        <div className="px-4 pb-2">
+          <div className="max-w-2xl mx-auto flex flex-wrap gap-2">
+            {EXAMPLE_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => handleSend(q)}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-ink/80 hover:border-brand-red hover:text-brand-red hover:bg-red-50 transition-colors duration-150 cursor-pointer"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <ChatInput onSend={handleSend} disabled={thinking} />
     </div>
   );
