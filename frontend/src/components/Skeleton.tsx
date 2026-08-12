@@ -15,6 +15,7 @@ export function DashboardSkeleton() {
       </div>
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-5 min-w-0 lg:flex-1">
+          <Skeleton className="h-56 rounded-2xl" />
           <div className="grid gap-5 sm:grid-cols-2">
             <Skeleton className="h-40 rounded-2xl" />
             <Skeleton className="h-40 rounded-2xl" />

@@ -10,10 +10,12 @@ import type { AnalysisHistoryEntry } from "../../types/recommendation";
 import { modeLabel } from "../../labels";
 import { StatTile } from "../../components/StatTile";
 import { DashboardSkeleton } from "../../components/Skeleton";
+import { SpendChart } from "../../components/SpendChart";
 import { CARD, CARD_INTERACTIVE, BTN_PRIMARY_SM } from "../../ui";
 import {
   aggregateTrips,
   bucketByMode,
+  bucketSpendOverTime,
   DEFAULT_RANGE,
   filterTripsByRange,
   RANGE_OPTIONS,
@@ -154,6 +156,11 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const recent = useMemo(() => recentTrips(filtered, 5), [filtered]);
   const maxUsage = usageSorted[0]?.trips ?? 0;
   const maxCo2 = co2Sorted[0]?.co2Kg ?? 0;
+  const spend = useMemo(
+    () => (travel ? bucketSpendOverTime(travel.trips, subscriptions, travel.referenceDate, range) : null),
+    [travel, subscriptions, range],
+  );
+  const hasSpend = !!spend && spend.buckets.some((b) => b.tripEur > 0 || b.subEur > 0);
 
   // General (non-range) derivations. Only the newest analysis is "live" — nudge on it iff it's still
   // undecided (pending), so a stale older pending never resurfaces here.
@@ -177,6 +184,19 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const firstName = personaName.trim().split(/\s+/)[0] || personaName;
 
   // ── widget blocks (declared once, placed by the responsive layout below) ─────
+  const spendCard = (
+    <Card
+      title="Mobility spend"
+      subtitle="Trip costs plus subscriptions, assumed active since they started"
+    >
+      {!hasSpend || !spend ? (
+        <EmptyState text="No spend in this range." />
+      ) : (
+        <SpendChart buckets={spend.buckets} unit={spend.unit} />
+      )}
+    </Card>
+  );
+
   const modesCard = (
     <Card title="Modes by usage" subtitle="Ranked by number of trips">
       {usageSorted.length === 0 ? (
@@ -426,6 +446,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                 </Card>
               ) : (
                 <>
+                  {spendCard}
                   <div className="grid gap-5 sm:grid-cols-2">
                     {modesCard}
                     {co2Card}

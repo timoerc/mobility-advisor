@@ -1,4 +1,5 @@
 import type { TripRecord } from "./api";
+import type { SubscriptionEntry } from "./types";
 
 /** Time-range presets for the home dashboard, in display order. */
 export type RangeKey = "1m" | "6m" | "1y" | "ytd" | "5y" | "all";
@@ -16,7 +17,7 @@ export const DEFAULT_RANGE: RangeKey = "1y";
 
 /** Inclusive lower bound for a range, anchored to the frozen reference date (`ref`). Returns null
  *  for "all" (no lower bound). */
-function rangeStart(range: RangeKey, ref: Date): Date | null {
+export function rangeStart(range: RangeKey, ref: Date): Date | null {
   const d = new Date(ref);
   switch (range) {
     case "1m":
@@ -106,4 +107,148 @@ export function recentTrips(trips: TripRecord[], limit: number): TripRecord[] {
   return [...trips]
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     .slice(0, limit);
+}
+
+// ── spend-over-time bucketing (home dashboard chart) ───────────────────────────
+
+export type BucketUnit = "week" | "month" | "quarter";
+
+export type SpendBucket = {
+  key: string;
+  label: string;
+  start: Date;
+  /** Exclusive. */
+  end: Date;
+  tripEur: number;
+  subEur: number;
+};
+
+const MS_PER_DAY = 86_400_000;
+
+function startOfWeek(d: Date): Date {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (r.getDay() + 6) % 7; // Monday = 0
+  r.setDate(r.getDate() - day);
+  return r;
+}
+
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function startOfQuarter(d: Date): Date {
+  return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+}
+
+function addUnit(d: Date, unit: BucketUnit): Date {
+  const r = new Date(d);
+  if (unit === "week") r.setDate(r.getDate() + 7);
+  else if (unit === "month") r.setMonth(r.getMonth() + 1);
+  else r.setMonth(r.getMonth() + 3);
+  return r;
+}
+
+/** How many months' worth of a subscription's monthly_cost_eur one bucket of this unit covers. */
+function unitMonths(unit: BucketUnit): number {
+  return unit === "week" ? 7 / 30.44 : unit === "month" ? 1 : 3;
+}
+
+/** Parses a date string, rejecting both unparseable strings and falsy values. Needed because
+ *  `new Date(null)` resolves to the Unix epoch instead of Invalid Date — and subscriptions with
+ *  no resolvable catalog entry (e.g. Enterprise Silver) carry `started: null` despite the field
+ *  being typed as `string`. Without this guard such a subscription reads as "started in 1970"
+ *  and blows up the "all"-range window to hundreds of empty buckets. */
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function bucketLabel(start: Date, unit: BucketUnit, spansMultipleYears: boolean): string {
+  if (unit === "week") {
+    return start.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  }
+  if (unit === "month") {
+    return start.toLocaleDateString(
+      "de-DE",
+      spansMultipleYears ? { month: "short", year: "2-digit" } : { month: "short" },
+    );
+  }
+  const q = Math.floor(start.getMonth() / 3) + 1;
+  return `Q${q} '${String(start.getFullYear()).slice(2)}`;
+}
+
+/** Buckets trip spend and inferred fixed subscription cost per period across the selected range,
+ *  for the home dashboard's spend-over-time chart. Bucket width (week/month/quarter) is picked
+ *  from the range's span so a 1-month view doesn't collapse into a single bar and a 5-year view
+ *  doesn't produce hundreds of them. Every bucket in the window is emitted, including ones with
+ *  no trips, so a quiet month reads as a gap rather than being skipped.
+ *
+ *  Trip spend is summed from actual trip dates. Subscription spend is *inferred*: only
+ *  currently-active subscriptions are known (past/cancelled ones aren't in the data), so each
+ *  is assumed to have run unchanged from its `started` date through today, contributing its
+ *  monthly-equivalent cost to every bucket from `started` onward — with no proration for the
+ *  bucket it starts in. */
+export function bucketSpendOverTime(
+  trips: TripRecord[],
+  subscriptions: SubscriptionEntry[] | null,
+  referenceDate: string,
+  range: RangeKey,
+): { buckets: SpendBucket[]; unit: BucketUnit } {
+  const ref = new Date(referenceDate);
+  if (Number.isNaN(ref.getTime())) return { buckets: [], unit: "month" };
+
+  const subs = subscriptions ?? [];
+  let start = rangeStart(range, ref);
+  if (!start) {
+    // "all": fall back to the earliest known trip date or subscription start date.
+    const candidates: number[] = [];
+    for (const t of trips) {
+      const d = new Date(t.date);
+      if (!Number.isNaN(d.getTime())) candidates.push(d.getTime());
+    }
+    for (const s of subs) {
+      const d = parseDate(s.started);
+      if (d) candidates.push(d.getTime());
+    }
+    start = candidates.length ? new Date(Math.min(...candidates)) : new Date(ref);
+  }
+
+  const spanDays = (ref.getTime() - start.getTime()) / MS_PER_DAY;
+  const unit: BucketUnit = spanDays <= 70 ? "week" : spanDays <= 365 * 3 ? "month" : "quarter";
+
+  const alignStart =
+    unit === "week" ? startOfWeek(start) : unit === "month" ? startOfMonth(start) : startOfQuarter(start);
+  const spansMultipleYears = alignStart.getFullYear() !== ref.getFullYear();
+
+  const inRange = filterTripsByRange(trips, referenceDate, range);
+
+  const buckets: SpendBucket[] = [];
+  let cursor = alignStart;
+  while (cursor <= ref) {
+    const bucketEnd = addUnit(cursor, unit);
+    const key =
+      unit === "week"
+        ? cursor.toISOString().slice(0, 10)
+        : unit === "month"
+          ? `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`
+          : `${cursor.getFullYear()}-Q${Math.floor(cursor.getMonth() / 3) + 1}`;
+
+    const tripEur = inRange.reduce((sum, t) => {
+      const d = new Date(t.date);
+      if (Number.isNaN(d.getTime()) || d < cursor || d >= bucketEnd) return sum;
+      return sum + (t.cost_eur ?? 0);
+    }, 0);
+
+    const subEur = subs.reduce((sum, s) => {
+      const started = parseDate(s.started);
+      if (!started || started > bucketEnd) return sum;
+      return sum + (s.monthly_cost_eur ?? 0) * unitMonths(unit);
+    }, 0);
+
+    buckets.push({ key, label: bucketLabel(cursor, unit, spansMultipleYears), start: cursor, end: bucketEnd, tripEur, subEur });
+    cursor = bucketEnd;
+  }
+
+  return { buckets, unit };
 }

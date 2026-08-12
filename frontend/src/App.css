@@ -81,6 +81,11 @@
   animation: growBar 0.6s var(--ease-soft) both;
 }
 
+.col-fill {
+  transform-origin: bottom;
+  animation: growCol 0.6s var(--ease-soft) both;
+}
+
 @keyframes riseIn {
   0% {
     opacity: 0;
@@ -112,6 +117,16 @@
 
   100% {
     transform: scaleX(1);
+  }
+}
+
+@keyframes growCol {
+  0% {
+    transform: scaleY(0);
+  }
+
+  100% {
+    transform: scaleY(1);
   }
 }
 
