@@ -45,6 +45,10 @@ export type Alternative = {
   // null only for the always-present "Keep current setup" row; every other
   // alternative carries the action that gets executed if the user selects it.
   action: ProposedAction | null;
+  // Structured product-name lists behind `name`/`action.title`, so cancel vs. add can be
+  // rendered as distinct chips instead of parsed out of a sentence. Empty for no-change rows.
+  addedProducts?: string[];
+  removedProducts?: string[];
 };
 
 export type Recommendation = {

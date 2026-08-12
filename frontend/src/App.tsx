@@ -591,7 +591,7 @@ export default function App() {
 
   return (
     <AppShell
-      wide={mainView === "home"}
+      wide={mainView === "home" || mainView === "annual"}
       personaName={activePersona.profileData.personal.full_name || activePersona.name}
       personaTagline={activePersona.tagline}
       avatarBg={activePersona.avatarBg}

@@ -14,12 +14,12 @@ The `travel_history.json` fixture contains intentionally malformed entries — v
 
 | # | Date | Field | Bad Value | Entry Type |
 |---|---|---|---|---|
-| 15 | 2025-05-28 | `cost_eur` | `null` | Rail: Frankfurt → Nürnberg |
-| 16 | 2024-11-30 | `cost_eur` | `null` | Car-share: Frankfurt Innenstadt → Frankfurt Bornheim |
-| 17 | 2025-02-05 | `mode` | `""` (empty string) | Unknown: Frankfurt → Hannover |
-| 18 | 2024-12-10 | `mode` | `""` (empty string) | Unknown: Frankfurt Bornheim → Airport |
-| 19 | 2024-10-14 | `mode` | `"hovercraft"` | Unknown: Frankfurt → Bremen |
-| 20 | 2024-08-19 | `mode` | `"hovercraft"` | Unknown: Frankfurt Westend → Frankfurt Nordend |
+| 15 | 2026-05-28 | `cost_eur` | `null` | Rail: Frankfurt → Nürnberg |
+| 16 | 2025-11-30 | `cost_eur` | `null` | Car-share: Frankfurt Innenstadt → Frankfurt Bornheim |
+| 17 | 2026-02-05 | `mode` | `""` (empty string) | Unknown: Frankfurt → Hannover |
+| 18 | 2025-12-10 | `mode` | `""` (empty string) | Unknown: Frankfurt Bornheim → Airport |
+| 19 | 2025-10-14 | `mode` | `"hovercraft"` | Unknown: Frankfurt → Bremen |
+| 20 | 2025-08-19 | `mode` | `"hovercraft"` | Unknown: Frankfurt Westend → Frankfurt Nordend |
 
 **Total:** 6 of 20 entries (30%) are semantically broken. All 20 entries are syntactically valid JSON.
 
@@ -52,12 +52,12 @@ DATA QUALITY WARNINGS
 =====================
 The following 6 trip entries were excluded from analysis due to missing or unrecognized values:
 
-  1. 2025-05-28 | Frankfurt → Nürnberg | cost_eur: null (cannot compute savings)
-  2. 2024-11-30 | Frankfurt Innenstadt → Frankfurt Bornheim | cost_eur: null (cannot compute savings)
-  3. 2025-02-05 | Frankfurt → Hannover | mode: "" (unrecognized, cannot classify)
-  4. 2024-12-10 | Frankfurt Bornheim → Airport | mode: "" (unrecognized, cannot classify)
-  5. 2024-10-14 | Frankfurt → Bremen | mode: "hovercraft" (unrecognized, cannot classify)
-  6. 2024-08-19 | Frankfurt Westend → Frankfurt Nordend | mode: "hovercraft" (unrecognized, cannot classify)
+  1. 2026-05-28 | Frankfurt → Nürnberg | cost_eur: null (cannot compute savings)
+  2. 2025-11-30 | Frankfurt Innenstadt → Frankfurt Bornheim | cost_eur: null (cannot compute savings)
+  3. 2026-02-05 | Frankfurt → Hannover | mode: "" (unrecognized, cannot classify)
+  4. 2025-12-10 | Frankfurt Bornheim → Airport | mode: "" (unrecognized, cannot classify)
+  5. 2025-10-14 | Frankfurt → Bremen | mode: "hovercraft" (unrecognized, cannot classify)
+  6. 2025-08-19 | Frankfurt Westend → Frankfurt Nordend | mode: "hovercraft" (unrecognized, cannot classify)
 
 Analysis is based on the remaining 14 trips (70% of history).
 

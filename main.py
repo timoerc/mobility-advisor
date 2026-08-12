@@ -506,6 +506,21 @@ def _load_optimization_weights() -> dict | None:
     return json.loads(opt_path.read_text(encoding="utf-8")).get("weights")
 
 
+def _dedupe_warnings(warnings: list[str]) -> list[str]:
+    """Collapse exact-duplicate warning strings into a single "(×N)" line, preserving
+    first-seen order. Upstream (tools.py), the same warning — e.g. "car_share: driving route
+    API failed, using heuristic" — is appended once per affected historical route rather than
+    once per mode, so an API outage or missing ORS_API_KEY can otherwise repeat an identical
+    line many times in the Data quality notes panel."""
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for w in warnings:
+        if w not in counts:
+            order.append(w)
+        counts[w] = counts.get(w, 0) + 1
+    return [f"{w} (×{counts[w]})" if counts[w] > 1 else w for w in order]
+
+
 def _load_optimization_warnings() -> list[str]:
     """Deterministic warnings optimize_all_categories() persisted for this run — malformed
     travel-history entries, travel-reduction damping, rail-fare calibration notes, etc. (see
@@ -515,7 +530,8 @@ def _load_optimization_warnings() -> list[str]:
     opt_path = _DATA / "_optimization_results.json"
     if not opt_path.exists():
         return []
-    return json.loads(opt_path.read_text(encoding="utf-8")).get("warnings", [])
+    warnings = json.loads(opt_path.read_text(encoding="utf-8")).get("warnings", [])
+    return _dedupe_warnings(warnings)
 
 
 def _normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
@@ -669,22 +685,28 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
 
         added_names = [catalog_by_id[sid]["product"] for sid in sorted(added) if sid in catalog_by_id]
         removed_names = [catalog_by_id[sid]["product"] for sid in sorted(removed) if sid in catalog_by_id]
+        # " + " everywhere a card joins multiple product names — matches the separator
+        # optimize_all_categories() already uses for its combo labels (tools.py), so a
+        # two-product cancel/add reads the same as a two-product portfolio label instead of
+        # switching between ", " and " + " depending on which code path built the string.
+        added_joined = " + ".join(added_names)
+        removed_joined = " + ".join(removed_names)
 
         if added_names and removed_names:
-            action_title = f"Replace {', '.join(removed_names)} with {', '.join(added_names)}"
+            action_title = f"Replace {removed_joined} with {added_joined}"
             name = f"Switch to {s['label']}"
             consequence = (
-                f"Your {', '.join(removed_names)} will be cancelled and "
-                f"{', '.join(added_names)} will start in its place."
+                f"Your {removed_joined} will be cancelled and "
+                f"{added_joined} will start in its place."
             )
         elif added_names:
-            action_title = f"Add {', '.join(added_names)}"
+            action_title = f"Add {added_joined}"
             name = f"Add {s['label']}"
-            consequence = f"{', '.join(added_names)} will be added to your portfolio."
+            consequence = f"{added_joined} will be added to your portfolio."
         elif removed_names:
-            action_title = f"Cancel {', '.join(removed_names)}"
-            name = f"Cancel {', '.join(removed_names)}"
-            consequence = f"{', '.join(removed_names)} will be cancelled."
+            action_title = f"Cancel {removed_joined}"
+            name = f"Cancel {removed_joined}"
+            consequence = f"{removed_joined} will be cancelled."
         else:
             action_title = s["label"]
             name = s["label"]
@@ -789,6 +811,8 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
                 timeMin=round(d_time, 1),
                 co2Kg=round(d_co2, 2),
             ),
+            addedProducts=added_names,
+            removedProducts=removed_names,
         ))
 
     # Deterministic "hold pending decision" row — detect_pending_portfolio_decision() is a

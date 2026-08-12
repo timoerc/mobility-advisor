@@ -344,6 +344,11 @@ class Alternative(BaseModel):
     # alternative must carry its own action so it can be executed if the user
     # selects it — see /api/execute in main.py.
     action: ProposedAction | None = None
+    # Structured product-name lists behind `name`/`action.title`, so the frontend can render
+    # cancel vs. add as distinct chips instead of parsing an opaque sentence. Empty for rows
+    # with no change (e.g. "Keep current setup").
+    addedProducts: list[str] = []
+    removedProducts: list[str] = []
 
 
 class Recommendation(BaseModel):

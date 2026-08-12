@@ -51,7 +51,10 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
       return;
     }
     const url = URL.createObjectURL(report);
-    setPdfUrl(url);
+    // #zoom=page-width forces the browser's PDF viewer to fit the page to the
+    // iframe's width instead of its default fit-whole-page zoom, which leaves
+    // large gray margins on tall/narrow viewports.
+    setPdfUrl(`${url}#zoom=page-width`);
     return () => URL.revokeObjectURL(url);
   }, [report]);
 
@@ -101,7 +104,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
       <iframe
         src={pdfUrl}
         title="Your Annual Mobility Review"
-        className="w-full h-[80vh] rounded-lg border border-gray-200 bg-white"
+        className="w-full h-[88vh] rounded-lg border border-gray-200 bg-white"
       />
     </div>
   );

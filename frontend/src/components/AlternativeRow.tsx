@@ -54,6 +54,33 @@ function formatTime(value: number): string {
   return `${sign}${hours} h ${mins}`;
 }
 
+// Renders the structured added/removed product lists as distinct chips (one per product,
+// colored by direction) instead of the caller having to parse them back out of `alt.name` /
+// `alt.tradeoff`'s free-text sentence.
+function ActionChips({ added, removed }: { added: string[]; removed: string[] }) {
+  if (added.length === 0 && removed.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {removed.map((product) => (
+        <span
+          key={`remove-${product}`}
+          className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600"
+        >
+          − {product}
+        </span>
+      ))}
+      {added.map((product) => (
+        <span
+          key={`add-${product}`}
+          className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-700"
+        >
+          + {product}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function DeltaBadge({
   value,
   threshold,
@@ -130,6 +157,8 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
           )}
         </div>
       </div>
+
+      <ActionChips added={alt.addedProducts ?? []} removed={alt.removedProducts ?? []} />
 
       <div className="mt-0.5">
         <span className="text-[11px] text-gray-400">vs. your current setup</span>
