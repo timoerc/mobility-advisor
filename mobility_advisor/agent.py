@@ -2,11 +2,11 @@ from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
 from google.genai import types
 
-from .execution_agent import execution_agent
-from .pipeline import annual_report_pipeline, optimization_pipeline
-from .qa_agent import qa_agent
-from .reject_agent import reject_agent
-from .sub_agents import _TODAY, build_model
+from .agents.execution import execution_agent
+from .agents.model import _TODAY, build_model
+from .agents.pipelines import annual_report_pipeline, optimization_pipeline
+from .agents.qa import qa_agent
+from .agents.reject import reject_agent
 
 # TODO (Tier 2): add persistent user state, RAG over contracts catalog, calendar-driven forecasting, constraint capture
 COORDINATOR_INSTRUCTION = f"""\
