@@ -1,4 +1,5 @@
 import type { BucketUnit, SpendBucket } from "../dashboard-stats";
+import { formatCurrency, useI18n } from "../i18n";
 
 // Trip spend is the variable part the advisor can act on; subscriptions are the fixed,
 // already-committed base. Validated (dataviz palette check) against the white card surface:
@@ -8,16 +9,12 @@ const SUB_COLOR = "#2f6f9f"; // muted steel blue
 
 const CHART_HEIGHT = 160; // px
 
-const fmtEur = (n: number) => `€${Math.round(n).toLocaleString("de-DE")}`;
-
-function unitNoun(unit: BucketUnit): string {
-  return unit === "week" ? "week" : unit === "month" ? "month" : "quarter";
-}
-
 /** Home-dashboard spend-over-time chart: stacked bars of trip spend + inferred subscription
  *  cost per bucket. Hand-rolled divs (no charting lib in this project), matching the
  *  MeasureBar idiom used elsewhere on the dashboard. */
 export function SpendChart({ buckets, unit }: { buckets: SpendBucket[]; unit: BucketUnit }) {
+  const { language, t, tPlural } = useI18n();
+  const fmtEur = (n: number) => formatCurrency(language, n);
   const maxTotal = Math.max(...buckets.map((b) => b.tripEur + b.subEur), 0);
   const totalTrip = buckets.reduce((s, b) => s + b.tripEur, 0);
   const totalSub = buckets.reduce((s, b) => s + b.subEur, 0);
@@ -31,11 +28,11 @@ export function SpendChart({ buckets, unit }: { buckets: SpendBucket[]; unit: Bu
       <div className="flex items-center gap-4 mb-4">
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: TRIP_COLOR }} />
-          Trips
+          {t("spendChart.legend.trips")}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: SUB_COLOR }} />
-          Subscriptions
+          {t("spendChart.legend.subscriptions")}
         </span>
       </div>
 
@@ -53,9 +50,12 @@ export function SpendChart({ buckets, unit }: { buckets: SpendBucket[]; unit: Bu
             const total = b.tripEur + b.subEur;
             const subPx = maxTotal ? (b.subEur / maxTotal) * CHART_HEIGHT : 0;
             const tripPx = maxTotal ? (b.tripEur / maxTotal) * CHART_HEIGHT : 0;
-            const tooltip = `${b.label} · Trips ${fmtEur(b.tripEur)} · Subscriptions ${fmtEur(
-              b.subEur,
-            )} · Total ${fmtEur(total)}`;
+            const tooltip = t("spendChart.tooltip", {
+              label: b.label,
+              trip: fmtEur(b.tripEur),
+              sub: fmtEur(b.subEur),
+              total: fmtEur(total),
+            });
             return (
               <div key={b.key} className="group relative flex-1 min-w-0 h-full flex flex-col justify-end">
                 <div className="mx-auto w-full max-w-6 flex flex-col items-stretch">
@@ -96,8 +96,8 @@ export function SpendChart({ buckets, unit }: { buckets: SpendBucket[]; unit: Bu
                     aria-hidden="true"
                   >
                     <span className="block font-semibold">{b.label}</span>
-                    <span className="block text-gray-300">Trips {fmtEur(b.tripEur)}</span>
-                    <span className="block text-gray-300">Subscriptions {fmtEur(b.subEur)}</span>
+                    <span className="block text-gray-300">{t("spendChart.legend.trips")} {fmtEur(b.tripEur)}</span>
+                    <span className="block text-gray-300">{t("spendChart.legend.subscriptions")} {fmtEur(b.subEur)}</span>
                   </span>
                 </button>
               </div>
@@ -118,8 +118,13 @@ export function SpendChart({ buckets, unit }: { buckets: SpendBucket[]; unit: Bu
       </div>
 
       <p className="text-xs text-gray-400 m-0 mt-3 pt-3 border-t border-gray-100">
-        {fmtEur(totalTrip + totalSub)} across {buckets.length} {unitNoun(unit)}
-        {buckets.length === 1 ? "" : "s"} · {fmtEur(totalTrip)} trips + {fmtEur(totalSub)} subscriptions
+        {t("spendChart.summary", {
+          total: fmtEur(totalTrip + totalSub),
+          count: buckets.length,
+          unit: tPlural(`spendChart.unit.${unit}`, buckets.length),
+          trip: fmtEur(totalTrip),
+          sub: fmtEur(totalSub),
+        })}
       </p>
     </div>
   );

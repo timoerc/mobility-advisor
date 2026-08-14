@@ -178,11 +178,11 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   // ── widget blocks (declared once, placed by the responsive layout below) ─────
   const spendCard = (
     <Card
-      title="Mobility spend"
-      subtitle="Trip costs plus subscriptions, assumed active since they started"
+      title={t("home.spend.title")}
+      subtitle={t("home.spend.subtitle")}
     >
       {!hasSpend || !spend ? (
-        <EmptyState text="No spend in this range." />
+        <EmptyState text={t("home.spend.empty")} />
       ) : (
         <SpendChart buckets={spend.buckets} unit={spend.unit} />
       )}
