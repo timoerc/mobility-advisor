@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusMessage } from "../../components/StatusMessage";
-import { executeAction } from "../../api";
+import { executeAction, ApiError } from "../../api";
+import { useT } from "../../i18n";
 import type { ExecutionResult, ProposedAction } from "../../types/recommendation";
-
-const STATUS_MESSAGES = ["Confirming with the execution agent…", "Updating your subscriptions…"];
 
 type ExecutingPageProps = {
   sessionId: string;
@@ -16,6 +15,8 @@ type ExecutingPageProps = {
 };
 
 export function ExecutingPage({ sessionId, action, analysisId, alternativeId, onComplete, onCancel }: ExecutingPageProps) {
+  const t = useT();
+  const STATUS_MESSAGES = useMemo(() => [t("executing.status.1"), t("executing.status.2")], [t]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Declined/ambiguous responses are deterministic (temperature 0) — retrying the same
@@ -33,13 +34,14 @@ export function ExecutingPage({ sessionId, action, analysisId, alternativeId, on
           window.setTimeout(() => onComplete(result), 600);
         } else {
           setCanRetry(false);
-          setError(result.message || "The execution agent could not apply this change.");
+          setError(result.message || t("executing.fallbackError"));
         }
       })
       .catch((err) => {
         console.error("Execution failed:", err);
         setCanRetry(true);
-        setError(err instanceof Error ? err.message : "The execution agent failed. Please try again.");
+        // See AnalysisPage's identical catch — ApiError.detail is the un-prefixed backend message.
+        setError(err instanceof ApiError ? err.detail : t("executing.fallbackErrorRetry"));
       });
   };
 
@@ -61,7 +63,7 @@ export function ExecutingPage({ sessionId, action, analysisId, alternativeId, on
           </svg>
         </div>
         <div className="flex flex-col gap-2 max-w-xs">
-          <h2 className="text-xl font-bold text-[#1f1f1f] m-0">Couldn't apply this change</h2>
+          <h2 className="text-xl font-bold text-[#1f1f1f] m-0">{t("executing.couldntApply")}</h2>
           <p className="text-sm text-gray-500 m-0 leading-relaxed">{error}</p>
         </div>
         <button
@@ -69,7 +71,7 @@ export function ExecutingPage({ sessionId, action, analysisId, alternativeId, on
           onClick={canRetry ? start : onCancel}
           className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
         >
-          {canRetry ? "Try again" : "Back to dashboard"}
+          {canRetry ? t("common.tryAgain") : t("common.backToDashboard")}
         </button>
       </div>
     );
@@ -82,7 +84,7 @@ export function ExecutingPage({ sessionId, action, analysisId, alternativeId, on
       </div>
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">Applying your change…</h2>
+        <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">{t("executing.heading")}</h2>
         <StatusMessage messages={STATUS_MESSAGES} intervalMs={2200} />
       </div>
 

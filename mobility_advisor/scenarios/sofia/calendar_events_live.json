@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Studio day — design review, Berlin Mitte",
+      "description_de": "Studio-Tag — Design-Review, Berlin Mitte",
       "location": "Berlin",
       "signals": [
         "local_transit_regular"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Client workshop — Berlin Kreuzberg",
+      "description_de": "Kunden-Workshop — Berlin Kreuzberg",
       "location": "Berlin",
       "signals": [
         "local_transit_regular"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Furniture pickup + friend's move — evening, likely car-share",
+      "description_de": "Möbelabholung + Umzug einer Freundin — abends, vermutlich Carsharing",
       "location": "Berlin",
       "signals": [
         "car_share_likely"
@@ -43,6 +46,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Team offsite — Berlin Prenzlauer Berg",
+      "description_de": "Team-Offsite — Berlin Prenzlauer Berg",
       "location": "Berlin",
       "signals": [
         "local_transit_regular"
@@ -55,6 +59,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Weekend visit to a friend in Hamburg — long-distance rail",
+      "description_de": "Wochenendbesuch bei einer Freundin in Hamburg — Fernverkehr",
       "location": "Hamburg",
       "signals": [
         "long_distance_rail_likely"

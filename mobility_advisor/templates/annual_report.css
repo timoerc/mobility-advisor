@@ -7,7 +7,13 @@
   margin: 30mm 20mm 22mm 20mm;
 
   @top-left {
-    content: "Mobility Advisor";
+    /* __MASTHEAD_LEFT__ etc.: plain-text tokens substituted by report_pdf.py before this
+       stylesheet is handed to WeasyPrint — see that module for why (a static .css file can't
+       vary per request/language, so the localized text is filled in at render time). Kept as
+       distinct single-value tokens (not e.g. the whole `content:` line) so the counter(page)/
+       counter(pages) generated-content calls around __PAGE_LABEL__/__OF_LABEL__ survive the
+       substitution untouched. */
+    content: "__MASTHEAD_LEFT__";
     font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 8pt;
     color: #8a8a86;
@@ -15,13 +21,13 @@
     text-transform: uppercase;
   }
   @top-right {
-    content: "Annual Mobility Review";
+    content: "__MASTHEAD_RIGHT__";
     font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 8pt;
     color: #8a8a86;
   }
   @bottom-center {
-    content: "Page " counter(page) " of " counter(pages);
+    content: "__PAGE_LABEL__" counter(page) "__OF_LABEL__" counter(pages);
     font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 8pt;
     color: #8a8a86;

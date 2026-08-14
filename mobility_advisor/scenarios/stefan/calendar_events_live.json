@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Frankfurt office day (Tues)",
+      "description_de": "Wöchentlicher Bürotag in Frankfurt (Di)",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Frankfurt office day (Tues)",
+      "description_de": "Wöchentlicher Bürotag in Frankfurt (Di)",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Frankfurt office day (Tues)",
+      "description_de": "Wöchentlicher Bürotag in Frankfurt (Di)",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -43,6 +46,7 @@
       "time_end": null,
       "type": "life_event",
       "description": "Apartment viewing in Hamburg — exploring housing options",
+      "description_de": "Wohnungsbesichtigung in Hamburg — Wohnoptionen werden geprüft",
       "location": "Hamburg",
       "signals": [
         "possible_relocation",
@@ -56,6 +60,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Business trip to Amsterdam — international, neither D-Ticket nor BahnCard applies",
+      "description_de": "Geschäftsreise nach Amsterdam — international, weder D-Ticket noch BahnCard gelten",
       "location": "Amsterdam",
       "signals": [
         "long_distance_rail_likely"
@@ -68,6 +73,7 @@
       "time_end": null,
       "type": "life_event",
       "description": "Job offer decision deadline — possible relocation to Hamburg in September",
+      "description_de": "Entscheidungsfrist für das Stellenangebot — möglicher Umzug nach Hamburg im September",
       "location": "München",
       "signals": [
         "possible_relocation",
@@ -81,6 +87,7 @@
       "time_end": null,
       "type": "life_event",
       "description": "Potential start date for new Hamburg-based role — remote with biweekly on-site",
+      "description_de": "Möglicher Starttermin für die neue Stelle in Hamburg — remote mit zweiwöchentlicher Präsenz vor Ort",
       "location": "Hamburg",
       "signals": [
         "possible_relocation",
@@ -95,6 +102,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Recurring project sync — Frankfurt office",
+      "description_de": "Wiederkehrendes Projekt-Sync — Büro Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -107,6 +115,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Client meeting — Frankfurt",
+      "description_de": "Kundentermin — Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"

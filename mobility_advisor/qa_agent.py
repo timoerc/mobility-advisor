@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent
 
+from .i18n import localized
 from .sub_agents import _TODAY, build_model
 from .tools import (
     compute_travel_stats,
@@ -19,7 +20,11 @@ qa_agent = LlmAgent(
         "Answers factual lookup questions about the user's mobility data — "
         "counts, spend, distances, renewal dates, usage — without running a full portfolio review."
     ),
-    instruction=f"""\
+    # localized(): called by the coordinator without skip_summarization, so in principle the
+    # coordinator's own directive could translate this on relay — but giving qa_agent its own
+    # directive means it answers correctly in the target language directly, rather than
+    # depending on a second LLM hop to translate a fact-bearing answer correctly.
+    instruction=localized(f"""\
 You are the Q&A agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -64,7 +69,7 @@ RULES:
    12 rail trips," never "The user took 12 rail trips".
 
 Keep answers short and direct — a sentence or two, with the concrete number(s) requested.
-""",
+"""),
     tools=[
         compute_travel_stats,
         load_travel_history,

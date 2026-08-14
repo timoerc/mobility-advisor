@@ -9,6 +9,7 @@ import type { SubscriptionEntry } from "../../types";
 import type { AnalysisHistoryEntry } from "../../types/recommendation";
 import { modeLabel } from "../../labels";
 import { StatTile } from "../../components/StatTile";
+import { useI18n, formatInt, formatKg, formatDate as fmtDateFor, formatCurrency, formatCurrencyPrecise } from "../../i18n";
 import {
   aggregateTrips,
   bucketByMode,
@@ -28,27 +29,11 @@ type HomePageProps = {
   onReviewRecommendation: (entry: AnalysisHistoryEntry) => void;
 };
 
-// ── formatting helpers ────────────────────────────────────────────────────────
-const fmtInt = (n: number) => Math.round(n).toLocaleString("de-DE");
-const fmtKg = (n: number) => (n >= 10 ? Math.round(n).toLocaleString("de-DE") : n.toFixed(1));
-const fmtDate = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" });
-};
-const fmtDateShort = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
-};
-
-function greeting(): string {
+function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "home.greeting.evening" {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return "home.greeting.morning";
+  if (h < 18) return "home.greeting.afternoon";
+  return "home.greeting.evening";
 }
 
 // ── small presentational pieces ───────────────────────────────────────────────
@@ -110,6 +95,13 @@ const USAGE_COLOR = "#374151"; // gray-700
 const CO2_COLOR = "#ef4444"; // red-500
 
 export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHistory, onReviewRecommendation }: HomePageProps) {
+  const { language, t, tPlural, tDynamic } = useI18n();
+  const mLabel = (mode: string) => modeLabel(mode, tDynamic);
+  const fmtInt = (n: number) => formatInt(language, n);
+  const fmtKg = (n: number) => formatKg(language, n);
+  const fmtDate = (iso: string) => fmtDateFor(language, iso, "long");
+  const fmtDateShort = (iso: string) => fmtDateFor(language, iso, "short");
+  const fmtEur = (n: number) => formatCurrency(language, n);
   const [travel, setTravel] = useState<TravelHistory | null>(null);
   const [travelFailed, setTravelFailed] = useState(false);
   const [subscriptions, setSubscriptions] = useState<SubscriptionEntry[] | null>(null);
@@ -173,16 +165,16 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
 
   // ── widget blocks (declared once, placed by the responsive layout below) ─────
   const modesCard = (
-    <Card title="Modes by usage" subtitle="Ranked by number of trips">
+    <Card title={t("home.modesByUsage")} subtitle={t("home.modesByUsage.subtitle")}>
       {usageSorted.length === 0 ? (
-        <EmptyState text="No trips in this range." />
+        <EmptyState text={t("home.noTripsInRange")} />
       ) : (
         <div className="flex flex-col gap-3">
           {usageSorted.map((b) => (
             <MeasureBar
               key={b.mode}
-              label={modeLabel(b.mode)}
-              valueText={`${b.trips} ${b.trips === 1 ? "trip" : "trips"} · ${Math.round((b.trips / stats.count) * 100)}%`}
+              label={mLabel(b.mode)}
+              valueText={`${b.trips} ${tPlural("home.trip", b.trips)} · ${Math.round((b.trips / stats.count) * 100)}%`}
               pct={maxUsage ? (b.trips / maxUsage) * 100 : 0}
               color={USAGE_COLOR}
             />
@@ -193,15 +185,15 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   );
 
   const co2Card = (
-    <Card title="CO₂ by mode" subtitle="Which modes drive your footprint">
+    <Card title={t("home.co2ByMode")} subtitle={t("home.co2ByMode.subtitle")}>
       {co2Sorted.length === 0 ? (
-        <EmptyState text="No emissions data in this range." />
+        <EmptyState text={t("home.noEmissionsInRange")} />
       ) : (
         <div className="flex flex-col gap-3">
           {co2Sorted.map((b) => (
             <MeasureBar
               key={b.mode}
-              label={modeLabel(b.mode)}
+              label={mLabel(b.mode)}
               valueText={`${fmtKg(b.co2Kg)} kg`}
               pct={maxCo2 ? (b.co2Kg / maxCo2) * 100 : 0}
               color={CO2_COLOR}
@@ -213,9 +205,9 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   );
 
   const recentCard = (
-    <Card title="Recent activity" subtitle="Your latest trips in this range">
+    <Card title={t("home.recentActivity")} subtitle={t("home.recentActivity.subtitle")}>
       {recent.length === 0 ? (
-        <EmptyState text="No trips in this range." />
+        <EmptyState text={t("home.noTripsInRange")} />
       ) : (
         <div className="flex flex-col">
           {recent.map((t, i) => (
@@ -224,7 +216,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0"
             >
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 flex-shrink-0">
-                {modeLabel(t.mode)}
+                {mLabel(t.mode)}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-900 m-0 truncate">
@@ -234,7 +226,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               </div>
               <div className="text-right flex-shrink-0">
                 {t.cost_eur != null && (
-                  <p className="text-sm font-semibold text-gray-900 m-0 tabular-nums">€{fmtInt(t.cost_eur)}</p>
+                  <p className="text-sm font-semibold text-gray-900 m-0 tabular-nums">{fmtEur(t.cost_eur)}</p>
                 )}
                 {t.co2_emission_kg != null && (
                   <p className="text-xs text-gray-400 m-0 tabular-nums">{fmtKg(t.co2_emission_kg)} kg CO₂</p>
@@ -248,9 +240,9 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   );
 
   const subscriptionsCard = (
-    <Card title="Your subscriptions">
+    <Card title={t("home.yourSubscriptions")}>
       {!subscriptions || subscriptions.length === 0 ? (
-        <EmptyState text="No active subscriptions." />
+        <EmptyState text={t("home.noActiveSubscriptions")} />
       ) : (
         <>
           <div className="flex flex-col">
@@ -261,26 +253,31 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                     {s.provider} — {s.product}
                   </p>
                   <p className="text-xs text-gray-400 m-0">
-                    {modeLabel(s.mode)}
+                    {mLabel(s.mode)}
                     {s.next_renewal_date ? ` · renews ${fmtDate(s.next_renewal_date)}` : ""}
                   </p>
                 </div>
                 {typeof s.monthly_cost_eur === "number" && (
                   <span className="text-sm font-semibold text-gray-900 tabular-nums flex-shrink-0">
-                    {s.monthly_cost_eur === 0 ? "Free" : `€${s.monthly_cost_eur.toFixed(2)}/mo`}
+                    {s.monthly_cost_eur === 0 ? t("home.free") : `${formatCurrencyPrecise(language, s.monthly_cost_eur)}/mo`}
                   </span>
                 )}
               </div>
             ))}
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-            <span className="text-sm text-gray-500">Total</span>
-            <span className="text-sm font-bold text-gray-900 tabular-nums">€{totalMonthly.toFixed(2)}/mo</span>
+            <span className="text-sm text-gray-500">{t("home.total")}</span>
+            <span className="text-sm font-bold text-gray-900 tabular-nums">{formatCurrencyPrecise(language, totalMonthly)}/mo</span>
           </div>
           {nextRenewal && (
             <p className="text-xs text-gray-400 m-0 mt-2">
-              Next renewal: {nextRenewal.entry.provider} — {nextRenewal.entry.product} in {nextRenewal.days}{" "}
-              {nextRenewal.days === 1 ? "day" : "days"} ({fmtDate(nextRenewal.entry.next_renewal_date)})
+              {t("home.nextRenewal", {
+                provider: nextRenewal.entry.provider,
+                product: nextRenewal.entry.product,
+                days: nextRenewal.days,
+                dayWord: tPlural("home.day", nextRenewal.days),
+                date: fmtDate(nextRenewal.entry.next_renewal_date),
+              })}
             </p>
           )}
         </>
@@ -290,7 +287,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
 
   const quickActions = (
     <div>
-      <p className="text-sm font-bold text-gray-900 mb-3">Quick actions</p>
+      <p className="text-sm font-bold text-gray-900 mb-3">{t("home.quickActions")}</p>
       <div className="flex flex-col gap-3">
         <ActionCard
           icon={
@@ -298,8 +295,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           }
-          title="Chat"
-          subtitle="Ask me anything about your trips, costs, and subscriptions."
+          title={t("home.action.chat.title")}
+          subtitle={t("home.action.chat.subtitle")}
           onClick={onChat}
         />
         <ActionCard
@@ -309,8 +306,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           }
-          title="Start Analysis"
-          subtitle="Run a full analysis of your mobility portfolio."
+          title={t("home.action.analysis.title")}
+          subtitle={t("home.action.analysis.subtitle")}
           onClick={onAnalysis}
         />
         <ActionCard
@@ -323,8 +320,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <polyline points="10 9 9 9 8 9" />
             </svg>
           }
-          title="Generate Annual Report"
-          subtitle="Get your full year-in-review: spend, CO₂, and subscription ROI."
+          title={t("home.action.annualReport.title")}
+          subtitle={t("home.action.annualReport.subtitle")}
           onClick={onAnnualReport}
         />
         <ActionCard
@@ -334,8 +331,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <polyline points="12 6 12 12 16 14" />
             </svg>
           }
-          title="History"
-          subtitle="Review past analyses and the decisions you made."
+          title={t("home.action.history.title")}
+          subtitle={t("home.action.history.subtitle")}
           onClick={onHistory}
         />
       </div>
@@ -347,13 +344,13 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold leading-tight mb-1">
-          {greeting()}, {firstName}
+          {t(greetingKey())}, {firstName}
         </h1>
-        <p className="text-gray-500 text-sm m-0">Here's your mobility at a glance.</p>
+        <p className="text-gray-500 text-sm m-0">{t("home.subheading")}</p>
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-400 py-8 text-center">Loading your dashboard…</div>
+        <div className="text-sm text-gray-400 py-8 text-center">{t("home.loadingDashboard")}</div>
       ) : (
         <>
           {/* Open-recommendation nudge — opens the decision screen for the newest, undecided analysis. */}
@@ -362,8 +359,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 m-0">
                   {pendingSavings > 0
-                    ? `Save up to €${fmtInt(pendingSavings)}/yr`
-                    : "You have an open recommendation"}
+                    ? t("home.saveUpTo", { amount: fmtEur(pendingSavings) })
+                    : t("home.openRecommendation")}
                 </p>
                 <p className="text-xs text-gray-500 m-0 mt-0.5 truncate">{openRec.recommendation.verdict}</p>
               </div>
@@ -372,7 +369,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                 onClick={() => onReviewRecommendation(openRec)}
                 className="bg-brand-red text-white rounded-full px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer flex-shrink-0"
               >
-                Review
+                {t("home.review")}
               </button>
             </div>
           )}
@@ -392,22 +389,22 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                       : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
                   }`}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               ))}
             </div>
             {travel && (
-              <span className="text-xs text-gray-400 flex-shrink-0">as of {fmtDate(travel.referenceDate)}</span>
+              <span className="text-xs text-gray-400 flex-shrink-0">{t("home.rangeAsOf", { date: fmtDate(travel.referenceDate) })}</span>
             )}
           </div>
 
           {/* Full-width KPI band */}
           {!travelFailed && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatTile value={fmtKg(stats.totalCo2Kg)} unit="kg" label="CO₂ footprint" />
-              <StatTile value={`€${fmtInt(stats.totalSpendEur)}`} label="Travel spend" />
-              <StatTile value={fmtInt(stats.totalDistanceKm)} unit="km" label="Distance" />
-              <StatTile value={fmtInt(stats.count)} label={stats.count === 1 ? "Trip" : "Trips"} />
+              <StatTile value={fmtKg(stats.totalCo2Kg)} unit="kg" label={t("home.kpi.co2Footprint")} />
+              <StatTile value={fmtEur(stats.totalSpendEur)} label={t("home.kpi.travelSpend")} />
+              <StatTile value={fmtInt(stats.totalDistanceKm)} unit="km" label={t("home.kpi.distance")} />
+              <StatTile value={fmtInt(stats.count)} label={tPlural("home.kpi.trip", stats.count)} />
             </div>
           )}
 
@@ -416,8 +413,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
             <div className="flex flex-col gap-5 min-w-0 lg:flex-1">
               {travelFailed ? (
-                <Card title="Travel insights">
-                  <EmptyState text="Couldn't load travel data right now." />
+                <Card title={t("home.travelInsights")}>
+                  <EmptyState text={t("home.travelDataLoadError")} />
                 </Card>
               ) : (
                 <>

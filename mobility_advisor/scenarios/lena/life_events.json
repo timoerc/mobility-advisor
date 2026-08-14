@@ -3,6 +3,7 @@
     {
       "category": "subscription_change",
       "summary": "Activated Deutschlandticket (RMV) subscription",
+      "summary_de": "Deutschlandticket-Abonnement (RMV) aktiviert",
       "event_date": "2023-05-01",
       "signals": [
         "d_ticket_relevance_change"
@@ -13,6 +14,7 @@
     {
       "category": "subscription_change",
       "summary": "BahnCard 50 Young renewed for another 12 months",
+      "summary_de": "BahnCard 50 Young um weitere 12 Monate verlängert",
       "event_date": "2026-01-15",
       "signals": [
         "rail_card_relevance_change"
@@ -23,6 +25,7 @@
     {
       "category": "other",
       "summary": "Spotify Premium subscription payment of €10.99 on 2026-07-01",
+      "summary_de": "Spotify-Premium-Abozahlung über 10,99 € am 01.07.2026",
       "event_date": "2026-07-01",
       "signals": [
         "non_mobility_spend"

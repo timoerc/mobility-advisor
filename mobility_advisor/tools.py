@@ -13,6 +13,7 @@ from typing import Literal
 
 from pydantic import ValidationError
 
+from .i18n import get_language, pick, t
 from .models import (
     AnalysisHistory,
     CalendarEvents,
@@ -111,7 +112,13 @@ def load_life_events() -> dict:
     if not path.exists():
         return {"events": []}
     raw = json.loads(path.read_text())
-    return LifeEvents.model_validate(raw).model_dump()
+    events = LifeEvents.model_validate(raw).model_dump()
+    # summary_de sibling on seeded scenario fixtures, resolved for the active request's
+    # language (see i18n.pick()) — this summary reaches the user both via the Forecaster's
+    # restated life-event report and detect_pending_portfolio_decision()'s reason sentence.
+    for event in events["events"]:
+        event["summary"] = pick(event, "summary")
+    return events
 
 
 # Signals whose arrival would, on their own, invalidate the current commute-based
@@ -174,12 +181,10 @@ def detect_pending_portfolio_decision() -> dict:
         return {"exists": False, "reason": "", "revisit_after": None, "events": []}
 
     revisit_after = max(event_date for _, event_date in qualifying)
-    categories = "/".join(sorted({event["category"] for event, _ in qualifying}))
-    reason = (
-        f"A pending {categories} is expected to take effect by "
-        f"{revisit_after.isoformat()}, which would reset the current commute-based "
-        f"portfolio — acting now risks a change the decision could immediately reverse."
+    categories = "/".join(
+        t(f"lifeEvent.category.{c}") for c in sorted({event["category"] for event, _ in qualifying})
     )
+    reason = t("pending.reason", categories=categories, date=revisit_after.isoformat())
     return {
         "exists": True,
         "reason": reason,
@@ -228,16 +233,24 @@ def load_recommendation_history(limit: int = 3) -> dict:
         return {"history": []}
     raw = json.loads(path.read_text())
     entries = AnalysisHistory.model_validate(raw).entries[-limit:]
+    is_de = get_language() == "de"
     history = []
     for entry in entries:
         recommended = next(
             (alt for alt in entry.recommendation.alternatives if alt.isRecommended), None
         )
+        # _de siblings on seeded scenario analysis_history.json entries, resolved for the
+        # active request's language — same fields main.py's _resolve_recommendation_language
+        # resolves for GET /api/analysis-history; live entries never populate these siblings.
+        verdict = (entry.recommendation.verdict_de or entry.recommendation.verdict) if is_de else entry.recommendation.verdict
+        action_name = ""
+        if recommended:
+            action_name = (recommended.name_de or recommended.name) if is_de else recommended.name
         history.append({
             "date": entry.date,
-            "verdict": entry.recommendation.verdict,
+            "verdict": verdict,
             "outcome": entry.outcome,
-            "recommended_action": recommended.name if recommended else "",
+            "recommended_action": action_name,
         })
     return {"history": history}
 
@@ -424,7 +437,7 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
             else:
                 dist_km = hav_km * 1.3
                 dur_min = estimate_duration_min("car", dist_km)
-                warnings.append(f"{mode}: driving route API failed, using heuristic")
+                warnings.append(t("warn.drivingRouteFailed", mode=mode))
         elif mode.startswith("rail"):
             dist_km = round(hav_km * 1.3, 1)
             dur_min = estimate_duration_min(mode, dist_km)
@@ -617,13 +630,19 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     synthetic_total = 0.0
     max_dist = 0.0
     n = 0
-    for t in trips:
-        if t.get("mode") != "rail":
+    # NB: loop variable named `trip`, not `t` — `t` is also this module's i18n translate
+    # function (see the `from .i18n import t` at the top of the file), and Python treats any
+    # name assigned anywhere in a function body as local to the whole function. A `for t in
+    # trips:` here would silently shadow the translator for every t(...) call below, in every
+    # branch this loop can fall through to — not a crash on every path, so easy to miss in
+    # ad-hoc testing; a `for trip in trips:` elsewhere in this file already avoids exactly this.
+    for trip in trips:
+        if trip.get("mode") != "rail":
             continue
-        if "deutsche bahn" not in (t.get("provider") or "").lower():
+        if "deutsche bahn" not in (trip.get("provider") or "").lower():
             continue
-        cost = t.get("cost_eur")
-        dist = t.get("distance_km")
+        cost = trip.get("cost_eur")
+        dist = trip.get("distance_km")
         if cost is None or not dist or dist <= 0:
             continue
         if dist <= _RAIL_DISTANCE_THRESHOLD_KM:
@@ -631,7 +650,7 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
             # _apply_rail_calibration) — a regional-distance fare here would fit the ratio
             # against a fare structure it never actually scales.
             continue
-        ticket_type_lower = (t.get("ticket_type") or "").lower()
+        ticket_type_lower = (trip.get("ticket_type") or "").lower()
         if cost == 0 or "deutschland-ticket" in ticket_type_lower or "bahncard 100" in ticket_type_lower:
             continue
         fare_class = "flex" if "flex" in ticket_type_lower else "spar"
@@ -647,9 +666,7 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
 
     if n < _RAIL_FARE_CALIBRATION_MIN_TRIPS or synthetic_total <= 0:
         return 1.0, 0.0, [
-            f"Rail fare calibration skipped ({n} usable DB trip(s) with cost+distance data; "
-            f"need >= {_RAIL_FARE_CALIBRATION_MIN_TRIPS}) — projected rail prices use the "
-            f"uncalibrated synthetic price curve, not observed fares."
+            t("warn.railCalibrationSkipped", n=n, minTrips=_RAIL_FARE_CALIBRATION_MIN_TRIPS)
         ]
 
     ratio = full_price_total / synthetic_total
@@ -659,16 +676,12 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     )
     lo, hi = _RAIL_FARE_CALIBRATION_CLAMP
     if ratio < lo or ratio > hi:
-        warning = (
-            f"Rail fare calibration ratio {round(ratio, 2)}x (from {n} observed DB trips) "
-            f"looked like an outlier and was clamped to [{lo}, {hi}]."
-        )
+        warning = t("warn.railCalibrationClamped", ratio=round(ratio, 2), n=n, lo=lo, hi=hi)
         ratio = max(lo, min(hi, ratio))
     else:
-        warning = (
-            f"Rail prices calibrated to observed fares: synthetic price curve scaled "
-            f"{round(ratio, 2)}x from {n} observed DB Sparpreis/Flexpreis trip(s) up to "
-            f"{round(max_distance_km)}km; routes beyond that use the uncalibrated curve."
+        warning = t(
+            "warn.railCalibrationApplied",
+            ratio=round(ratio, 2), n=n, maxDist=round(max_distance_km),
         )
     return ratio, max_distance_km, [warning]
 
@@ -732,11 +745,7 @@ def _travel_reduction_factor() -> tuple[float, list[str]]:
 
     nearest = min(qualifying)
     factor = max(0.0, min(1.0, (nearest - MOCK_TODAY).days / 365))
-    warning = (
-        f"Travel-reduction signal detected (event date {nearest.isoformat()}) — projected "
-        f"trip frequencies damped by a factor of {round(factor, 2)} to reflect reduced "
-        f"travel after this date, rather than extrapolating history unchanged."
-    )
+    warning = t("warn.travelReductionDetected", date=nearest.isoformat(), factor=round(factor, 2))
     return factor, [warning]
 
 
@@ -789,7 +798,7 @@ def _build_local_aggregate_trip(
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Local/regional travel ({len(local_aggregate)} route(s), aggregated)",
+        route=t("route.localRegional", count=len(local_aggregate)),
         origin="various",
         destination="various",
         frequency_per_year=damped_freq,
@@ -799,11 +808,11 @@ def _build_local_aggregate_trip(
         alternatives=alternatives,
         fare_class=fare_class,
     )
-    warning = (
-        f"Aggregated {len(local_aggregate)} regional route(s) each seen under 2x/yr "
-        f"individually ({total_freq}/yr combined, ~{avg_dist}km avg) into one projected "
-        f"local-travel trip, instead of dropping them — this is the demand a "
-        f"Deutschlandticket or regional pass actually prices against."
+    warning = t(
+        "warn.aggregatedRegionalRoutes",
+        count=len(local_aggregate),
+        totalFreq=total_freq,
+        avgDist=avg_dist,
     )
     return trip.model_dump(), warning
 
@@ -893,7 +902,7 @@ def _build_intra_city_aggregate_trip(
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Intra-city car travel ({len(car_trips)} trip(s) observed, aggregated)",
+        route=t("route.intraCityCar", count=len(car_trips)),
         origin="various",
         destination="various",
         frequency_per_year=annual_freq,
@@ -903,11 +912,11 @@ def _build_intra_city_aggregate_trip(
         alternatives=alternatives,
         fare_class=fare_class,
     )
-    warning = (
-        f"Aggregated {len(car_trips)} same-city car-share/car-rental trip(s) "
-        f"(avg ~{avg_dist}km) into one projected intra-city trip ({annual_freq}/yr) instead "
-        f"of dropping them — this is the demand a car-share membership actually prices "
-        f"against. No rail alternative is offered for it (see this function's docstring)."
+    warning = t(
+        "warn.aggregatedIntraCityCar",
+        count=len(car_trips),
+        avgDist=avg_dist,
+        freq=annual_freq,
     )
     return trip.model_dump(), warning
 
@@ -974,7 +983,7 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Home-city commute (~{len(office_days)}x/week office, ~{dist}km one-way)",
+        route=t("route.homeCommute", n=len(office_days), km=dist),
         origin="various",
         destination="various",
         frequency_per_year=damped_freq,
@@ -985,11 +994,11 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
         fare_class="spar",
         tariff="local",
     )
-    warning = (
-        f"Modelled {len(office_days)} office day(s)/week as a recurring home-city commute "
-        f"at ~{dist}km one-way (typical urban commute distance, not from actual data — "
-        f"travel history only records inter-city trips) — {damped_freq}/yr legs. This is "
-        f"the demand a Deutschlandticket or regional pass is actually priced against."
+    warning = t(
+        "warn.modelledCommute",
+        n=len(office_days),
+        km=dist,
+        freq=damped_freq,
     )
     return trip.model_dump(), warning
 
@@ -1380,7 +1389,7 @@ def derive_car_usage_trips() -> dict:
             alternatives.append(alt.model_dump())
 
         trip = ProjectedTrip(
-            route=f"Car usage ({cat['name']}, ~{dist}km)",
+            route=t("route.carUsage", name=cat["name"], km=dist),
             origin="various",
             destination="various",
             frequency_per_year=freq,
@@ -1496,15 +1505,16 @@ def merge_projected_trip_sets() -> dict:
                 # supports) is already bounded below by _UNCORROBORATED_CALENDAR_FREQUENCY_CAP.
                 merged_freq = max(trip["frequency_per_year"], existing["frequency_per_year"])
                 if merged_freq > trip["frequency_per_year"]:
-                    warnings.append(
-                        f"Dedup: {key[0]} ↔ {key[1]} — calendar route data used, but "
-                        f"frequency kept at history's higher {merged_freq}/yr rather than "
-                        f"calendar's {trip['frequency_per_year']}/yr"
-                    )
+                    warnings.append(t(
+                        "warn.dedupCalendarWins",
+                        a=key[0], b=key[1], merged=merged_freq, calFreq=trip["frequency_per_year"],
+                    ))
                 else:
-                    warnings.append(
-                        f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
-                    )
+                    warnings.append(t(
+                        "warn.dedupCalendarReplaces",
+                        a=key[0], b=key[1],
+                        calFreq=trip["frequency_per_year"], histFreq=existing["frequency_per_year"],
+                    ))
                 trip["frequency_per_year"] = merged_freq
                 _merge_fare_class(trip, existing)
                 deduped[key] = trip
@@ -1520,12 +1530,11 @@ def merge_projected_trip_sets() -> dict:
         if trip.get("source") != "calendar" or key in history_route_keys:
             continue
         if trip["frequency_per_year"] > _UNCORROBORATED_CALENDAR_FREQUENCY_CAP:
-            warnings.append(
-                f"Uncorroborated calendar demand: {trip['route']} was projected at "
-                f"{trip['frequency_per_year']}/yr from calendar events alone, with no "
-                f"supporting trip in travel history — capped at "
-                f"{_UNCORROBORATED_CALENDAR_FREQUENCY_CAP}/yr."
-            )
+            warnings.append(t(
+                "warn.uncorroboratedCalendarDemand",
+                route=trip["route"], freq=trip["frequency_per_year"],
+                cap=_UNCORROBORATED_CALENDAR_FREQUENCY_CAP,
+            ))
             trip["frequency_per_year"] = _UNCORROBORATED_CALENDAR_FREQUENCY_CAP
 
     all_trips = list(deduped.values()) + car_usage_trips
@@ -2258,7 +2267,7 @@ def optimize_all_categories() -> dict:
         for cs_label, cs_ids in car_share_choices:
             ids = rail_ids + cs_ids
             if not ids:
-                cands.append(("No subscriptions", "baseline", ids))
+                cands.append((t("catalog.noSubscriptions"), "baseline", ids))
             elif rail_ids and cs_ids:
                 cands.append((f"{rail_label} + {cs_label}", "combo", ids))
             elif rail_ids:
@@ -2541,11 +2550,11 @@ def _travel_history_result(trips: list) -> dict:
     for trip in trips:
         label = f"{trip.date} {trip.origin}→{trip.destination}"
         if trip.cost_eur is None:
-            warnings.append(f"{label}: cost_eur is null — excluded from spend totals")
+            warnings.append(t("data.tripExcludedNullCost", label=label))
         if not trip.mode:
-            warnings.append(f"{label}: mode is empty — excluded from CO₂ and mode aggregations")
+            warnings.append(t("data.tripExcludedEmptyMode", label=label))
         elif trip.mode not in _KNOWN_MODES:
-            warnings.append(f"{label}: unknown mode '{trip.mode}' — excluded from CO₂ and mode aggregations")
+            warnings.append(t("data.tripExcludedUnknownMode", label=label, mode=trip.mode))
 
     result = {"trips": [t.model_dump() for t in trips]}
     if warnings:
@@ -2593,7 +2602,12 @@ def load_calendar_events() -> dict:
     else:
         from .outlook_calendar import fetch_calendar_events
         raw = fetch_calendar_events()
-    return CalendarEvents.model_validate(raw).model_dump()
+    events = CalendarEvents.model_validate(raw).model_dump()
+    # description_de sibling on seeded scenario fixtures, resolved for the active request's
+    # language (see i18n.pick()) — restated verbatim in the Forecaster's summary.
+    for event in events["events"]:
+        event["description"] = pick(event, "description")
+    return events
 
 
 def load_annual_analyst_context() -> dict:
@@ -2812,10 +2826,10 @@ def _resolve_unique_match(
         ]
 
     if not matches:
-        return None, f"no match for '{needle}'"
+        return None, t("error.noMatchFor", query=needle)
     if len(matches) > 1:
         names = ", ".join(c.get("product", "?") for c in matches)
-        return None, f"ambiguous match for '{needle}': matched {len(matches)} entries ({names})"
+        return None, t("error.ambiguousMatchFor", query=needle, count=len(matches), matches=names)
     return matches[0], None
 
 
@@ -2935,15 +2949,18 @@ def compute_annual_report_stats() -> dict:
     trips_missing_cost = sum(1 for t in trips if t["cost_eur"] is None)
 
     by_mode_acc: dict[str, dict] = {}
-    for t in trips:
-        mode = t["mode"] or "unknown"
+    # `trip`, not `t` — see the identical note in _rail_fare_calibration_ratio() above; this
+    # function doesn't call the t() translator today, but a bare `for t in ...:` here would
+    # silently break the first one anyone adds.
+    for trip in trips:
+        mode = trip["mode"] or "unknown"
         row = by_mode_acc.setdefault(
             mode, {"mode": mode, "trips": 0, "distance_km": 0.0, "spend_eur": 0.0, "co2_kg": 0.0}
         )
         row["trips"] += 1
-        row["distance_km"] += t["distance_km"] or 0.0
-        row["spend_eur"] += t["cost_eur"] or 0.0
-        row["co2_kg"] += t["co2_emission_kg"] or 0.0
+        row["distance_km"] += trip["distance_km"] or 0.0
+        row["spend_eur"] += trip["cost_eur"] or 0.0
+        row["co2_kg"] += trip["co2_emission_kg"] or 0.0
 
     by_mode = sorted(by_mode_acc.values(), key=lambda r: r["co2_kg"], reverse=True)
     for row in by_mode:
@@ -3136,33 +3153,17 @@ def compute_co2_impact_kg(
     # Pure add: no historical trips can be attributed to a mode the user is only now gaining
     # (or a second subscription for a mode they already have) — stated honestly rather than guessed.
     if target_match is None:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. This adds a subscription without removing another, "
-                "so it doesn't change which mode you currently use for any trip."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.pureAdd"))
 
     changed_mode = target_match["mode"]
     if changed_mode not in _MODE_ACCESS_GATED_MODES:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. This changes price/tier only; it doesn't affect "
-                f"which mode of transport you use (you can still use {changed_mode} with or "
-                "without this subscription)."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.priceOnly", mode=changed_mode))
 
     still_covered = (catalog_match is not None and catalog_match["mode"] == changed_mode) or any(
         s["mode"] == changed_mode and s is not target_match for s in subs
     )
     if still_covered:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. You keep another subscription covering "
-                f"{changed_mode}, so access to this mode is unaffected."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.stillCovered", mode=changed_mode))
 
     trips = load_travel_history()["trips"]
     affected = [
@@ -3180,22 +3181,21 @@ def compute_co2_impact_kg(
         t["distance_km"] * generic_factor for t in affected if t.get("distance_km") is not None
     )
     delta_kg = co2_before_kg - co2_after_kg
-    period = "in the period considered" if (date_from or date_to) else "from the past 12 months"
+    period = t("co2Impact.period.scoped") if (date_from or date_to) else t("co2Impact.period.pastYear")
 
     if delta_kg >= 0:
-        explanation = (
-            f"{delta_kg:.1f} kg CO2/year saved. Losing your only {changed_mode} subscription "
-            f"means your {len(affected)} {changed_mode} trip(s) {period} would "
-            f"shift to driving (at {generic_factor * 1000:.0f} g/km), which is actually lower "
-            f"emissions than those trips currently produce ({co2_before_kg:.1f} kg → "
-            f"{co2_after_kg:.1f} kg)."
+        explanation = t(
+            "co2Impact.explanation.saved",
+            delta=f"{delta_kg:.1f}", mode=changed_mode, tripCount=len(affected), period=period,
+            gramsPerKm=f"{generic_factor * 1000:.0f}",
+            before=f"{co2_before_kg:.1f}", after=f"{co2_after_kg:.1f}",
         )
     else:
-        explanation = (
-            f"{abs(delta_kg):.1f} kg CO2/year more emissions. Losing your only {changed_mode} "
-            f"subscription means your {len(affected)} {changed_mode} trip(s) {period} "
-            f"would shift to driving (at {generic_factor * 1000:.0f} g/km), raising "
-            f"emissions from {co2_before_kg:.1f} kg to {co2_after_kg:.1f} kg/year."
+        explanation = t(
+            "co2Impact.explanation.moreEmissions",
+            delta=f"{abs(delta_kg):.1f}", mode=changed_mode, tripCount=len(affected), period=period,
+            gramsPerKm=f"{generic_factor * 1000:.0f}",
+            before=f"{co2_before_kg:.1f}", after=f"{co2_after_kg:.1f}",
         )
 
     return _result(
@@ -3290,9 +3290,9 @@ def apply_subscription_change(
         }
 
     if action in ("remove", "replace") and not target_subscription:
-        return _error(f"target_subscription is required for action={action!r}")
+        return _error(t("subscriptionChange.error.targetRequired", action=repr(action)))
     if action in ("add", "replace") and not new_product:
-        return _error(f"new_product is required for action={action!r}")
+        return _error(t("subscriptionChange.error.newProductRequired", action=repr(action)))
 
     # Load raw dicts to preserve all fields beyond the Pydantic model.
     raw_file = json.loads((_DATA / "current_subscriptions.json").read_text(encoding="utf-8"))
@@ -3330,7 +3330,7 @@ def apply_subscription_change(
         try:
             Subscription.model_validate(new_sub)
         except (ValueError, ValidationError) as exc:
-            return _error(f"new subscription entry failed validation: {exc}", before_count)
+            return _error(t("subscriptionChange.error.newEntryInvalid", error=str(exc)), before_count)
 
     if (
         action == "replace"
@@ -3338,10 +3338,7 @@ def apply_subscription_change(
         and catalog_match is not None
         and target_match["product"] == catalog_match["product"]
     ):
-        warnings.append(
-            f"replace target and new_product both resolved to '{catalog_match['product']}' — "
-            "this resets the renewal clock on an unchanged product, not a real swap."
-        )
+        warnings.append(t("subscriptionChange.warn.replaceIsNoOp", product=catalog_match["product"]))
 
     removed = [target_match] if target_match is not None else []
     added = [new_sub] if new_sub is not None else []
@@ -3353,7 +3350,7 @@ def apply_subscription_change(
     try:
         CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
     except (ValueError, ValidationError) as exc:
-        return _error(f"resulting subscriptions failed validation: {exc}", before_count)
+        return _error(t("subscriptionChange.error.resultInvalid", error=str(exc)), before_count)
 
     # Write raw dicts (not model_dump) to preserve all fields beyond the pipeline schema.
     _atomic_write_json(_DATA / "current_subscriptions.json", {"subscriptions": new_subs_list})

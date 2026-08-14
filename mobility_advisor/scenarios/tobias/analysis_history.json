@@ -6,48 +6,67 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Card is clearly paying for itself while the Munich project runs — no change.",
+      "resolvedMessage_de": "Die Karte rechnet sich eindeutig, solange das München-Projekt läuft — keine Änderung.",
       "resolvedAt": "2026-03-20",
       "recommendation": {
         "verdict": "BahnCard 50 is comfortably paying for itself",
+        "verdict_de": "Die BahnCard 50 rechnet sich derzeit deutlich",
         "confidence": "high",
         "summaryText": "Your weekly Frankfurt–Munich project trips put your discounted DB spend well above BahnCard 50's break-even threshold. The card is clearly worth keeping at your current travel level.",
+        "summaryText_de": "Ihre wöchentlichen Projektfahrten Frankfurt–München bringen Ihre rabattierten DB-Ausgaben deutlich über die Gewinnschwelle der BahnCard 50. Bei Ihrem aktuellen Reiseaufkommen lohnt sich die Karte eindeutig.",
         "metrics": [
-          { "value": 165, "unit": "€/year", "direction": "save", "label": "Net benefit of BahnCard 50 vs. full price" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 165, "unit": "€/year", "direction": "save", "label": "Net benefit of BahnCard 50 vs. full price", "label_de": "Nettovorteil der BahnCard 50 gegenüber dem Normalpreis" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO2-Auswirkung" }
         ],
         "reasoning": [
           "Frankfurt–Munich long-distance trips imply a full-price equivalent around €800/year, well above the €488 BahnCard 50 break-even",
           "Net benefit from holding BahnCard 50 is roughly €165/year at this usage",
           "Deutschland-Ticket separately covers your local Frankfurt travel"
         ],
+        "reasoning_de": [
+          "Die Fernverkehrsfahrten Frankfurt–München entsprechen einem Normalpreis-Äquivalent von rund 800 €/Jahr — deutlich über der Gewinnschwelle der BahnCard 50 von 488 €",
+          "Der Nettovorteil aus dem Besitz der BahnCard 50 liegt bei diesem Reiseaufkommen bei rund 165 €/Jahr",
+          "Das Deutschland-Ticket deckt separat Ihre lokalen Fahrten in Frankfurt ab"
+        ],
         "assumptions": [
           "Assumes the Munich project travel pattern continues at its current pace",
           "CO2 impact is neutral — this only concerns discount tier, not transport mode"
+        ],
+        "assumptions_de": [
+          "Setzt voraus, dass das Reisemuster des München-Projekts im aktuellen Tempo weiterläuft",
+          "CO2-Auswirkung ist neutral — hier geht es nur um die Rabattstufe, nicht um das Verkehrsmittel"
         ],
         "alternatives": [
           {
             "id": "reaffirm_bc50",
             "name": "Keep BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 behalten (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "No change — usage comfortably justifies the card while the Munich project runs.",
+            "tradeoff_de": "Keine Änderung — die Nutzung rechtfertigt die Karte deutlich, solange das München-Projekt läuft.",
             "isRecommended": true,
             "action": {
               "title": "Keep BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "BahnCard 50 behalten (2. Klasse, Standard, Jahresabo)",
               "description": "No change needed — your Frankfurt–Munich travel clears the break-even threshold with room to spare.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) stays active with no change to your subscription stack."
+              "description_de": "Keine Änderung nötig — Ihre Fahrten Frankfurt–München übertreffen die Gewinnschwelle mit deutlichem Abstand.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) stays active with no change to your subscription stack.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) bleibt unverändert aktiv, kein Eingriff in Ihre Abo-Struktur."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelle Konfiguration beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Equivalent to reaffirming the card — no action needed either way.",
+            "tradeoff_de": "Entspricht der Bestätigung der Karte — in beiden Fällen ist keine Aktion nötig.",
             "isRecommended": false,
             "action": null
           }
@@ -63,11 +82,13 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "BahnCard 50 paid off this year — but your travel is about to fall off a cliff",
+        "verdict_de": "Die BahnCard 50 hat sich dieses Jahr gelohnt — aber Ihre Reisetätigkeit bricht bald stark ein",
         "confidence": "high",
         "summaryText": "Your Munich project wraps at the end of August and your next staffing is a local Frankfurt engagement with no regular long-distance travel. Past usage justified BahnCard 50, but from September the card would sit idle — downgrading to BahnCard 25 before the January renewal keeps a discount for occasional trips at less than half the cost.",
+        "summaryText_de": "Ihr München-Projekt endet Ende August, und Ihr nächster Einsatz ist ein lokales Frankfurt-Projekt ohne regelmäßige Fernreisen. Die bisherige Nutzung hat die BahnCard 50 gerechtfertigt, doch ab September würde die Karte ungenutzt bleiben — ein Downgrade auf die BahnCard 25 vor der Verlängerung im Januar erhält einen Rabatt für gelegentliche Fahrten zu weniger als der Hälfte der Kosten.",
         "metrics": [
-          { "value": 133, "unit": "€/year", "direction": "save", "label": "Saving from downgrading to BahnCard 25" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 133, "unit": "€/year", "direction": "save", "label": "Saving from downgrading to BahnCard 25", "label_de": "Ersparnis durch Downgrade auf BahnCard 25" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO2-Auswirkung" }
         ],
         "reasoning": [
           "Historic usage clears BahnCard 50 comfortably (~€165/year net benefit) — the card was the right call while the Munich project ran",
@@ -75,49 +96,71 @@
           "With long-distance demand dropping to near zero from September, neither BahnCard 50 nor even BahnCard 25 is likely to break even next year — but BahnCard 25 costs €133/year less and keeps a 25% discount as a cheap hedge for residual trips",
           "Next renewal is 10 January 2027 — the decision should be made before then"
         ],
+        "reasoning_de": [
+          "Die bisherige Nutzung übertrifft die Gewinnschwelle der BahnCard 50 deutlich (~165 €/Jahr Nettovorteil) — die Karte war die richtige Wahl, solange das München-Projekt lief",
+          "Eine Einsatzplanungs-E-Mail (12. Juni) bestätigt, dass das München-Projekt am 31. August endet und der nächste Einsatz eine lokale Tätigkeit in Frankfurt ist — keine regelmäßigen Fernverkehrsfahrten absehbar",
+          "Da die Fernverkehrsnachfrage ab September gegen null geht, dürfte sich im nächsten Jahr weder die BahnCard 50 noch die BahnCard 25 amortisieren — aber die BahnCard 25 kostet 133 €/Jahr weniger und bleibt als günstige Absicherung für Restfahrten ein 25%-Rabatt erhalten",
+          "Die nächste Verlängerung ist am 10. Januar 2027 — die Entscheidung sollte vorher getroffen werden"
+        ],
         "assumptions": [
           "Assumes the staffing change holds and the local Frankfurt engagement generates no regular long-distance rail travel",
           "If occasional long-distance trips continue, BahnCard 25 still covers them at 25% off; full cancellation is the more aggressive option if they stop entirely"
+        ],
+        "assumptions_de": [
+          "Setzt voraus, dass die Einsatzplanung so bestehen bleibt und das lokale Frankfurt-Projekt keine regelmäßigen Fernverkehrsfahrten erzeugt",
+          "Falls gelegentliche Fernreisen weiterhin anfallen, deckt die BahnCard 25 diese weiterhin mit 25% Rabatt ab; eine vollständige Kündigung ist die aggressivere Option, falls sie ganz wegfallen"
         ],
         "alternatives": [
           {
             "id": "downgrade_bc25",
             "name": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "Downgrade auf BahnCard 25 (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 111,
             "savingsVsCurrentEur": 133,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Keeps a 25% discount for any residual trips at €133/year less — a hedge against the forecast being slightly off.",
+            "tradeoff_de": "Erhält einen 25%-Rabatt für etwaige Restfahrten bei 133 €/Jahr weniger Kosten — eine Absicherung, falls die Prognose leicht danebenliegt.",
             "isRecommended": true,
             "action": {
               "title": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Downgrade auf BahnCard 25 (2. Klasse, Standard, Jahresabo)",
               "description": "Replace your BahnCard 50 with a BahnCard 25 before the 10 January 2027 renewal, ahead of your travel dropping off in September.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
+              "description_de": "Ersetzen Sie Ihre BahnCard 50 vor der Verlängerung am 10. Januar 2027 durch eine BahnCard 25, bevor Ihre Reisetätigkeit im September zurückgeht.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und durch eine BahnCard 25 (2. Klasse, Standard, Jahresabo) ersetzt."
             }
           },
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 kündigen (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Saves the most, but leaves no rail discount if an occasional long-distance trip does come up — best only if long-distance travel stops entirely.",
+            "tradeoff_de": "Spart am meisten, lässt aber keinen Bahnrabatt übrig, falls doch eine gelegentliche Fernreise anfällt — nur sinnvoll, wenn Fernreisen vollständig entfallen.",
             "isRecommended": false,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "BahnCard 50 kündigen (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before the 10 January 2027 renewal to avoid another year of card fees once your travel drops off.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "description_de": "Kündigen Sie vor der Verlängerung am 10. Januar 2027, um ein weiteres Jahr Kartengebühren zu vermeiden, sobald Ihre Reisetätigkeit zurückgeht.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und nicht ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelle Konfiguration beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Only worth it if the staffing change falls through and heavy long-distance travel continues.",
+            "tradeoff_de": "Nur sinnvoll, wenn die Einsatzplanung sich zerschlägt und die intensiven Fernreisen weitergehen.",
             "isRecommended": false,
             "action": null
           }

@@ -3,6 +3,7 @@
     {
       "category": "relocation",
       "summary": "Scheduled viewing of a 62 m² apartment at Stresemannstraße 48, Hamburg-Altona, indicating a potential move",
+      "summary_de": "Besichtigungstermin für eine 62 m² große Wohnung in der Stresemannstraße 48, Hamburg-Altona, vereinbart — deutet auf einen möglichen Umzug hin",
       "event_date": "2026-07-12",
       "signals": [
         "home_base_change"
@@ -13,6 +14,7 @@
     {
       "category": "job_change",
       "summary": "Received a job offer for Senior Software Engineer at TechNord GmbH in Hamburg-Altona, starting 01.09.2026 with BVG-Jobticket benefit",
+      "summary_de": "Stellenangebot als Senior Software Engineer bei der TechNord GmbH in Hamburg-Altona erhalten, Beginn 01.09.2026, mit BVG-Jobticket als Zusatzleistung",
       "event_date": "2026-09-01",
       "signals": [
         "home_base_change",

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
 import { sendMessage } from "../../api";
+import { useT } from "../../i18n";
 
 type Message = { role: "agent" | "user"; text: string; id: string };
 
@@ -11,12 +12,10 @@ type ChatPageProps = {
   onDataChanged?: () => void;
 };
 
-const INITIAL_MESSAGE =
-  "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.";
-
 export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPageProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "agent", text: INITIAL_MESSAGE, id: "init" },
+  const t = useT();
+  const [messages, setMessages] = useState<Message[]>(() => [
+    { role: "agent", text: t("chat.initialMessage"), id: "init" },
   ]);
   const [thinking, setThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -57,7 +56,7 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
         ...m,
         {
           role: "agent",
-          text: "I couldn't reach the advisor right now. Please try again.",
+          text: t("chat.error"),
           id: crypto.randomUUID(),
         },
       ]);

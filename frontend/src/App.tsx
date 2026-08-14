@@ -3,6 +3,9 @@ import "./App.css";
 import { AppShell } from "./components/AppShell";
 import { ProgressBar } from "./components/ProgressBar";
 import { SkipButton } from "./components/SkipButton";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { useI18n } from "./i18n";
+import type { TranslationKey } from "./i18n";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
 import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis, revertAnalysis } from "./api";
 import type { Alternative, AnalysisHistoryEntry, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
@@ -99,7 +102,9 @@ function downloadJson(filename: string, data: unknown) {
 
 type Phase = "login" | "onboarding" | "editing" | "main";
 type MainView = "home" | "analysis" | "dashboard" | "approval" | "executing" | "confirmation" | "chat" | "annual" | "history";
-type EditConfig = { steps: number[]; currentIndex: number; label: string };
+// labelKey (not label) so the editing header title stays correct if the user switches
+// language mid-edit — resolved via t() at render time, not baked in at startEditing() time.
+type EditConfig = { steps: number[]; currentIndex: number; labelKey: TranslationKey };
 
 function getOrCreateSessionId(): string {
   const key = "mobility_advisor_session_id";
@@ -111,6 +116,7 @@ function getOrCreateSessionId(): string {
 }
 
 export default function App() {
+  const { t, language } = useI18n();
   const [phase, setPhase] = useState<Phase>("login");
   const [loginCanGoBack, setLoginCanGoBack] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>(loadPersonas);
@@ -165,11 +171,17 @@ export default function App() {
       .catch(console.warn);
   }, [activePersonaId]);
 
-  // ── Fetch personas from backend on mount ───────────────────────────────────
+  // ── Fetch personas from backend on mount, and again on every language switch ───
+  // Re-running on `language` is required, not cosmetic: GET /api/personas resolves each
+  // persona's tagline_de sibling server-side from the X-Language header (main.py's pick()),
+  // so an empty dependency array here would leave the tagline frozen in whatever language was
+  // active at page load even after the rest of the UI (which goes through t()) flips language.
 
   useEffect(() => {
+    let cancelled = false;
     fetchPersonas()
       .then((backendPersonas) => {
+        if (cancelled) return;
         setPersonas((current) =>
           backendPersonas.map((bp) => {
             const local = current.find((p) => p.id === bp.id);
@@ -181,7 +193,10 @@ export default function App() {
         );
       })
       .catch(console.warn);
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   // ── Step renderer (shared by onboarding and editing phases) ───────────────
 
@@ -339,7 +354,7 @@ export default function App() {
     setSelectedAlternative(alt);
     if (alt.action === null) {
       // "Keep current setup" — nothing to execute, skip Approval/Executing entirely.
-      const message = "You chose to keep your current mobility setup. No changes have been made.";
+      const message = t("confirmation.keptCurrentMessage");
       if (currentAnalysisId) {
         resolveAnalysis(currentAnalysisId, { outcome: "kept_current", alternativeId: alt.id, message }).catch(console.warn);
       }
@@ -389,9 +404,9 @@ export default function App() {
 
   // ── Deep-link editing (clean single-section edit pages) ──────────────────
 
-  const startEditing = (steps: number[], label: string) => {
+  const startEditing = (steps: number[], labelKey: TranslationKey) => {
     setReturnToMain(mainView);
-    setEditConfig({ steps, currentIndex: 0, label });
+    setEditConfig({ steps, currentIndex: 0, labelKey });
     setPhase("editing");
   };
 
@@ -452,7 +467,7 @@ export default function App() {
     setPhase("onboarding");
   };
 
-  const handleEditConnections = () => startEditing([5], "Connections");
+  const handleEditConnections = () => startEditing([5], "profileDropdown.connections.label");
 
   const handleSwitchProfile = () => {
     setPhase("login");
@@ -487,10 +502,13 @@ export default function App() {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
             <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
-            <span className="font-bold text-sm">Mobility Advisor</span>
-            <span className="ml-auto text-xs text-gray-400">
-              {onboardingStep} / {TOTAL_ONBOARDING_STEPS - 1}
-            </span>
+            <span className="font-bold text-sm">{t("nav.appName")}</span>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="text-xs text-gray-400">
+                {onboardingStep} / {TOTAL_ONBOARDING_STEPS - 1}
+              </span>
+              <LanguageSwitcher />
+            </div>
           </div>
         </header>
 
@@ -508,7 +526,7 @@ export default function App() {
             <button
               type="button"
               onClick={returnToMain !== null ? handleSaveAndReturn : goBack}
-              aria-label={returnToMain !== null ? "Back to app" : "Back"}
+              aria-label={returnToMain !== null ? t("onboarding.backToApp") : t("common.back")}
               className="h-[52px] w-[52px] rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer flex-shrink-0"
             >
               <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
@@ -520,7 +538,7 @@ export default function App() {
               onClick={handleSaveAndReturn}
               className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
             >
-              Save & return →
+              {t("onboarding.saveAndReturn")}
             </button>
           ) : (
             <>
@@ -528,7 +546,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={goNext}
-                  aria-label="Continue"
+                  aria-label={t("common.continue")}
                   className="h-[52px] w-[52px] rounded-full bg-brand-red flex items-center justify-center hover:opacity-90 cursor-pointer border-0 flex-shrink-0"
                 >
                   <span className="nav-arrow nav-arrow-white" aria-hidden="true" />
@@ -552,14 +570,17 @@ export default function App() {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
             <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
-            <span className="font-bold text-sm">{editConfig.label}</span>
-            <button
-              type="button"
-              onClick={handleEditCancel}
-              className="ml-auto text-sm text-gray-500 hover:text-gray-900 cursor-pointer border-0 bg-transparent"
-            >
-              Cancel
-            </button>
+            <span className="font-bold text-sm">{t(editConfig.labelKey)}</span>
+            <div className="ml-auto flex items-center gap-3">
+              <LanguageSwitcher />
+              <button
+                type="button"
+                onClick={handleEditCancel}
+                className="text-sm text-gray-500 hover:text-gray-900 cursor-pointer border-0 bg-transparent"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -573,14 +594,14 @@ export default function App() {
             onClick={handleEditCancel}
             className="h-[52px] px-6 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50 cursor-pointer flex-shrink-0"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
             onClick={isLast ? handleEditSave : handleEditNext}
             className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
           >
-            {isLast ? "Save" : "Next →"}
+            {isLast ? t("common.save") : t("common.next")}
           </button>
         </footer>
       </div>
@@ -608,9 +629,9 @@ export default function App() {
       }
       onLogoClick={() => setMainView("home")}
       onChatOpen={() => setMainView("chat")}
-      onEditPreferences={() => startEditing([7], "Edit preferences")}
-      onEditProfile={() => startEditing([2, 3], "Edit profile")}
-      onMobilityModes={() => startEditing([4, 6], "Mobility modes")}
+      onEditPreferences={() => startEditing([7], "profileDropdown.editPreferences.label")}
+      onEditProfile={() => startEditing([2, 3], "profileDropdown.editProfile.label")}
+      onMobilityModes={() => startEditing([4, 6], "profileDropdown.mobilityModes.label")}
       onEditConnections={handleEditConnections}
       onRedoOnboarding={handleRedoOnboarding}
       onSwitchProfile={handleSwitchProfile}

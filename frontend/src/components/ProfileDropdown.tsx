@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../i18n";
 
 type ProfileDropdownProps = {
   name: string;
@@ -46,6 +47,7 @@ export function ProfileDropdown({
   onRedoOnboarding,
   onSwitchProfile,
 }: ProfileDropdownProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -79,8 +81,8 @@ export function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Profile and settings"
-        aria-label="Profile and settings"
+        title={t("profileDropdown.profileAndSettings")}
+        aria-label={t("profileDropdown.profileAndSettings")}
         aria-expanded={open}
         aria-haspopup="true"
         className="h-8 w-8 rounded-full text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
@@ -100,28 +102,28 @@ export function ProfileDropdown({
           {/* Preference & profile actions */}
           <div className="py-1">
             <DropdownItem
-              label="Edit preferences"
-              sublabel="Cost · Time · CO₂ weights"
+              label={t("profileDropdown.editPreferences.label")}
+              sublabel={t("profileDropdown.editPreferences.sublabel")}
               onClick={wrap(onEditPreferences)}
             />
             <DropdownItem
-              label="Edit profile"
-              sublabel="Name, location, commute"
+              label={t("profileDropdown.editProfile.label")}
+              sublabel={t("profileDropdown.editProfile.sublabel")}
               onClick={wrap(onEditProfile)}
             />
             <DropdownItem
-              label="Mobility modes"
-              sublabel="Car, subscriptions, modes"
+              label={t("profileDropdown.mobilityModes.label")}
+              sublabel={t("profileDropdown.mobilityModes.sublabel")}
               onClick={wrap(onMobilityModes)}
             />
             <DropdownItem
-              label="Connections"
-              sublabel="Linked accounts & services"
+              label={t("profileDropdown.connections.label")}
+              sublabel={t("profileDropdown.connections.sublabel")}
               onClick={wrap(onEditConnections)}
             />
             <DropdownItem
-              label="Re-do full onboarding"
-              sublabel="Start the setup wizard again"
+              label={t("profileDropdown.redoOnboarding.label")}
+              sublabel={t("profileDropdown.redoOnboarding.sublabel")}
               onClick={wrap(onRedoOnboarding)}
             />
           </div>
@@ -133,7 +135,7 @@ export function ProfileDropdown({
               onClick={wrap(onSwitchProfile)}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 cursor-pointer border-0 bg-transparent transition-colors text-gray-500"
             >
-              Switch profile
+              {t("profileDropdown.switchProfile")}
             </button>
           </div>
         </div>

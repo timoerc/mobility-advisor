@@ -81,3 +81,35 @@ def test_no_op_when_hold_already_recommended(stefan):
     out = main._enforce_hold_when_decision_pending(rec)
     assert out.verdict == before  # untouched — already correct
     assert [a for a in out.alternatives if a.isRecommended][0].id == "hold"
+
+
+def test_promotes_hold_by_id_even_with_translated_name(stefan):
+    # The hold row is matched on id alone (see main.py:_enforce_hold_when_decision_pending),
+    # not on an English name substring — so a German-language recommendation, whose alternative
+    # name is not the English "Hold pending decision" string, must still be promoted correctly.
+    translated_hold = Alternative(
+        id="hold", name="Entscheidung zurückstellen", annualCostEur=1120.0,
+        savingsVsCurrentEur=0.0, tradeoff="Vermeidet eine Änderung, die der Umzug rückgängig machen könnte.",
+        isRecommended=False, action=None,
+    )
+    rec = _rec([_keep(), _cancel(recommended=True), translated_hold])
+    out = main._enforce_hold_when_decision_pending(rec)
+    recommended = [a for a in out.alternatives if a.isRecommended]
+    assert len(recommended) == 1
+    assert recommended[0].id == "hold"
+    assert out.confidence == "low"
+
+
+def test_does_not_promote_english_name_with_different_id(stefan):
+    # Intentional narrowing (see main.py comment): a row that merely happens to be *named*
+    # "Hold pending decision" but carries a different id must NOT be promoted. Only the
+    # deterministic pending-decision id="hold" row is eligible.
+    lookalike = Alternative(
+        id="cancel_alt", name="Hold pending decision", annualCostEur=1120.0,
+        savingsVsCurrentEur=0.0, tradeoff="t", isRecommended=False, action=None,
+    )
+    rec = _rec([_keep(), _cancel(recommended=True), lookalike])
+    out = main._enforce_hold_when_decision_pending(rec)
+    recommended = [a for a in out.alternatives if a.isRecommended]
+    assert len(recommended) == 1
+    assert recommended[0].id == "cancel"  # unchanged — the lookalike was not promoted

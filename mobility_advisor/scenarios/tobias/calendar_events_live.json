@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Helios project week on-site in Munich",
+      "description_de": "Helios-Projektwoche vor Ort in München",
       "location": "München",
       "signals": [
         "long_distance_rail_likely"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Helios project week on-site in Munich",
+      "description_de": "Helios-Projektwoche vor Ort in München",
       "location": "München",
       "signals": [
         "long_distance_rail_likely"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Helios final steering + closeout presentation in Munich (last project week)",
+      "description_de": "Helios Abschluss-Steering und Abschlusspräsentation in München (letzte Projektwoche)",
       "location": "München",
       "signals": [
         "long_distance_rail_likely",
@@ -44,6 +47,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Kickoff new Rhein-Main engagement — client site Frankfurt-Niederrad (local, ÖPNV)",
+      "description_de": "Kickoff neues Rhein-Main-Projekt — Kundenstandort Frankfurt-Niederrad (lokal, ÖPNV)",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -56,6 +60,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Client workshop Frankfurt-Niederrad",
+      "description_de": "Kunden-Workshop Frankfurt-Niederrad",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -68,6 +73,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Client workshop Frankfurt-Niederrad",
+      "description_de": "Kunden-Workshop Frankfurt-Niederrad",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"

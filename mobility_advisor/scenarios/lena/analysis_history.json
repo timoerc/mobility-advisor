@@ -6,48 +6,67 @@
       "outcome": "executed",
       "resolvedAlternativeId": "renew_bc50_young",
       "resolvedMessage": "Renewal confirmed — BahnCard 50 Young stays active.",
+      "resolvedMessage_de": "Verlängerung bestätigt — BahnCard 50 Young bleibt aktiv.",
       "resolvedAt": "2026-01-25",
       "recommendation": {
         "verdict": "BahnCard 50 Young easily pays for itself",
+        "verdict_de": "Die BahnCard 50 Young amortisiert sich mühelos",
         "confidence": "high",
         "summaryText": "Your discounted DB spend so far comfortably clears BahnCard 50 Young's break-even threshold — the card is worth keeping as-is.",
+        "summaryText_de": "Ihre bisherigen vergünstigten DB-Ausgaben übertreffen deutlich die Amortisationsschwelle der BahnCard 50 Young — die Karte lohnt sich unverändert.",
         "metrics": [
-          { "value": 40, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 40, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling", "label_de": "Nettovorteil ggü. Kündigung" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO₂-Auswirkung" }
         ],
         "reasoning": [
           "Discounted DB spend in the first weeks of the year already implies a full-price equivalent above the €244 breakeven threshold",
           "Your Frankfurt-area long-distance trips are frequent enough that BahnCard 50 Young more than covers its own cost",
           "Deutschland-Ticket continues to cover all local and regional travel separately"
         ],
+        "reasoning_de": [
+          "Die vergünstigten DB-Ausgaben der ersten Wochen des Jahres entsprechen bereits einem Vollpreiswert über der Amortisationsschwelle von 244 €",
+          "Ihre Fernfahrten im Raum Frankfurt sind häufig genug, dass sich die BahnCard 50 Young mehr als amortisiert",
+          "Das Deutschland-Ticket deckt weiterhin getrennt alle lokalen und regionalen Fahrten ab"
+        ],
         "assumptions": [
           "Assumes travel frequency observed in January continues",
           "CO2 impact is neutral — renewing doesn't change which products or transport modes you use"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass die im Januar beobachtete Reisehäufigkeit anhält",
+          "CO₂-Auswirkung ist neutral — die Verlängerung ändert weder die genutzten Produkte noch die Verkehrsmittel"
         ],
         "alternatives": [
           {
             "id": "renew_bc50_young",
             "name": "Confirm renewal of BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "name_de": "Verlängerung der BahnCard 50 Young (2. Klasse, Jahresabo) bestätigen",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "No change to your setup — simply reaffirms the card is worth keeping.",
+            "tradeoff_de": "Keine Änderung an Ihrem Setup — bestätigt lediglich, dass sich die Karte weiterhin lohnt.",
             "isRecommended": true,
             "action": {
               "title": "Confirm renewal of BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "title_de": "Verlängerung der BahnCard 50 Young (2. Klasse, Jahresabo) bestätigen",
               "description": "Reconfirm your BahnCard 50 Young ahead of its 15 January 2027 renewal — usage comfortably justifies the cost.",
-              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+              "description_de": "Bestätigen Sie Ihre BahnCard 50 Young vor der Verlängerung am 15. Januar 2027 erneut — die Nutzung rechtfertigt die Kosten deutlich.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack.",
+              "consequence_de": "Ihre BahnCard 50 Young (2. Klasse, Jahresabo) bleibt unverändert aktiv, an Ihrem Abo-Portfolio ändert sich nichts."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Equivalent to confirming renewal — no action needed either way.",
+            "tradeoff_de": "Entspricht der Bestätigung der Verlängerung — in beiden Fällen ist keine Handlung nötig.",
             "isRecommended": false,
             "action": null
           }
@@ -60,48 +79,67 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Didn't want to act on a partial picture — will check again once the data is cleaner.",
+      "resolvedMessage_de": "Wollte nicht auf Basis eines unvollständigen Bildes handeln — prüfe erneut, sobald die Daten sauberer sind.",
       "resolvedAt": "2026-03-30",
       "recommendation": {
         "verdict": "A few trip records this quarter couldn't be classified",
+        "verdict_de": "Einige Fahrtdatensätze dieses Quartal konnten nicht zugeordnet werden",
         "confidence": "medium",
         "summaryText": "Most of your DB spend this quarter still justifies BahnCard 50 Young, but a couple of trip records had missing or unrecognized data and were excluded from the calculation.",
+        "summaryText_de": "Der Großteil Ihrer DB-Ausgaben dieses Quartal rechtfertigt weiterhin die BahnCard 50 Young, aber einige Fahrtdatensätze hatten fehlende oder nicht erkannte Daten und wurden von der Berechnung ausgeschlossen.",
         "metrics": [
-          { "value": 2, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)" },
-          { "value": 25, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)" }
+          { "value": 2, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)", "label_de": "Ausgeschlossene Datensätze (Datenqualität)" },
+          { "value": 25, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)", "label_de": "Nettovorteil ggü. Kündigung (bereinigte Teilmenge)" }
         ],
         "reasoning": [
           "2 trip records this quarter had missing cost or an unrecognized mode and were excluded rather than guessed at",
           "Based on the remaining clean trips, discounted DB spend still exceeds the break-even threshold for BahnCard 50 Young",
           "Deutschland-Ticket continues to cover local and regional travel"
         ],
+        "reasoning_de": [
+          "2 Fahrtdatensätze dieses Quartal hatten fehlende Kosten oder ein nicht erkanntes Verkehrsmittel und wurden ausgeschlossen statt geschätzt",
+          "Auf Basis der übrigen bereinigten Fahrten übersteigen die vergünstigten DB-Ausgaben weiterhin die Amortisationsschwelle der BahnCard 50 Young",
+          "Das Deutschland-Ticket deckt weiterhin lokale und regionale Fahrten ab"
+        ],
         "assumptions": [
           "If the excluded trips included further long-distance rail spend, the case for keeping the card is even stronger",
           "Recommend a data quality fix before relying on this analysis for a final decision"
+        ],
+        "assumptions_de": [
+          "Enthielten die ausgeschlossenen Fahrten weitere Fernverkehrsausgaben, spricht das noch stärker für den Erhalt der Karte",
+          "Empfehlung: Datenqualität beheben, bevor diese Analyse für eine endgültige Entscheidung herangezogen wird"
         ],
         "alternatives": [
           {
             "id": "keep_bc50_young",
             "name": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "name_de": "BahnCard 50 Young (2. Klasse, Jahresabo) erneut bestätigen",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Based on a partial data subset — worth re-checking once records are cleaned up.",
+            "tradeoff_de": "Basiert auf einer unvollständigen Datenteilmenge — nach Bereinigung der Datensätze erneut prüfen.",
             "isRecommended": true,
             "action": {
               "title": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "title_de": "BahnCard 50 Young (2. Klasse, Jahresabo) erneut bestätigen",
               "description": "No change needed — clean-subset usage still justifies the card, though 2 trip records were unreadable this run.",
-              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+              "description_de": "Keine Änderung nötig — die bereinigte Nutzung rechtfertigt die Karte weiterhin, auch wenn 2 Fahrtdatensätze diesmal nicht lesbar waren.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack.",
+              "consequence_de": "Ihre BahnCard 50 Young (2. Klasse, Jahresabo) bleibt unverändert aktiv, an Ihrem Abo-Portfolio ändert sich nichts."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Didn't want to act on a partial picture.",
+            "tradeoff_de": "Wollte nicht auf Basis eines unvollständigen Bildes handeln.",
             "isRecommended": false,
             "action": null
           }
@@ -117,11 +155,13 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "BahnCard 50 Young still looks justified, but some records are unreadable",
+        "verdict_de": "Die BahnCard 50 Young scheint weiterhin gerechtfertigt, aber einige Datensätze sind nicht lesbar",
         "confidence": "medium",
         "summaryText": "Based on the clean subset of trips this run, BahnCard 50 Young clears its break-even threshold — but several records were excluded due to data issues, so this should be treated as a partial picture.",
+        "summaryText_de": "Auf Basis der bereinigten Fahrtenteilmenge dieses Durchlaufs übertrifft die BahnCard 50 Young ihre Amortisationsschwelle — mehrere Datensätze wurden jedoch wegen Datenproblemen ausgeschlossen, dies sollte daher als unvollständiges Bild betrachtet werden.",
         "metrics": [
-          { "value": 6, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)" },
-          { "value": 30, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)" }
+          { "value": 6, "unit": "trips", "direction": "neutral", "label": "Records excluded (data quality)", "label_de": "Ausgeschlossene Datensätze (Datenqualität)" },
+          { "value": 30, "unit": "€/year", "direction": "save", "label": "Net benefit vs. cancelling (clean subset)", "label_de": "Nettovorteil ggü. Kündigung (bereinigte Teilmenge)" }
         ],
         "reasoning": [
           "6 of the trip records logged this run had missing cost figures or unrecognized transport modes and were excluded rather than guessed at",
@@ -129,34 +169,51 @@
           "Clean-subset discounted DB spend still exceeds the break-even threshold for BahnCard 50 Young",
           "Next renewal is 15 January 2027 — worth revisiting once the data quality issue is fixed"
         ],
+        "reasoning_de": [
+          "6 der in diesem Durchlauf erfassten Fahrtdatensätze hatten fehlende Kostenangaben oder nicht erkannte Verkehrsmittel und wurden ausgeschlossen statt geschätzt",
+          "Die Analyse basiert nur auf den verbleibenden 14 bereinigten Fahrten",
+          "Die vergünstigten DB-Ausgaben der bereinigten Teilmenge übersteigen weiterhin die Amortisationsschwelle der BahnCard 50 Young",
+          "Nächste Verlängerung ist am 15. Januar 2027 — nach Behebung des Datenqualitätsproblems erneut prüfen"
+        ],
         "assumptions": [
           "If the excluded trips included further rail spend, the case for keeping the card is even stronger, not weaker",
           "Data quality fix recommended before the January 2027 renewal decision"
+        ],
+        "assumptions_de": [
+          "Enthielten die ausgeschlossenen Fahrten weitere Bahnausgaben, spricht das noch stärker und nicht schwächer für den Erhalt der Karte",
+          "Behebung der Datenqualität vor der Verlängerungsentscheidung im Januar 2027 empfohlen"
         ],
         "alternatives": [
           {
             "id": "keep_bc50_young",
             "name": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+            "name_de": "BahnCard 50 Young (2. Klasse, Jahresabo) erneut bestätigen",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Based on 14 of 20 trip records this run — the rest were excluded due to data quality issues.",
+            "tradeoff_de": "Basiert auf 14 von 20 Fahrtdatensätzen dieses Durchlaufs — die übrigen wurden wegen Datenqualitätsproblemen ausgeschlossen.",
             "isRecommended": true,
             "action": {
               "title": "Reaffirm BahnCard 50 Young (2. Klasse, Jahresabo)",
+              "title_de": "BahnCard 50 Young (2. Klasse, Jahresabo) erneut bestätigen",
               "description": "No change needed — clean-subset usage still justifies the card, though 6 trip records were unreadable this run.",
-              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack."
+              "description_de": "Keine Änderung nötig — die bereinigte Nutzung rechtfertigt die Karte weiterhin, auch wenn 6 Fahrtdatensätze diesmal nicht lesbar waren.",
+              "consequence": "Your BahnCard 50 Young (2. Klasse, Jahresabo) stays active with no change to your subscription stack.",
+              "consequence_de": "Ihre BahnCard 50 Young (2. Klasse, Jahresabo) bleibt unverändert aktiv, an Ihrem Abo-Portfolio ändert sich nichts."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 122,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Equivalent outcome to reaffirming the card given the partial data.",
+            "tradeoff_de": "Entspricht bei unvollständigen Daten dem Ergebnis, die Karte erneut zu bestätigen.",
             "isRecommended": false,
             "action": null
           }

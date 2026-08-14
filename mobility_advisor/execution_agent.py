@@ -1,6 +1,7 @@
 from google.adk.agents import LlmAgent
 from google.genai import types
 
+from .i18n import localized
 from .sub_agents import _TODAY, build_model
 from .tools import apply_subscription_change, load_mobility_catalog
 
@@ -12,7 +13,10 @@ execution_agent = LlmAgent(
         "subscriptions (add, remove, or replace) and reports back the exact result. "
         "Never decides whether a change is a good idea — that is the optimizer's job."
     ),
-    instruction=f"""\
+    # localized(): this agent's output is relayed to the user byte-for-byte by the coordinator
+    # (skip_summarization=True in agent.py), so it must produce correctly-localized text
+    # itself — the coordinator's own directive never touches it.
+    instruction=localized(f"""\
 You are the Execution agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -85,7 +89,7 @@ plain sentences or a plain "Label: value" line per item (no asterisks around the
 A "-" for a list item is fine; anything else is not.
 
 Keep your output short and factual — this is a receipt, not a sales pitch.
-""",
+"""),
     tools=[apply_subscription_change, load_mobility_catalog],
     generate_content_config=types.GenerateContentConfig(
         temperature=0.0, max_output_tokens=2048

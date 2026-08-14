@@ -68,6 +68,17 @@ def test_confidence_synonym_falls_back_to_medium():
     assert parsed["confidence"] == "medium"
 
 
+def test_german_confidence_synonyms_map_correctly():
+    # Defense in depth for a German-language response: both prompts instruct the model to
+    # always emit the English enum word, but this must not degrade silently to "medium" if a
+    # completion slips and translates it anyway (see _CONFIDENCE_SYNONYMS's comment).
+    assert main._normalize_confidence_and_lists({"confidence": "hoch"})["confidence"] == "high"
+    assert main._normalize_confidence_and_lists({"confidence": "HOCH"})["confidence"] == "high"
+    assert main._normalize_confidence_and_lists({"confidence": "mittel"})["confidence"] == "medium"
+    assert main._normalize_confidence_and_lists({"confidence": "niedrig"})["confidence"] == "low"
+    assert main._normalize_confidence_and_lists({"confidence": "gering"})["confidence"] == "low"
+
+
 def test_confidence_missing_defaults_to_medium():
     parsed = main._normalize_confidence_and_lists({})
     assert parsed["confidence"] == "medium"

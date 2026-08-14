@@ -1,10 +1,12 @@
 import { TypewriterHeading } from "../components/TypewriterHeading";
+import { useI18n } from "../i18n";
 
 type FinalPageProps = {
   onGoHome: () => void;
 };
 
 export function FinalPage({ onGoHome }: FinalPageProps) {
+  const { t, language } = useI18n();
   return (
     <div className="flex flex-col items-center gap-8 text-center py-8">
       <div
@@ -15,10 +17,9 @@ export function FinalPage({ onGoHome }: FinalPageProps) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <TypewriterHeading text="Thank you!" />
+        <TypewriterHeading key={language} text={t("onboarding.final.heading")} />
         <p className="text-gray-500 leading-relaxed m-0">
-          I will now analyze your mobility portfolio and prepare personalized
-          recommendations for your next trips.
+          {t("onboarding.final.body")}
         </p>
       </div>
 
@@ -27,7 +28,7 @@ export function FinalPage({ onGoHome }: FinalPageProps) {
         onClick={onGoHome}
         className="bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
       >
-        Go to homepage →
+        {t("onboarding.final.goHome")}
       </button>
     </div>
   );

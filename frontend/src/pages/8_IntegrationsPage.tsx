@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useI18n } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import type { Integrations } from "../types";
 
 type IntegrationsPageProps = {
@@ -6,48 +8,26 @@ type IntegrationsPageProps = {
   onChange: (integrations: Integrations) => void;
 };
 
+// `label` is a brand name (Deutsche Bahn, MILES Mobility, ...) and is intentionally NOT
+// translated — same reasoning as PROVIDER_FULL_NAMES below. Only `descriptionKey` is localized.
 const MOBILITY_SERVICES: {
   key: keyof Integrations;
   label: string;
-  description: string;
+  descriptionKey: TranslationKey;
 }[] = [
-  {
-    key: "db_connected",
-    label: "Deutsche Bahn",
-    description: "Import BahnCard, Sparpreise and trip history from your DB account",
-  },
-  {
-    key: "miles_connected",
-    label: "MILES Mobility",
-    description: "Import your MILES membership tier and trip history",
-  },
-  {
-    key: "deutschlandticket_connected",
-    label: "Deutschlandticket",
-    description: "Confirm your active D-Ticket subscription and renewal date",
-  },
+  { key: "db_connected", label: "Deutsche Bahn", descriptionKey: "onboarding.integrations.db.description" },
+  { key: "miles_connected", label: "MILES Mobility", descriptionKey: "onboarding.integrations.miles.description" },
+  { key: "deutschlandticket_connected", label: "Deutschlandticket", descriptionKey: "onboarding.integrations.dTicket.description" },
 ];
 
 const EMAIL_SERVICES: {
   key: keyof Integrations;
   label: string;
-  description: string;
+  descriptionKey: TranslationKey;
 }[] = [
-  {
-    key: "outlook_connected",
-    label: "Outlook",
-    description: "Scan booking confirmations and subscription receipts",
-  },
-  {
-    key: "gmail_connected",
-    label: "Gmail",
-    description: "Scan booking confirmations and subscription receipts",
-  },
-  {
-    key: "calendar_connected",
-    label: "Google Calendar",
-    description: "Detect commute patterns and upcoming travel demand",
-  },
+  { key: "outlook_connected", label: "Outlook", descriptionKey: "onboarding.integrations.outlook.description" },
+  { key: "gmail_connected", label: "Gmail", descriptionKey: "onboarding.integrations.gmail.description" },
+  { key: "calendar_connected", label: "Google Calendar", descriptionKey: "onboarding.integrations.calendar.description" },
 ];
 
 const MORE_PROVIDERS = [
@@ -84,6 +64,7 @@ function ServiceRow({
   connected: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200">
       <div className="flex-1 min-w-0">
@@ -99,7 +80,7 @@ function ServiceRow({
             : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
         }`}
       >
-        {connected ? "Connected ✓" : "Connect"}
+        {connected ? t("onboarding.integrations.connected") : t("onboarding.integrations.connect")}
       </button>
     </div>
   );
@@ -109,6 +90,7 @@ export function IntegrationsPage({
   integrations,
   onChange,
 }: IntegrationsPageProps) {
+  const { t, tPlural } = useI18n();
   const [confirmingProvider, setConfirmingProvider] = useState<string | null>(null);
 
   const toggle = (key: keyof Integrations) =>
@@ -139,31 +121,30 @@ export function IntegrationsPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold leading-tight mb-2">
-          Connect your accounts
+          {t("onboarding.integrations.heading")}
         </h1>
         <p className="text-gray-500 leading-relaxed m-0">
-          Connect your mobility and email accounts so we can detect your active
-          subscriptions and travel history automatically.
+          {t("onboarding.integrations.subheading")}
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-            Mobility accounts
+            {t("onboarding.integrations.mobilityAccounts")}
           </h2>
           {mobilityCount > 0 && (
             <span className="text-xs text-brand-red font-semibold">
-              {mobilityCount} connected
+              {tPlural("onboarding.integrations.connectedCount", mobilityCount)}
             </span>
           )}
         </div>
         <div className="flex flex-col gap-3">
-          {MOBILITY_SERVICES.map(({ key, label, description }) => (
+          {MOBILITY_SERVICES.map(({ key, label, descriptionKey }) => (
             <ServiceRow
               key={key}
               label={label}
-              description={description}
+              description={t(descriptionKey)}
               connected={!!integrations[key]}
               onToggle={() => toggle(key)}
             />
@@ -172,7 +153,7 @@ export function IntegrationsPage({
 
         {/* More providers — interactive pills */}
         <div className="mt-1 p-3 rounded-lg border border-dashed border-gray-200 bg-white">
-          <p className="text-xs text-gray-500 mb-2 font-medium">More providers</p>
+          <p className="text-xs text-gray-500 mb-2 font-medium">{t("onboarding.integrations.moreProviders")}</p>
           <div className="flex flex-wrap gap-1.5">
             {MORE_PROVIDERS.map((name) => {
               const connected = additionalConnections.includes(name);
@@ -199,14 +180,14 @@ export function IntegrationsPage({
 
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-          Email & calendar
+          {t("onboarding.integrations.emailCalendar")}
         </h2>
         <div className="flex flex-col gap-3">
-          {EMAIL_SERVICES.map(({ key, label, description }) => (
+          {EMAIL_SERVICES.map(({ key, label, descriptionKey }) => (
             <ServiceRow
               key={key}
               label={label}
-              description={description}
+              description={t(descriptionKey)}
               connected={!!integrations[key]}
               onToggle={() => toggle(key)}
             />
@@ -227,10 +208,10 @@ export function IntegrationsPage({
           >
             <div>
               <p className="font-bold text-base m-0">
-                Connect {PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider}?
+                {t("onboarding.integrations.confirmTitle", { provider: PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider })}
               </p>
               <p className="text-sm text-gray-500 mt-1 m-0">
-                Link your {PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider} account to import ticket and trip data.
+                {t("onboarding.integrations.confirmBody", { provider: PROVIDER_FULL_NAMES[confirmingProvider] ?? confirmingProvider })}
               </p>
             </div>
             <div className="flex gap-2 justify-end">
@@ -239,14 +220,14 @@ export function IntegrationsPage({
                 onClick={() => setConfirmingProvider(null)}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 bg-transparent border border-gray-200 rounded-full cursor-pointer"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => connectProvider(confirmingProvider)}
                 className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-full border-0 cursor-pointer hover:opacity-90"
               >
-                Connect ✓
+                {t("onboarding.integrations.confirmConnect")}
               </button>
             </div>
           </div>

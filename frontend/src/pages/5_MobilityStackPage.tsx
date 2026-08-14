@@ -3,6 +3,9 @@ import { SubscriptionCard } from "../components/SubscriptionCard";
 import { Combobox } from "../components/Combobox";
 import { fetchCatalog } from "../api";
 import type { CatalogOption } from "../api";
+import { useI18n, formatCurrencyPrecise } from "../i18n";
+import type { Language } from "../i18n";
+import { MODE_LABEL_KEYS } from "../labels";
 import type {
   MobilityMode,
   SubscriptionEntry,
@@ -13,13 +16,9 @@ type MobilityStackPageProps = {
   onChange: (subscriptions: SubscriptionEntry[]) => void;
 };
 
-const SECTIONS: { mode: MobilityMode; label: string }[] = [
-  { mode: "rail", label: "Rail" },
-  { mode: "car_share", label: "Carsharing" },
-  { mode: "car_rental", label: "Car Rental" },
-  { mode: "flight", label: "Flight" },
-  { mode: "bus", label: "Bus" },
-];
+// Reuses the mode.* translation keys (see labels.ts) rather than a separate label set, so the
+// wording stays in one place.
+const SECTIONS: MobilityMode[] = ["rail", "car_share", "car_rental", "flight", "bus"];
 
 type FormState = Partial<SubscriptionEntry> & {
   mode: MobilityMode;
@@ -41,8 +40,8 @@ const inputClass =
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-xs text-gray-600";
 
-function productLabel(o: CatalogOption): string {
-  return `${o.product} — €${o.monthly_cost_eur.toFixed(2)}/mo`;
+function productLabel(lang: Language, o: CatalogOption): string {
+  return `${o.product} — ${formatCurrencyPrecise(lang, o.monthly_cost_eur)}/mo`;
 }
 
 function SubscriptionForm({
@@ -50,16 +49,19 @@ function SubscriptionForm({
   onFormChange,
   onSave,
   onCancel,
-  saveLabel = "Add",
+  saveLabel,
   catalogOptions,
 }: {
   form: FormState;
   onFormChange: (f: FormState) => void;
   onSave: () => void;
   onCancel: () => void;
-  saveLabel?: string;
+  // Always passed by the caller (SectionAccordion), which resolves it to a translated
+  // "Save"/"Add" — no English-literal default needed here.
+  saveLabel: string;
   catalogOptions: CatalogOption[];
 }) {
+  const { language, t } = useI18n();
   const set = (patch: Partial<FormState>) =>
     onFormChange({ ...form, ...patch });
 
@@ -98,26 +100,26 @@ function SubscriptionForm({
     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         <label className={labelClass}>
-          <span className={labelTextClass}>Provider</span>
+          <span className={labelTextClass}>{t("onboarding.mobilityStack.provider")}</span>
           <Combobox
             items={providers}
             selectedKey={form.provider || null}
             onSelect={handleProviderChange}
             getKey={(p) => p}
             getLabel={(p) => p}
-            placeholder="Search provider…"
+            placeholder={t("onboarding.mobilityStack.provider.placeholder")}
             className={inputClass}
           />
         </label>
         <label className={labelClass}>
-          <span className={labelTextClass}>Product</span>
+          <span className={labelTextClass}>{t("onboarding.mobilityStack.product")}</span>
           <Combobox
             items={products}
             selectedKey={form.id || null}
             onSelect={handleProductChange}
             getKey={(o) => o.id}
-            getLabel={productLabel}
-            placeholder={form.provider ? "Search product…" : "Select a provider first"}
+            getLabel={(o) => productLabel(language, o)}
+            placeholder={form.provider ? t("onboarding.mobilityStack.product.placeholder") : t("onboarding.mobilityStack.product.selectProviderFirst")}
             disabled={!form.provider}
             className={inputClass}
           />
@@ -126,7 +128,7 @@ function SubscriptionForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className={labelClass}>
-          <span className={labelTextClass}>Valid from</span>
+          <span className={labelTextClass}>{t("onboarding.mobilityStack.validFrom")}</span>
           <input
             type="date"
             value={form.started ?? ""}
@@ -135,7 +137,7 @@ function SubscriptionForm({
           />
         </label>
         <label className={labelClass}>
-          <span className={labelTextClass}>Next renewal / expiry</span>
+          <span className={labelTextClass}>{t("onboarding.mobilityStack.nextRenewal")}</span>
           <input
             type="date"
             value={form.next_renewal_date ?? ""}
@@ -151,7 +153,7 @@ function SubscriptionForm({
           onClick={onCancel}
           className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 bg-transparent border-0 cursor-pointer"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -168,7 +170,6 @@ function SubscriptionForm({
 
 function SectionAccordion({
   mode,
-  label,
   subscriptions,
   onAdd,
   onRemove,
@@ -178,7 +179,6 @@ function SectionAccordion({
   catalogOptions,
 }: {
   mode: MobilityMode;
-  label: string;
   subscriptions: SubscriptionEntry[];
   onAdd: (entry: SubscriptionEntry) => void;
   onRemove: (id: string) => void;
@@ -187,6 +187,7 @@ function SectionAccordion({
   onEditDone: (entryToRestore: SubscriptionEntry | null) => void;
   catalogOptions: CatalogOption[];
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [addingForm, setAddingForm] = useState<FormState | null>(null);
   const editingId = useRef<string | null>(null);
@@ -236,7 +237,7 @@ function SectionAccordion({
         className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 cursor-pointer border-0 text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-sm">{label}</span>
+          <span className="font-semibold text-sm">{t(MODE_LABEL_KEYS[mode])}</span>
           {sectionEntries.length > 0 && (
             <span className="text-xs bg-brand-red text-white rounded-full px-2 py-0.5 font-semibold">
               {sectionEntries.length}
@@ -265,7 +266,7 @@ function SectionAccordion({
               onFormChange={setAddingForm}
               onSave={handleSave}
               onCancel={handleCancel}
-              saveLabel={editingId.current ? "Save" : "Add"}
+              saveLabel={editingId.current ? t("common.save") : t("onboarding.mobilityStack.add")}
               catalogOptions={catalogOptions}
             />
           ) : (
@@ -274,7 +275,7 @@ function SectionAccordion({
               onClick={() => setAddingForm(emptyForm(mode))}
               className="flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-brand-red hover:text-brand-red cursor-pointer bg-transparent w-full transition-colors"
             >
-              <span className="text-lg leading-none">+</span> Add service
+              <span className="text-lg leading-none">+</span> {t("onboarding.mobilityStack.addService")}
             </button>
           )}
         </div>
@@ -287,6 +288,7 @@ export function MobilityStackPage({
   subscriptions,
   onChange,
 }: MobilityStackPageProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [editingEntry, setEditingEntry] = useState<SubscriptionEntry | null>(null);
   const [catalogOptions, setCatalogOptions] = useState<CatalogOption[]>([]);
@@ -345,21 +347,20 @@ export function MobilityStackPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold leading-tight mb-2">
-          Current mobility stack
+          {t("onboarding.mobilityStack.heading")}
         </h1>
         <p className="text-gray-500 leading-relaxed m-0">
           {loading
-            ? "Scanning your connected accounts for active subscriptions…"
-            : "We've detected your active subscriptions from your connected accounts. Review, edit, or add more."}
+            ? t("onboarding.mobilityStack.scanning")
+            : t("onboarding.mobilityStack.detected")}
         </p>
       </div>
 
       <div className="flex flex-col gap-3">
-        {SECTIONS.map(({ mode, label }) => (
+        {SECTIONS.map((mode) => (
           <SectionAccordion
             key={mode}
             mode={mode}
-            label={label}
             subscriptions={subscriptions}
             onAdd={add}
             onRemove={remove}
@@ -376,7 +377,7 @@ export function MobilityStackPage({
 
       {!loading && subscriptions.length === 0 && (
         <p className="text-xs text-gray-400 text-center">
-          No services detected — skip to continue with an empty stack.
+          {t("onboarding.mobilityStack.noneDetected")}
         </p>
       )}
     </div>

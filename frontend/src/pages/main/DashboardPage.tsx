@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ConfidenceBadge } from "../../components/ConfidenceBadge";
 import { MetricTile } from "../../components/MetricTile";
 import { AlternativeRow } from "../../components/AlternativeRow";
+import { useT } from "../../i18n";
 import type { Alternative, Recommendation } from "../../types/recommendation";
 import type { MobilityArchetype } from "../../mobility-archetypes";
 
@@ -16,6 +17,7 @@ export function DashboardPage({
   mobilityArchetype,
   onProceed,
 }: DashboardPageProps) {
+  const t = useT();
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [selectedId, setSelectedId] = useState(
     () =>
@@ -50,7 +52,7 @@ export function DashboardPage({
       {/* Reasoning */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide m-0">
-          Why this recommendation?
+          {t("dashboard.whyRecommendation")}
         </h2>
         <ul className="m-0 pl-4 flex flex-col gap-2">
           {rec.reasoning.map((r, i) => (
@@ -64,7 +66,7 @@ export function DashboardPage({
           onClick={() => setShowAssumptions((v) => !v)}
           className="text-xs text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-0 text-left w-fit underline underline-offset-2 transition-colors"
         >
-          {showAssumptions ? "Hide assumptions" : "Show assumptions"}
+          {showAssumptions ? t("dashboard.hideAssumptions") : t("dashboard.showAssumptions")}
         </button>
         {showAssumptions && (
           <ul className="m-0 pl-4 flex flex-col gap-1.5 border-t border-gray-100 pt-3">
@@ -82,7 +84,7 @@ export function DashboardPage({
       {rec.dataQualityWarnings && rec.dataQualityWarnings.length > 0 && (
         <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex flex-col gap-2">
           <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide m-0">
-            Data quality notes
+            {t("dashboard.dataQualityNotes")}
           </h2>
           <ul className="m-0 pl-4 flex flex-col gap-1.5">
             {rec.dataQualityWarnings.map((w, i) => (
@@ -102,34 +104,34 @@ export function DashboardPage({
               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${mobilityArchetype.color}`}
             />
             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">
-              Your mobility profile
+              {t("dashboard.yourMobilityProfile")}
             </h2>
           </div>
           <div>
             <p className="font-semibold text-[#1f1f1f] m-0 text-sm">
-              {mobilityArchetype.name}
+              {t(mobilityArchetype.nameKey)}
             </p>
             <p className="text-xs text-gray-500 m-0 mt-0.5">
-              {mobilityArchetype.tagline}
+              {t(mobilityArchetype.taglineKey)}
             </p>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed m-0">
-            {mobilityArchetype.description}
+            {t(mobilityArchetype.descriptionKey)}
           </p>
           <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide m-0">
-              Portfolio implications
+              {t("dashboard.portfolioImplications")}
             </p>
             <ul className="m-0 pl-4 flex flex-col gap-1.5">
-              {mobilityArchetype.portfolioInsights.map((insight, i) => (
-                <li key={i} className="text-xs text-gray-600 leading-relaxed">
-                  {insight}
+              {mobilityArchetype.insightKeys.map((insightKey) => (
+                <li key={insightKey} className="text-xs text-gray-600 leading-relaxed">
+                  {t(insightKey)}
                 </li>
               ))}
             </ul>
           </div>
           <p className="text-[10px] text-gray-400 m-0 leading-relaxed">
-            Source: {mobilityArchetype.source}
+            {t("dashboard.source", { source: mobilityArchetype.source })}
           </p>
         </div>
       )}
@@ -137,7 +139,7 @@ export function DashboardPage({
       {/* Alternatives */}
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide m-0 px-1">
-          Alternatives
+          {t("dashboard.alternatives")}
         </h2>
         <div className="flex flex-col gap-2">
           {rec.alternatives.map((alt) => (
@@ -159,8 +161,8 @@ export function DashboardPage({
           className="w-full bg-brand-red text-white rounded-full px-8 py-3.5 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
         >
           {selected.action === null
-            ? "Confirm: keep my current setup →"
-            : "Continue →"}
+            ? t("dashboard.confirmKeepCurrent")
+            : t("dashboard.continue")}
         </button>
       </div>
     </div>

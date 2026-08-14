@@ -1,4 +1,6 @@
 import { ProfileDropdown } from "./ProfileDropdown";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useT } from "../i18n";
 
 type AppShellProps = {
   personaName: string;
@@ -35,6 +37,7 @@ export function AppShell({
   wide = false,
   children,
 }: AppShellProps) {
+  const t = useT();
   const widthClass = wide ? "max-w-6xl" : "max-w-2xl";
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
@@ -45,36 +48,37 @@ export function AppShell({
               <button
                 type="button"
                 onClick={onBack}
-                aria-label="Back"
+                aria-label={t("common.back")}
                 className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer flex-shrink-0 transition-colors"
               >
                 <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
               </button>
-              <span className="font-bold text-sm">Mobility Advisor</span>
+              <span className="font-bold text-sm">{t("nav.appName")}</span>
             </>
           ) : onLogoClick ? (
             <button
               type="button"
               onClick={onLogoClick}
-              aria-label="Home"
+              aria-label={t("nav.home")}
               className="flex items-center gap-3 border-0 bg-transparent cursor-pointer p-0"
             >
               <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block flex-shrink-0" alt="" />
-              <span className="font-bold text-sm">Mobility Advisor</span>
+              <span className="font-bold text-sm">{t("nav.appName")}</span>
             </button>
           ) : (
             <>
               <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block flex-shrink-0" alt="" />
-              <span className="font-bold text-sm">Mobility Advisor</span>
+              <span className="font-bold text-sm">{t("nav.appName")}</span>
             </>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <LanguageSwitcher />
             <button
               type="button"
               onClick={onChatOpen}
-              title="Open chat"
+              title={t("nav.openChat")}
               className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer text-gray-500 transition-colors"
-              aria-label="Open chat"
+              aria-label={t("nav.openChat")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

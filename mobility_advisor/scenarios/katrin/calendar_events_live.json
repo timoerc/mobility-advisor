@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Office day Düsseldorf — account reviews",
+      "description_de": "Bürotag Düsseldorf — Kundenreviews",
       "location": "Düsseldorf",
       "signals": [
         "local_transit_regular"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Office day Düsseldorf",
+      "description_de": "Bürotag Düsseldorf",
       "location": "Düsseldorf",
       "signals": [
         "local_transit_regular"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Client pitch Berlin — date may still move, booking kept flexible",
+      "description_de": "Kundenpräsentation Berlin — Termin kann sich noch ändern, Buchung bleibt flexibel",
       "location": "Berlin",
       "signals": [
         "long_distance_rail_likely"
@@ -43,6 +46,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Key account workshop München — half-day, tight schedule",
+      "description_de": "Key-Account-Workshop München — halbtägig, enger Zeitplan",
       "location": "München",
       "signals": [
         "long_distance_rail_likely"
@@ -55,6 +59,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Contract negotiation Stuttgart — likely to be rescheduled once",
+      "description_de": "Vertragsverhandlung Stuttgart — wird voraussichtlich einmal verschoben",
       "location": "Stuttgart",
       "signals": [
         "long_distance_rail_likely"
@@ -67,6 +72,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Team lunch Düsseldorf Innenstadt",
+      "description_de": "Team-Mittagessen Düsseldorfer Innenstadt",
       "location": "Düsseldorf",
       "signals": [
         "local_transit_regular"

@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import type { Persona } from "../personas";
 
 type PersonaCardProps = {
@@ -6,6 +7,7 @@ type PersonaCardProps = {
 };
 
 export function PersonaCard({ persona, onSelect }: PersonaCardProps) {
+  const t = useT();
   const isNew = persona.id === "new";
 
   return (
@@ -25,7 +27,7 @@ export function PersonaCard({ persona, onSelect }: PersonaCardProps) {
         <p className="text-sm text-gray-500 m-0 mt-0.5 leading-snug">{persona.tagline}</p>
         {persona.onboardingComplete && (
           <span className="inline-block mt-1.5 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">
-            Profile complete
+            {t("personaCard.profileComplete")}
           </span>
         )}
       </div>

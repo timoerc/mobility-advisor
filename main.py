@@ -26,6 +26,7 @@ from pydantic import BaseModel, ValidationError
 
 from mobility_advisor.agent import root_agent
 from mobility_advisor.execution_agent import execution_agent
+from mobility_advisor.i18n import get_language, normalize_language, pick, set_language, t
 from mobility_advisor.models import (
     Alternative,
     AnalysisHistory,
@@ -72,8 +73,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"],
+    # NB: allow_headers=["*"] only wildcards because allow_credentials is unset (False) here —
+    # per the CORS spec, "*" in Access-Control-Allow-Headers is NOT honored when credentials
+    # are allowed, so a future `allow_credentials=True` would silently stop the frontend's
+    # X-Language header (below) from reaching this API cross-origin.
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def _language_middleware(request, call_next):
+    """Sets the request's language (mobility_advisor.i18n's ContextVar) from the frontend's
+    X-Language header for the lifetime of this request — read by every deterministic string
+    built in main.py and tools.py, including inside ADK FunctionTool calls several frames below
+    this handler (contextvars propagate into the asyncio tasks the ADK Runner spawns). A header
+    middleware — rather than a field on each request body model — covers the GET endpoints
+    (personas, analysis-history, catalog, ...) that a body field would miss, for free."""
+    set_language(normalize_language(request.headers.get("x-language")))
+    return await call_next(request)
 
 # ── Per-session chat state ────────────────────────────────────────────────────
 
@@ -260,6 +277,50 @@ def _save_history(hist: AnalysisHistory) -> None:
     _atomic_write(_DATA / "analysis_history.json", hist.model_dump())
 
 
+def _resolve_recommendation_language(rec: Recommendation) -> Recommendation:
+    """Swap in the German sibling fields (verdict_de, summaryText_de, ...) seeded on scenario
+    analysis_history.json entries, when the active request is German — see models.py's _de
+    fields and CLAUDE.md's i18n notes. A live /api/analyze run never populates these siblings
+    (its LLM output already comes back in the request's language via the agent-prompt
+    directive), so this is always a no-op for freshly-generated recommendations; it only
+    matters for seeded scenario history read back through GET /api/analysis-history."""
+    if get_language() != "de":
+        return rec
+    if rec.verdict_de:
+        rec.verdict = rec.verdict_de
+    if rec.summaryText_de:
+        rec.summaryText = rec.summaryText_de
+    if rec.reasoning_de:
+        rec.reasoning = rec.reasoning_de
+    if rec.assumptions_de:
+        rec.assumptions = rec.assumptions_de
+    for metric in rec.metrics:
+        if metric.label_de:
+            metric.label = metric.label_de
+        if metric.value_de:
+            metric.value = metric.value_de
+    for alt in rec.alternatives:
+        if alt.name_de:
+            alt.name = alt.name_de
+        if alt.tradeoff_de:
+            alt.tradeoff = alt.tradeoff_de
+        if alt.action is not None:
+            if alt.action.title_de:
+                alt.action.title = alt.action.title_de
+            if alt.action.description_de:
+                alt.action.description = alt.action.description_de
+            if alt.action.consequence_de:
+                alt.action.consequence = alt.action.consequence_de
+    return rec
+
+
+def _resolve_history_entry_language(entry: AnalysisHistoryEntry) -> AnalysisHistoryEntry:
+    _resolve_recommendation_language(entry.recommendation)
+    if get_language() == "de" and entry.resolvedMessage_de:
+        entry.resolvedMessage = entry.resolvedMessage_de
+    return entry
+
+
 # ── Profile endpoints ─────────────────────────────────────────────────────────
 
 @app.post("/api/profile")
@@ -297,6 +358,10 @@ async def list_personas():
         if not pf.exists():
             continue
         persona = json.loads(pf.read_text(encoding="utf-8"))
+        # tagline_de sibling in the scenario fixture, resolved for the active request's
+        # language — see mobility_advisor.i18n.pick(). persona.json is a raw dict, not
+        # Pydantic-validated, so this is the only place the German variant needs wiring.
+        persona["tagline"] = pick(persona, "tagline")
         sf = folder / "current_subscriptions.json"
         subscriptions = (
             CurrentSubscriptions.model_validate(json.loads(sf.read_text(encoding="utf-8"))).model_dump()["subscriptions"]
@@ -374,11 +439,22 @@ _JSON_SYSTEM_PROMPT = """
 Convert the mobility advisor's recommendation report into this exact JSON structure.
 Output ONLY valid JSON — no markdown fences, no surrounding text.
 
+LANGUAGE: the report below may be written in English or German (the communicator agent that
+produced it follows the user's selected language). Preserve that language verbatim in every
+extracted free-text string — verdict, summaryText, reasoning, assumptions, tradeoff, and every
+action.{title,description,consequence} field. Do not translate them into English or into any
+other language, regardless of what language this system prompt itself is written in.
+
 The report follows a fixed structure — **Verdict:** / **Confidence:** / **Summary:** /
 **Reasoning:** (bullets) / **Assumptions:** (bullets) — and describes ONLY the recommended
 option compared against the user's current setup; it does not enumerate other candidates as
 separate labelled blocks. Reconstruct exactly two "alternatives" entries from it: one for the
 recommended option, one for the "Keep current setup" baseline it is compared against.
+
+The section labels above are normally English even in a German-language report (the
+communicator agent is instructed to keep them verbatim), but tolerate the German equivalents
+too if they appear: **Urteil:** = Verdict, **Vertrauen:** = Confidence, **Zusammenfassung:** =
+Summary, **Begründung:** = Reasoning, **Annahmen:** = Assumptions.
 
 {
   "verdict": "<the report's Verdict line, verbatim>",
@@ -449,6 +525,10 @@ Rules:
   shortened (e.g. "BahnCard 25 (2. Klasse, Standard, Jahresabo)", not "BahnCard 25") — this
   name is executed literally if the user picks this alternative.
 - confidence must be exactly "high", "medium", or "low", lowercase.
+- The "keep" entry's "name"/"tradeoff" fields are shown above in English ("Keep current
+  setup" / "No change to cost or emissions") only as illustrative placeholder text for the
+  JSON shape — write them in the SAME language as the rest of your extraction (i.e. the
+  report's own language), not necessarily English.
 """.strip()
 
 
@@ -487,12 +567,10 @@ def _co2_methodology_assumption(weights: dict | None) -> str:
     from mobility_advisor.tools import _generalized_cost_rates
 
     value_of_time, co2_price = _generalized_cost_rates(weights)
-    return (
-        "A subscription changes what each transport mode costs you; projected mode usage "
-        "shifts in response (a gradual mode-share shift, not a hard switch), and travel "
-        f"time and CO2 follow. For this persona, time is valued at €{value_of_time:.2f}/hour "
-        f"and CO2 at €{co2_price:.3f}/kg when weighing mode choice, derived from their "
-        "stated cost/time/sustainability priorities."
+    return t(
+        "assumption.co2Methodology",
+        valueOfTime=f"{value_of_time:.2f}",
+        co2Price=f"{co2_price:.3f}",
     )
 
 
@@ -653,12 +731,12 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         if is_keep:
             alts.append(Alternative(
                 id="keep",
-                name="Keep current setup",
+                name=t("alt.keep.name"),
                 annualCostEur=s["total_annual_cost_eur"],
                 savingsVsCurrentEur=0,
-                co2Impact="Neutral",
+                co2Impact=t("alt.co2.neutral"),
                 co2ImpactKg=0.0,
-                tradeoff="No change to cost or emissions",
+                tradeoff=t("alt.keep.tradeoff"),
                 isRecommended=s.get("is_recommended", False),
                 action=None,
                 deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
@@ -693,24 +771,21 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         removed_joined = " + ".join(removed_names)
 
         if added_names and removed_names:
-            action_title = f"Replace {removed_joined} with {added_joined}"
-            name = f"Switch to {s['label']}"
-            consequence = (
-                f"Your {removed_joined} will be cancelled and "
-                f"{added_joined} will start in its place."
-            )
+            action_title = t("alt.action.replace.title", removed=removed_joined, added=added_joined)
+            name = t("alt.action.replace.name", label=s["label"])
+            consequence = t("alt.action.replace.consequence", removed=removed_joined, added=added_joined)
         elif added_names:
-            action_title = f"Add {added_joined}"
-            name = f"Add {s['label']}"
-            consequence = f"{added_joined} will be added to your portfolio."
+            action_title = t("alt.action.add.title", added=added_joined)
+            name = t("alt.action.add.name", label=s["label"])
+            consequence = t("alt.action.add.consequence", added=added_joined)
         elif removed_names:
-            action_title = f"Cancel {removed_joined}"
-            name = f"Cancel {removed_joined}"
-            consequence = f"{removed_joined} will be cancelled."
+            action_title = t("alt.action.cancel.title", removed=removed_joined)
+            name = t("alt.action.cancel.name", removed=removed_joined)
+            consequence = t("alt.action.cancel.consequence", removed=removed_joined)
         else:
             action_title = s["label"]
             name = s["label"]
-            consequence = "No change."
+            consequence = t("alt.action.noChange.consequence")
 
         # Generate tradeoff string from deltas vs. the user's CURRENT setup — every row's
         # own card states what the user is being asked to give up or gain relative to what
@@ -721,19 +796,19 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         tradeoff_parts = []
         if abs(d_cost) >= 1:
             if d_cost > 0:
-                tradeoff_parts.append(f"€{round(d_cost)} more per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreExpensive", amount=round(d_cost)))
             else:
-                tradeoff_parts.append(f"€{round(abs(d_cost))} cheaper per year")
+                tradeoff_parts.append(t("alt.tradeoff.cheaper", amount=round(abs(d_cost))))
         if abs(d_time) >= 10:
             if d_time > 0:
-                tradeoff_parts.append(f"+{round(d_time)} min travel time per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreTime", minutes=round(d_time)))
             else:
-                tradeoff_parts.append(f"{round(d_time)} min travel time per year")
+                tradeoff_parts.append(t("alt.tradeoff.lessTime", minutes=round(d_time)))
         if abs(d_co2) >= 1:
             if d_co2 > 0:
-                tradeoff_parts.append(f"+{round(d_co2)} kg CO₂ per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreCo2", kg=round(d_co2)))
             else:
-                tradeoff_parts.append(f"{round(d_co2)} kg CO₂ per year")
+                tradeoff_parts.append(t("alt.tradeoff.lessCo2", kg=round(d_co2)))
 
         # Break-even for this row's resulting portfolio as a whole, not for its added/removed
         # subscriptions scored independently. optimize_all_categories() now computes
@@ -750,29 +825,33 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         break_even_parts = []
         row_break_even = break_even_by_ids.get(tuple(sorted(ids)))
         if row_break_even is not None:
-            verb = "breaks even" if row_break_even["breaks_even"] else "runs a net loss"
-            break_even_parts.append(
-                f"{s['label']} {verb}: €{row_break_even['discount_value_eur']:.0f} discount "
-                f"value vs. €{row_break_even['annual_fee_eur']:.0f} fee"
-            )
+            verb = t("alt.breakEven.breaksEven") if row_break_even["breaks_even"] else t("alt.breakEven.netLoss")
+            break_even_parts.append(t(
+                "alt.breakEven.line",
+                label=s["label"], verb=verb,
+                discount=f"{row_break_even['discount_value_eur']:.0f}",
+                fee=f"{row_break_even['annual_fee_eur']:.0f}",
+            ))
         else:
             for sid in sorted(added | removed):
                 break_even = break_even_by_ids.get((sid,))
                 if break_even is None:
                     continue
-                verb = "breaks even" if break_even["breaks_even"] else "runs a net loss"
+                verb = t("alt.breakEven.breaksEven") if break_even["breaks_even"] else t("alt.breakEven.netLoss")
                 product = catalog_by_id.get(sid, {}).get("product", break_even["label"])
-                break_even_parts.append(
-                    f"{product} {verb}: €{break_even['discount_value_eur']:.0f} discount value vs. "
-                    f"€{break_even['annual_fee_eur']:.0f} fee"
-                )
+                break_even_parts.append(t(
+                    "alt.breakEven.line",
+                    label=product, verb=verb,
+                    discount=f"{break_even['discount_value_eur']:.0f}",
+                    fee=f"{break_even['annual_fee_eur']:.0f}",
+                ))
         if break_even_parts:
             tradeoff_parts.append("; ".join(break_even_parts))
 
         if tradeoff_parts:
             tradeoff = "; ".join(tradeoff_parts)
         else:
-            tradeoff = "Same cost, travel time, and CO₂ as your current setup"
+            tradeoff = t("alt.tradeoff.sameAsCurrent")
 
         # CO2 impact vs. current setup (positive = saves CO2), consistent with
         # savingsVsCurrentEur's baseline.
@@ -785,7 +864,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         # opposite outcomes, on a field that's part of the wire contract (persisted into
         # analysis_history.json) even though today's frontend doesn't render it.
         d_co2_rounded = round(d_co2)
-        co2_impact_str = f"{d_co2_rounded:+d} kg CO₂/year" if d_co2_rounded != 0 else "Neutral"
+        co2_impact_str = t("alt.co2Impact.value", delta=d_co2_rounded) if d_co2_rounded != 0 else t("alt.co2.neutral")
 
         slug = "_".join(s["subscription_ids"]) if s["subscription_ids"] else "none"
 
@@ -800,7 +879,7 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
             isRecommended=s.get("is_recommended", False),
             action=ProposedAction(
                 title=action_title,
-                description=f"{action_title}. This changes your mobility portfolio.",
+                description=t("alt.action.description", title=action_title),
                 consequence=consequence,
             ),
             deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
@@ -827,10 +906,10 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
     if decision["exists"]:
         alts.append(Alternative(
             id="hold",
-            name="Hold pending decision",
+            name=t("alt.hold.name"),
             annualCostEur=keep_cost,
             savingsVsCurrentEur=0,
-            co2Impact="Neutral",
+            co2Impact=t("alt.co2.neutral"),
             co2ImpactKg=0.0,
             tradeoff=decision["reason"],
             isRecommended=False,
@@ -863,10 +942,10 @@ def _build_alternatives_from_optimization() -> list[Alternative] | None:
         baseline_id = "keep_baseline" if "keep" in existing_ids else "keep"
         alts.append(Alternative(
             id=baseline_id,
-            name="Keep current setup",
+            name=t("alt.keep.name"),
             annualCostEur=keep_cost,
             savingsVsCurrentEur=0,
-            tradeoff="No change to cost or emissions",
+            tradeoff=t("alt.keep.tradeoff"),
             isRecommended=False,
             action=None,
             deltaVsCurrent=DeltaVsCurrent(),
@@ -888,6 +967,12 @@ _VERDICT_SYSTEM_PROMPT = """
 Extract ONLY the qualitative summary from this mobility advisor report.
 Output valid JSON — no markdown fences.
 
+LANGUAGE: the report below may be written in English or German. Preserve that language
+verbatim in verdict/summaryText/reasoning/assumptions — do not translate them. The section
+labels are normally English even in a German report, but tolerate German equivalents too:
+**Urteil:** = Verdict, **Vertrauen:** = Confidence, **Zusammenfassung:** = Summary,
+**Begründung:** = Reasoning, **Annahmen:** = Assumptions.
+
 {
   "verdict": "<concise 8-10 word headline>",
   "confidence": "<high | medium | low>",
@@ -898,7 +983,9 @@ Output valid JSON — no markdown fences.
 
 Rules:
 - verdict: summarize the recommended action and its key benefit
-- confidence: high if cost gap is clear, medium if borderline, low if uncertain
+- confidence: high if cost gap is clear, medium if borderline, low if uncertain — always
+  output the English word "high"/"medium"/"low" for this field regardless of the report's
+  language, never a translated equivalent (e.g. never "hoch"/"mittel"/"niedrig")
 - summaryText: the recommended option, how much it saves, and key tradeoff
 - reasoning: 2-4 bullets explaining why this portfolio wins
 - assumptions: key model assumptions (Sparpreis pricing, trip frequencies, etc.)
@@ -927,6 +1014,18 @@ def _parse_json_response(text: str) -> dict:
 
 
 _VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
+# Defense in depth: _VERDICT_SYSTEM_PROMPT/_JSON_SYSTEM_PROMPT both explicitly instruct the
+# model to always emit the English enum word regardless of the report's language, but a German
+# request is exactly the condition most likely to make a model slip and translate it anyway —
+# without this map, "hoch" would silently fall through to the "medium" default below instead
+# of correctly resolving to "high", degrading confidence invisibly on every German response
+# that gets this one word wrong.
+_CONFIDENCE_SYNONYMS = {
+    "hoch": "high",
+    "mittel": "medium",
+    "niedrig": "low",
+    "gering": "low",
+}
 
 
 def _normalize_confidence_and_lists(parsed: dict) -> dict:
@@ -934,13 +1033,14 @@ def _normalize_confidence_and_lists(parsed: dict) -> dict:
     downstream code expects, in place, tolerating small deviations a completion can
     introduce without failing the whole extraction over what is narration, not numbers:
 
-    - confidence not exactly "high"/"medium"/"low" (wrong case, or a synonym like
-      "moderate") would otherwise raise a pydantic ValidationError deep inside
-      Recommendation construction — there is no `.get(..., default)` fallback for an
-      out-of-range Literal value, only for a missing key.
+    - confidence not exactly "high"/"medium"/"low" (wrong case, a German synonym like
+      "hoch", or an unrelated synonym like "moderate") would otherwise raise a pydantic
+      ValidationError deep inside Recommendation construction — there is no
+      `.get(..., default)` fallback for an out-of-range Literal value, only for a missing key.
     - reasoning/assumptions returned as a single string instead of a list.
     """
     confidence = str(parsed.get("confidence", "medium")).strip().lower()
+    confidence = _CONFIDENCE_SYNONYMS.get(confidence, confidence)
     parsed["confidence"] = confidence if confidence in _VALID_CONFIDENCE_LEVELS else "medium"
     for key in ("reasoning", "assumptions"):
         value = parsed.get(key)
@@ -1022,8 +1122,8 @@ def _format_time_headline(abs_time_min: float) -> tuple[float, str]:
     """Minutes below 90 render as whole minutes; above that, hours to 1 decimal — same
     breakpoint AlternativeRow uses for the vs-current strip."""
     if abs_time_min < 90:
-        return round(abs_time_min), "min/year"
-    return round(abs_time_min / 60, 1), "h/year"
+        return round(abs_time_min), t("metric.unit.minPerYear")
+    return round(abs_time_min / 60, 1), t("metric.unit.hPerYear")
 
 
 def _build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> list[MetricDelta]:
@@ -1036,21 +1136,24 @@ def _build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> 
         default=None,
     )
     value_on_hold = best_deferred.savingsVsCurrentEur if best_deferred else 0.0
-    category = decision["events"][0]["category"] if decision.get("events") else "life event"
+    category_key = decision["events"][0]["category"] if decision.get("events") else None
+    category_label = (
+        t(f"lifeEvent.category.{category_key}") if category_key else t("metric.pendingDecision.lifeEvent")
+    )
     return [
-        MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label="Revisit by"),
+        MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label=t("metric.pendingDecision.revisitBy")),
         MetricDelta(
             # max(0, ...), not abs(...) — savingsVsCurrentEur is negative when even the best
             # deferred alternative is WORSE than the status quo (no candidate improves on
             # holding), and abs() flipped that into a positive "Value on hold €X" figure,
             # implying value is being left on the table when there is none.
             value=max(0, round(value_on_hold)),
-            unit="€/year",
+            unit=t("metric.unit.eurPerYear"),
             direction="neutral",
-            label="Value on hold",
+            label=t("metric.pendingDecision.valueOnHold"),
         ),
         MetricDelta(
-            value=category.replace("_", " "), unit="", direction="neutral", label="Decision pending"
+            value=category_label, unit="", direction="neutral", label=t("metric.pendingDecision.decisionPending")
         ),
     ]
 
@@ -1087,22 +1190,22 @@ def _build_headline_metrics(alts: list[Alternative], decision: dict) -> list[Met
 
     cost_metric = MetricDelta(
         value=abs(round(delta.costEur)),
-        unit="€/year",
+        unit=t("metric.unit.eurPerYear"),
         direction="save" if delta.costEur < 0 else ("extra_cost" if delta.costEur > 0 else "neutral"),
-        label="Potential saving" if delta.costEur < 0 else ("Extra cost" if delta.costEur > 0 else "No change"),
+        label=t("metric.potentialSaving") if delta.costEur < 0 else (t("metric.extraCost") if delta.costEur > 0 else t("metric.noChange")),
     )
     co2_metric = MetricDelta(
         value=abs(round(delta.co2Kg, 1)),
-        unit="kg CO₂/year",
+        unit=t("metric.unit.kgCo2PerYear"),
         direction="reduce" if delta.co2Kg < 0 else ("increase" if delta.co2Kg > 0 else "neutral"),
-        label="CO₂ reduction" if delta.co2Kg < 0 else ("CO₂ increase" if delta.co2Kg > 0 else "No CO₂ change"),
+        label=t("metric.co2Reduction") if delta.co2Kg < 0 else (t("metric.co2Increase") if delta.co2Kg > 0 else t("metric.noCo2Change")),
     )
     time_value, time_unit = _format_time_headline(abs(delta.timeMin))
     time_metric = MetricDelta(
         value=time_value,
         unit=time_unit,
         direction="reduce" if delta.timeMin < 0 else ("increase" if delta.timeMin > 0 else "neutral"),
-        label="Time saved" if delta.timeMin < 0 else ("Extra travel time" if delta.timeMin > 0 else "No time change"),
+        label=t("metric.timeSaved") if delta.timeMin < 0 else (t("metric.extraTravelTime") if delta.timeMin > 0 else t("metric.noTimeChange")),
     )
 
     ranked = sorted(
@@ -1139,13 +1242,10 @@ def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     decision = detect_pending_portfolio_decision()
     if not decision["exists"]:
         return rec
+    # Matched on id alone (not a name substring like "hold pending") so this survives the
+    # alternative's display name being translated — see CLAUDE.md's i18n section.
     hold = next(
-        (
-            a
-            for a in rec.alternatives
-            if a.action is None
-            and (a.id == "hold" or "hold pending" in a.name.lower())
-        ),
+        (a for a in rec.alternatives if a.action is None and a.id == "hold"),
         None,
     )
     if hold is None or hold.isRecommended:
@@ -1154,7 +1254,7 @@ def _enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     for alt in rec.alternatives:
         alt.isRecommended = alt is hold
     revisit = decision["revisit_after"]
-    rec.verdict = f"Hold your current setup until the pending decision resolves ({revisit})"
+    rec.verdict = t("verdict.holdUntilResolved", revisit=revisit)
     rec.summaryText = decision["reason"]
     rec.confidence = "low"
     rec.metrics = _build_pending_decision_metrics(rec.alternatives, decision)
@@ -1213,12 +1313,7 @@ async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATT
             last_error = exc
     raise HTTPException(
         status_code=500,
-        detail=(
-            f"The pipeline did not produce a result after {max_attempts} attempts "
-            f"(last issue: missing input {last_error}). This can happen when a stage's "
-            "response comes back empty — either an oversized prompt or an intermittent "
-            "backend hiccup. Please try again."
-        ),
+        detail=t("error.pipelineRetryExhausted", attempts=max_attempts, lastError=str(last_error)),
     ) from last_error
 
 
@@ -1273,7 +1368,7 @@ async def analyze(req: AnalyzeRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"The recommendation pipeline failed before producing a report: {exc}",
+            detail=t("error.pipelineNoReport", error=str(exc)),
         ) from exc
 
     try:
@@ -1289,7 +1384,15 @@ async def analyze(req: AnalyzeRequest):
                 # hiccup on this one call must not throw away an entire completed
                 # four-stage pipeline run — see _parse_json_response's docstring for how
                 # often this backend needs the tolerance this is guarding against.
-                print(f"Warning: verdict extraction failed, using deterministic fallbacks: {exc}")
+                # Greppable prefix + active language: a parse failure specifically on German
+                # requests (e.g. from a translated section marker like **Urteil:** the
+                # extractor doesn't recognize) would otherwise degrade silently into a
+                # plausible-looking but empty-summary, medium-confidence result with no signal
+                # anywhere that anything went wrong — this line is the only trace of it.
+                print(
+                    f"VERDICT_EXTRACTION_FALLBACK: language={get_language()!r} "
+                    f"verdict extraction failed, using deterministic fallbacks: {exc}"
+                )
                 verdict = {}
             rec_alt = next((a for a in det_alts if a.isRecommended), det_alts[0])
             metrics = _build_headline_metrics(det_alts, detect_pending_portfolio_decision())
@@ -1308,7 +1411,7 @@ async def analyze(req: AnalyzeRequest):
             rec = await _extract_recommendation_json(report_text)
     except Exception as exc:
         raise HTTPException(
-            status_code=500, detail=f"JSON extraction failed: {exc}"
+            status_code=500, detail=t("error.jsonExtractionFailed", error=str(exc))
         ) from exc
 
     entry_id = f"hist_{uuid4().hex[:10]}"
@@ -1368,7 +1471,7 @@ async def annual_report(req: AnalyzeRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"The annual report pipeline failed before producing a report: {exc}",
+            detail=t("error.annualPipelineNoReport", error=str(exc)),
         ) from exc
 
     # The three data-heavy sections (Year at a Glance, Spend & Emissions by Mode,
@@ -1388,7 +1491,7 @@ async def annual_report(req: AnalyzeRequest):
     try:
         pdf_bytes = render_annual_report_pdf(report_text)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=t("error.pdfRenderingFailed", error=str(exc))) from exc
 
     return Response(
         content=pdf_bytes,
@@ -1442,18 +1545,21 @@ async def execute(req: ExecuteRequest):
         for fr in event.get_function_responses():
             if fr.name == "apply_subscription_change":
                 tool_result = fr.response
+        # `text`, not `t` — `t` is also this module's i18n translate function (imported from
+        # mobility_advisor.i18n), and a bare assignment to `t` here would shadow it for the
+        # rest of this handler, including the t(...) calls later in this function.
         if event.is_final_response():
-            t = _collect_text(event)
-            if t.strip():
-                last_text = t
+            text = _collect_text(event)
+            if text.strip():
+                last_text = text
         else:
-            t = _collect_text(event)
-            if t.strip() and not _has_function_call(event):
-                fallback_text = t
+            text = _collect_text(event)
+            if text.strip() and not _has_function_call(event):
+                fallback_text = text
 
     reply = last_text or fallback_text
     if not reply:
-        raise HTTPException(status_code=500, detail="Execution agent produced no response")
+        raise HTTPException(status_code=500, detail=t("error.executionAgentNoResponse"))
 
     success = bool(tool_result and tool_result.get("status") == "applied")
 
@@ -1479,11 +1585,7 @@ async def execute(req: ExecuteRequest):
                 # left the user with an applied change that silently can never be reverted
                 # through the history UI, with the response still claiming plain success.
                 print(f"Warning: applied change but could not record it against analysis {req.analysis_id}")
-                reply = (
-                    f"{reply}\n\n(Note: this change was applied, but could not be linked "
-                    f"to its originating analysis — likely because a newer analysis ran in "
-                    f"the meantime. It will not appear as revertible in your history.)"
-                )
+                reply = f"{reply}\n\n{t('error.unlinkedExecutionNote')}"
 
     return {"success": success, "message": reply}
 
@@ -1496,7 +1598,7 @@ async def get_analysis_history():
     oldest-first on disk (mocked ones authored in narrative order, live ones
     appended as they occur), and reversed here for display."""
     hist = _load_history()
-    return list(reversed(hist.entries))
+    return [_resolve_history_entry_language(e) for e in reversed(hist.entries)]
 
 
 @app.post("/api/analysis-history/{entry_id}/resolve")
@@ -1512,17 +1614,17 @@ async def resolve_analysis(entry_id: str, req: ResolveAnalysisRequest):
     async with _history_lock:
         hist = _load_history()
         if not hist.entries:
-            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+            raise HTTPException(status_code=404, detail=t("error.noAnalysisHistoryEntry", entryId=entry_id))
         newest = hist.entries[-1]
         if newest.id != entry_id:
             raise HTTPException(
                 status_code=409,
-                detail="Only the newest analysis can be resolved; older analyses are read-only.",
+                detail=t("error.onlyNewestCanBeResolved"),
             )
         if newest.outcome == "executed":
             raise HTTPException(
                 status_code=409,
-                detail="This analysis was already executed; revert it before deciding again.",
+                detail=t("error.alreadyExecutedMustRevertFirst"),
             )
         newest.outcome = req.outcome
         newest.resolvedAlternativeId = req.alternative_id
@@ -1543,33 +1645,38 @@ async def revert_analysis(entry_id: str):
     async with _history_lock:
         hist = _load_history()
         if not hist.entries:
-            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+            raise HTTPException(status_code=404, detail=t("error.noAnalysisHistoryEntry", entryId=entry_id))
         newest = hist.entries[-1]
         if newest.id != entry_id:
-            raise HTTPException(status_code=409, detail="Only the newest analysis can be reverted.")
+            raise HTTPException(status_code=409, detail=t("error.onlyNewestCanBeReverted"))
         if newest.outcome != "executed" or newest.revertSnapshot is None:
-            raise HTTPException(status_code=409, detail="This analysis has no executed change to revert.")
+            raise HTTPException(status_code=409, detail=t("error.noExecutedChangeToRevert"))
         restored = CurrentSubscriptions.model_validate(newest.revertSnapshot)
         _atomic_write(_DATA / "current_subscriptions.json", restored.model_dump())
         newest.outcome = "kept_current"
         newest.resolvedAlternativeId = None
-        newest.resolvedMessage = "Reverted — your previous mobility setup has been restored."
+        newest.resolvedMessage = t("revert.resolvedMessage")
         newest.resolvedAt = MOCK_TODAY.isoformat()
         newest.revertSnapshot = None
         _save_history(hist)
-    return {"success": True, "message": "Reverted to your previous mobility setup."}
+    return {"success": True, "message": t("revert.message")}
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────
 
-_MODE_DISPLAY_NAMES = {
-    "rail": "Rail",
-    "flight": "Flight",
-    "car_rental": "Car rental",
-    "car_share": "Car share",
-    "bus": "Bus",
-    "unknown": "Unknown",
+_MODE_DISPLAY_KEYS = {
+    "rail": "mode.rail",
+    "flight": "mode.flight",
+    "car_rental": "mode.carRental",
+    "car_share": "mode.carShare",
+    "bus": "mode.bus",
+    "unknown": "mode.unknown",
 }
+
+
+def _mode_display_label(mode: str) -> str:
+    key = _MODE_DISPLAY_KEYS.get(mode)
+    return t(key) if key else mode.replace("_", " ").title()
 
 
 def _render_glance_table(stats: dict) -> str:
@@ -1581,13 +1688,13 @@ def _render_glance_table(stats: dict) -> str:
         s["discount_value_eur"] for s in stats["subscriptions"] if s["discount_value_eur"] is not None
     )
     rows = [
-        ("Total mobility spend", f"€{stats['total_spend_eur']:,.2f}"),
-        ("Estimated savings from subscription discounts", f"€{discount_total:,.2f}"),
-        ("Total CO₂ footprint (all modes)", f"{stats['total_co2_kg']:,.1f} kg"),
-        ("CO₂ avoided on regional trips (rail vs. car-share)", f"{stats['rail_vs_car_saving_kg']:,.1f} kg"),
-        ("Trips logged", str(stats["total_trips"])),
+        (t("report.glance.totalSpend"), f"€{stats['total_spend_eur']:,.2f}"),
+        (t("report.glance.savings"), f"€{discount_total:,.2f}"),
+        (t("report.glance.totalCo2"), f"{stats['total_co2_kg']:,.1f} kg"),
+        (t("report.glance.co2Avoided"), f"{stats['rail_vs_car_saving_kg']:,.1f} kg"),
+        (t("report.glance.tripsLogged"), str(stats["total_trips"])),
     ]
-    lines = ["| Metric | Value |", "|--------|-------|"]
+    lines = [f"| {t('report.glance.header.metric')} | {t('report.glance.header.value')} |", "|--------|-------|"]
     lines += [f"| {label} | {value} |" for label, value in rows]
     return "\n".join(lines)
 
@@ -1598,14 +1705,17 @@ def _render_by_mode_table(stats: dict) -> str:
     trip that fed compute_annual_report_stats() is accounted for in some row) but
     scannable, the way a professional annual report should be."""
     lines = [
-        "| Mode | Trips | Distance | Spend | CO₂ |",
+        f"| {t('report.byMode.header.mode')} | {t('report.byMode.header.trips')} | "
+        f"{t('report.byMode.header.distance')} | {t('report.byMode.header.spend')} | "
+        f"{t('report.byMode.header.co2')} |",
         "|------|-------|----------|-------|-----|",
     ]
     for row in stats["by_mode"]:
+        # "Total" is an internal sentinel written by tools.py's compute_annual_report_stats()
+        # and matched by exact string equality here — it is never itself displayed, so it must
+        # stay untranslated (see that function's comment on the same value).
         is_total = row["mode"] == "Total"
-        label = "**Total**" if is_total else _MODE_DISPLAY_NAMES.get(
-            row["mode"], row["mode"].replace("_", " ").title()
-        )
+        label = t("report.byMode.total") if is_total else _mode_display_label(row["mode"])
         lines.append(
             f"| {label} | {row['trips']} | {row['distance_km']:,.0f} km | "
             f"€{row['spend_eur']:,.2f} | {row['co2_kg']:,.1f} kg |"
@@ -1632,14 +1742,14 @@ def _render_subscription_value(stats: dict) -> str:
     for sub in stats["subscriptions"]:
         header = f"**{sub['product']}**"
         if sub["has_discount_value"]:
-            header += f" — €{sub['monthly_cost_eur']:.2f}/mo (€{sub['annual_fee_eur']:.2f}/yr)"
+            header += t("report.subValue.header.discount", monthly=f"{sub['monthly_cost_eur']:.2f}", annual=f"{sub['annual_fee_eur']:.2f}")
             net = sub["net_eur"]
             if net >= 0:
-                verdict = "✅ Paid off"
+                verdict = t("report.subValue.paidOff")
             elif net >= -0.1 * sub["annual_fee_eur"]:
-                verdict = "⚠️ Borderline"
+                verdict = t("report.subValue.borderline")
             else:
-                verdict = "❌ Did not break even"
+                verdict = t("report.subValue.didNotBreakEven")
             sign = "+" if net >= 0 else "−"
             # Blank line between the header paragraph and the bullet list below is
             # required — python-markdown (unlike CommonMark) treats a list that
@@ -1647,31 +1757,30 @@ def _render_subscription_value(stats: dict) -> str:
             # of that paragraph, flattening the bullets into running prose.
             blocks.append(
                 f"{header}\n\n"
-                f"- Trips attributed: {sub['trips_attributed']} {sub['provider']} "
-                f"{sub['mode'].replace('_', ' ')} trips\n"
-                f"- Discount value delivered: €{sub['discount_value_eur']:.2f}\n"
-                f"- Net vs. annual fee: {sign}€{abs(net):.2f}\n"
-                f"- Verdict: {verdict}"
+                + t("report.subValue.tripsAttributedWithMode", count=sub["trips_attributed"], provider=sub["provider"], mode=sub["mode"].replace("_", " ")) + "\n"
+                + t("report.subValue.discountValue", amount=f"{sub['discount_value_eur']:.2f}") + "\n"
+                + t("report.subValue.netVsFee", sign=sign, amount=f"{abs(net):.2f}") + "\n"
+                + t("report.subValue.verdict", verdict=verdict)
             )
         elif sub["is_paid_subscription"]:
-            header += f" — €{sub['monthly_cost_eur']:.2f}/mo (€{sub['annual_fee_eur']:.2f}/yr, flat fee)"
+            header += t("report.subValue.header.flatFee", monthly=f"{sub['monthly_cost_eur']:.2f}", annual=f"{sub['annual_fee_eur']:.2f}")
             blocks.append(
                 f"{header}\n\n"
-                f"- Trips covered this year: {sub['trips_attributed']}\n"
-                f"- Flat-fee unlimited-access pass — no per-trip discount to break even against."
+                + t("report.subValue.tripsCoveredThisYear", count=sub["trips_attributed"]) + "\n"
+                + t("report.subValue.flatFeeNoBreakEven")
             )
         else:
-            header += " — no monthly fee (loyalty tier)"
+            header += t("report.subValue.header.loyalty")
             qa = sub["qualifying_activity"]
             activity_line = (
-                f"- Activity this year: {qa['count']} of {qa['threshold']} needed to reach the next tier"
+                t("report.subValue.activityThisYear", count=qa["count"], threshold=qa["threshold"])
                 if qa
-                else f"- Trips attributed: {sub['trips_attributed']}"
+                else t("report.subValue.tripsAttributedSimple", count=sub["trips_attributed"])
             )
             blocks.append(
                 f"{header}\n\n"
                 f"{activity_line}\n"
-                f"- No break-even applies — this membership has no fee to offset."
+                + t("report.subValue.loyaltyNoBreakEven")
             )
     return "\n\n".join(blocks)
 
@@ -1758,17 +1867,20 @@ async def chat(req: ChatRequest):
         if any(call.name == "optimization_pipeline" for call in function_calls):
             ran_optimization = True
 
+        # `text`, not `t` — see the identical note in the /api/execute handler above; `t` is
+        # also this module's i18n translate function and would otherwise be shadowed for the
+        # rest of this handler.
         if event.is_final_response():
-            t = _collect_text(event)
-            if t.strip():
-                last_text = t
+            text = _collect_text(event)
+            if text.strip():
+                last_text = text
         else:
-            t = _collect_text(event)
-            if t.strip() and not _has_function_call(event):
-                fallback_text = t
+            text = _collect_text(event)
+            if text.strip() and not _has_function_call(event):
+                fallback_text = text
 
     reply = last_text or fallback_text
     if not reply:
-        raise HTTPException(status_code=500, detail="Agent produced no response")
+        raise HTTPException(status_code=500, detail=t("error.agentNoResponse"))
 
     return {"text": reply, "action_taken": action_taken, "ran_optimization": ran_optimization}

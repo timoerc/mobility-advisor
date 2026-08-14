@@ -3,6 +3,7 @@ from google.adk.tools.agent_tool import AgentTool
 from google.genai import types
 
 from .execution_agent import execution_agent
+from .i18n import localized
 from .pipeline import annual_report_pipeline, optimization_pipeline
 from .qa_agent import qa_agent
 from .reject_agent import reject_agent
@@ -137,7 +138,12 @@ root_agent = LlmAgent(
     name="coordinator",
     model=build_model(),
     description="Routes mobility questions to the optimization pipeline, the data Q&A agent, or the execution agent, and rejects out-of-scope requests.",
-    instruction=COORDINATOR_INSTRUCTION,
+    # localized(): appends the active request's language directive — see i18n.py. Affects the
+    # coordinator's own commentary and its relay of reject_agent/qa_agent (neither uses
+    # skip_summarization, so the coordinator's own LLM call re-processes their output); has no
+    # effect on the three skip_summarization=True tools below, which must carry their own
+    # directive since the coordinator never touches their text.
+    instruction=localized(COORDINATOR_INSTRUCTION),
     # Low temperature: this agent's most safety-critical task is copying the
     # optimization_pipeline's report back unchanged, not creative composition.
     # Generous max_output_tokens: copying a long report back verbatim must not

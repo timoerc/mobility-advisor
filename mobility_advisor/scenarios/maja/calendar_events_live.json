@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Köln office day",
+      "description_de": "Wöchentlicher Bürotag in Köln",
       "location": "Köln",
       "signals": [
         "local_transit_regular"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Köln office day",
+      "description_de": "Wöchentlicher Bürotag in Köln",
       "location": "Köln",
       "signals": [
         "local_transit_regular"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Köln office day",
+      "description_de": "Wöchentlicher Bürotag in Köln",
       "location": "Köln",
       "signals": [
         "local_transit_regular"
@@ -43,6 +46,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Köln office day",
+      "description_de": "Wöchentlicher Bürotag in Köln",
       "location": "Köln",
       "signals": [
         "local_transit_regular"
@@ -55,6 +59,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Weekend trip to Heidelberg — leisure",
+      "description_de": "Wochenendausflug nach Heidelberg — privat",
       "location": "Heidelberg",
       "signals": [
         "leisure"
@@ -67,6 +72,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Doctor appointment — local errand in Köln",
+      "description_de": "Arzttermin — lokaler Termin in Köln",
       "location": "Köln",
       "signals": [
         "local_transit_regular"
@@ -79,6 +85,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Team lunch in Köln Innenstadt",
+      "description_de": "Team-Mittagessen in der Kölner Innenstadt",
       "location": "Köln",
       "signals": [
         "local_transit_regular"

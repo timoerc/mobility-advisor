@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useT } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import type { PriorityWeights } from "../types";
 
 type PrioritiesPageProps = {
@@ -20,14 +22,14 @@ const INTENSITY: Record<number, number> = {
   7: 5,
 };
 
-const LIKERT_LABELS: Record<number, string> = {
-  1: "Strongly disagree",
-  2: "Disagree",
-  3: "Somewhat disagree",
-  4: "Balanced",
-  5: "Somewhat agree",
-  6: "Agree",
-  7: "Strongly agree",
+const LIKERT_KEYS: Record<number, TranslationKey> = {
+  1: "priorities.likert.1",
+  2: "priorities.likert.2",
+  3: "priorities.likert.3",
+  4: "priorities.likert.4",
+  5: "priorities.likert.5",
+  6: "priorities.likert.6",
+  7: "priorities.likert.7",
 };
 
 // Three questions — each captures a pairwise comparison:
@@ -79,30 +81,15 @@ function computeCR(q1: number, q2: number, q3: number): number {
 
 type LikertQuestion = {
   id: "q1" | "q2" | "q3";
-  statement: string;
-  leftLabel: string;
-  rightLabel: string;
+  statementKey: TranslationKey;
+  leftLabelKey: TranslationKey;
+  rightLabelKey: TranslationKey;
 };
 
 const QUESTIONS: LikertQuestion[] = [
-  {
-    id: "q1",
-    statement: "Getting to my destination quickly matters more to me than a low price.",
-    leftLabel: "Low price",
-    rightLabel: "Fast travel",
-  },
-  {
-    id: "q2",
-    statement: "A low CO₂ footprint matters more to me than a low price.",
-    leftLabel: "Low price",
-    rightLabel: "Low CO₂",
-  },
-  {
-    id: "q3",
-    statement: "Getting to my destination quickly matters more to me than a low CO₂ footprint.",
-    leftLabel: "Low CO₂",
-    rightLabel: "Fast travel",
-  },
+  { id: "q1", statementKey: "priorities.q1.statement", leftLabelKey: "priorities.q1.leftLabel", rightLabelKey: "priorities.q1.rightLabel" },
+  { id: "q2", statementKey: "priorities.q2.statement", leftLabelKey: "priorities.q2.leftLabel", rightLabelKey: "priorities.q2.rightLabel" },
+  { id: "q3", statementKey: "priorities.q3.statement", leftLabelKey: "priorities.q3.leftLabel", rightLabelKey: "priorities.q3.rightLabel" },
 ];
 
 function LikertControl({
@@ -116,6 +103,7 @@ function LikertControl({
   leftLabel: string;
   rightLabel: string;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex gap-1">
@@ -124,8 +112,8 @@ function LikertControl({
             key={score}
             type="button"
             onClick={() => onChange(score)}
-            title={LIKERT_LABELS[score]}
-            aria-label={LIKERT_LABELS[score]}
+            title={t(LIKERT_KEYS[score])}
+            aria-label={t(LIKERT_KEYS[score])}
             aria-pressed={value === score}
             className={`flex-1 py-2 rounded text-xs font-semibold border transition-colors cursor-pointer ${
               value === score
@@ -188,6 +176,7 @@ function bestFitAnswers(target: PriorityWeights): { q1: number; q2: number; q3: 
 }
 
 export function PrioritiesPage({ priorities, onChange }: PrioritiesPageProps) {
+  const t = useT();
   const [answers, setAnswers] = useState(() => bestFitAnswers(priorities));
 
   const weights = computeWeights(answers.q1, answers.q2, answers.q3);
@@ -212,30 +201,30 @@ export function PrioritiesPage({ priorities, onChange }: PrioritiesPageProps) {
       <div>
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-bold leading-tight mb-2">
-            What matters most to you?
+            {t("priorities.heading")}
           </h1>
           <button
             type="button"
             onClick={handleReset}
             className="text-sm text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-0 whitespace-nowrap flex-shrink-0 mt-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
         </div>
         <p className="text-gray-500 leading-relaxed m-0">
-          Answer three short comparisons and we'll calculate your priorities.
+          {t("priorities.subheading")}
         </p>
       </div>
 
       <div className="flex flex-col gap-6">
         {QUESTIONS.map((q) => (
           <div key={q.id} className="flex flex-col gap-3">
-            <p className="text-sm font-medium text-gray-800 m-0 leading-snug">{q.statement}</p>
+            <p className="text-sm font-medium text-gray-800 m-0 leading-snug">{t(q.statementKey)}</p>
             <LikertControl
               value={answers[q.id]}
               onChange={(v) => handleChange(q.id, v)}
-              leftLabel={q.leftLabel}
-              rightLabel={q.rightLabel}
+              leftLabel={t(q.leftLabelKey)}
+              rightLabel={t(q.rightLabelKey)}
             />
           </div>
         ))}
@@ -246,18 +235,18 @@ export function PrioritiesPage({ priorities, onChange }: PrioritiesPageProps) {
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 flex gap-2 items-start">
           <span className="text-yellow-500 text-base leading-none mt-0.5">⚠</span>
           <p className="text-xs text-yellow-800 m-0 leading-relaxed">
-            Your answers are slightly inconsistent (CR = {cr.toFixed(2)}). This can happen when, for example, you say Time &gt; Price, Price &gt; CO₂, but also CO₂ &gt; Time. Would you like to review your answers?
+            {t("priorities.consistencyWarning", { cr: cr.toFixed(2) })}
           </p>
         </div>
       )}
 
       <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide m-0 mb-1">
-          Your priorities
+          {t("priorities.yourPriorities")}
         </p>
-        <WeightBar label="Cost"  pct={Math.round(weights.cost * 100)}           color="bg-brand-red" />
-        <WeightBar label="Time"  pct={Math.round(weights.time * 100)}            color="bg-gray-700" />
-        <WeightBar label="CO₂"   pct={Math.round(weights.sustainability * 100)}  color="bg-green-500" />
+        <WeightBar label={t("priorities.weight.cost")} pct={Math.round(weights.cost * 100)}           color="bg-brand-red" />
+        <WeightBar label={t("priorities.weight.time")} pct={Math.round(weights.time * 100)}            color="bg-gray-700" />
+        <WeightBar label={t("priorities.weight.co2")}  pct={Math.round(weights.sustainability * 100)}  color="bg-green-500" />
       </div>
     </div>
   );

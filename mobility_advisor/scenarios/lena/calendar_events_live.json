@@ -7,6 +7,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Weekly Frankfurt office day",
+      "description_de": "Wöchentlicher Bürotag in Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -19,6 +20,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "University seminar — Goethe-Universität Frankfurt, Wirtschaftswissenschaften",
+      "description_de": "Universitätsseminar — Goethe-Universität Frankfurt, Wirtschaftswissenschaften",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -31,6 +33,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Library study session — UB Johann Christian Senckenberg, exam preparation",
+      "description_de": "Lernsession in der Bibliothek — UB Johann Christian Senckenberg, Klausurvorbereitung",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -43,6 +46,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Internship interview — financial district, Deutsche Börse Group",
+      "description_de": "Praktikumsvorstellungsgespräch — Bankenviertel, Deutsche Börse Group",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -55,6 +59,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Weekend trip to Hamburg — visiting family, long-distance rail (BahnCard 50 applicable)",
+      "description_de": "Wochenendreise nach Hamburg — Familienbesuch, Fernverkehr (BahnCard 50 anwendbar)",
       "location": "Hamburg",
       "signals": [
         "long_distance_rail_likely"
@@ -67,6 +72,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Return from Hamburg to Frankfurt",
+      "description_de": "Rückreise von Hamburg nach Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -79,6 +85,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Group project meeting — campus café, Goethe-Universität",
+      "description_de": "Gruppenprojekt-Treffen — Campus-Café, Goethe-Universität",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -91,6 +98,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Student conference — Humboldt-Universität Berlin, collaborative sustainability lecture series",
+      "description_de": "Studierendenkonferenz — Humboldt-Universität Berlin, gemeinsame Vorlesungsreihe zu Nachhaltigkeit",
       "location": "Berlin",
       "signals": [
         "long_distance_rail_likely"
@@ -103,6 +111,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Return from Berlin conference",
+      "description_de": "Rückreise von der Berlin-Konferenz",
       "location": "Frankfurt",
       "signals": [
         "long_distance_rail_likely"
@@ -115,6 +124,7 @@
       "time_end": null,
       "type": "trip",
       "description": "Short leisure trip to Heidelberg — reachable by D-Ticket",
+      "description_de": "Kurzer Freizeitausflug nach Heidelberg — mit D-Ticket erreichbar",
       "location": "Heidelberg",
       "signals": [
         "leisure"
@@ -127,6 +137,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "Winter semester orientation day — Goethe-Universität Frankfurt",
+      "description_de": "Orientierungstag Wintersemester — Goethe-Universität Frankfurt",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"
@@ -139,6 +150,7 @@
       "time_end": null,
       "type": "meeting",
       "description": "First seminar of winter semester — lecture hall campus Westend",
+      "description_de": "Erstes Seminar im Wintersemester — Hörsaal Campus Westend",
       "location": "Frankfurt",
       "signals": [
         "local_transit_regular"

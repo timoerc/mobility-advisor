@@ -13,6 +13,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.lite_llm import LiteLlm
 from google.genai import types
 
+from .i18n import LANGUAGE_DIRECTIVE, get_language, localized
 from .tools import (
     MOCK_TODAY,
     REVIEW_YEAR,
@@ -380,7 +381,12 @@ communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
     description="Presents the portfolio optimization results as a clear, scannable report for the user.",
-    instruction=f"""\
+    # localized() wraps this into an InstructionProvider that appends the active request's
+    # language directive at call time (see i18n.py) — the six user-facing agents (this one,
+    # the annual communicator, coordinator, execution/qa/reject) get this treatment; the
+    # intermediate pipeline stages (analyst/forecaster/optimizer/annual_*) stay plain English
+    # strings since their output is never shown to the user (see CLAUDE.md's i18n section).
+    instruction=localized(f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -458,7 +464,7 @@ pull in different directions or the numbers are close]
 Use all numbers from the Optimizer's output. Do not invent figures.
 Speak directly to the user as "you"/"your" — not by name.
 If "No subscriptions" is the best option, say so clearly.
-""",
+"""),
     tools=[load_recommendation_history],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
@@ -544,16 +550,17 @@ annual_optimizer_agent = LlmAgent(
     name="annual_optimizer",
     model=_MODEL,
     description=_ANNUAL_OPTIMIZER_DESCRIPTION_BASE,
-    instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE.replace(
-        "over the past 12 months", f"in {_REVIEW_YEAR}"
-    ),
+    # NB: no .replace() here — a previous version tried to swap in "in {_REVIEW_YEAR}" for a
+    # phrase ("over the past 12 months") that doesn't actually appear anywhere in
+    # _ANNUAL_OPTIMIZER_INSTRUCTION_BASE, so it was a silent no-op. Removed.
+    instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE,
     tools=[load_annual_optimizer_context, compute_co2_impact_kg],
     output_key="annual_recommendation",  # see annual_analyst_agent's output_key comment above
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",
 )
 
-def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
+async def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
     """Built fresh per invocation (not a module-level constant) because it embeds
     compute_annual_report_stats() figures, which are persona-specific — the same
     staleness hazard _load_home_city() guards against above: a persona switch via
@@ -579,6 +586,19 @@ def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
     crash inside this InstructionProvider callback (a stage with no tools of its own,
     so nothing about the failure looked related to the stats computation at all) before
     main.py's broad except in /api/annual-report turned it into a 500 either way.
+
+    Async, and calls inject_session_state() itself before returning: this instruction embeds
+    ADK template placeholders — {{annual_recommendation}}, {{annual_analysis}},
+    {{annual_forecast}} below — meant to be resolved against session state the way ADK
+    resolves them for a plain-string instruction. But ADK's LlmAgent.canonical_instruction()
+    sets bypass_state_injection=True for ANY callable instruction (InstructionProvider), which
+    skips that resolution entirely (see google.adk.flows.llm_flows.instructions). Before this
+    fix, this function returned those placeholders completely unresolved — the LLM literally
+    received the text "{annual_recommendation}" instead of the optimizer's actual output — a
+    silent pre-existing bug independent of i18n, only surfaced while wiring the language
+    directive below through the same mechanism (see i18n.localized()'s docstring for the full
+    ADK mechanics and mobility_advisor/tests/test_i18n_agent_directive.py for the regression
+    test).
     """
     try:
         stats = compute_annual_report_stats()
@@ -594,7 +614,7 @@ def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
     )
     warnings_text = "; ".join(stats["data_quality_warnings"]) if stats["data_quality_warnings"] else "None."
 
-    return f"""\
+    raw_instruction = f"""\
 You are the Annual Report agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -695,6 +715,13 @@ Summarise {{annual_forecast}} in 2–3 sentences: what demand signals suggest ab
 ⚠️ **This report is informational. No changes have been made to your subscriptions.**
 ---
 """
+    # inject_session_state resolves the {annual_recommendation}/{annual_analysis}/
+    # {annual_forecast} placeholders above against real session state — see this function's
+    # docstring for why that has to happen here explicitly rather than automatically. Directive
+    # is appended AFTER resolution, at the end, for recency (see i18n.LANGUAGE_DIRECTIVE).
+    from google.adk.utils.instructions_utils import inject_session_state
+    resolved = await inject_session_state(raw_instruction, _ctx)
+    return resolved + LANGUAGE_DIRECTIVE[get_language()]
 
 
 annual_communicator_agent = LlmAgent(
