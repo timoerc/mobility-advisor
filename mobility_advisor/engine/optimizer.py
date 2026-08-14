@@ -4,6 +4,7 @@ layer reads back to build the user-facing Recommendation."""
 import json
 
 from .. import paths
+from ..i18n import t
 from ..store.loaders import load_user_preferences
 from .simulation import _compute_break_even, compute_portfolio_score, simulate_portfolio
 
@@ -129,7 +130,7 @@ def optimize_all_categories() -> dict:
         for cs_label, cs_ids in car_share_choices:
             ids = rail_ids + cs_ids
             if not ids:
-                cands.append(("No subscriptions", "baseline", ids))
+                cands.append((t("catalog.noSubscriptions"), "baseline", ids))
             elif rail_ids and cs_ids:
                 cands.append((f"{rail_label} + {cs_label}", "combo", ids))
             elif rail_ids:

@@ -5,6 +5,7 @@ import csv
 import re
 
 from .. import clock, paths
+from ..i18n import t
 from ..models import TravelHistory
 from ..store.loaders import (
     _KNOWN_MODES,
@@ -156,10 +157,10 @@ def _resolve_unique_match(
         ]
 
     if not matches:
-        return None, f"no match for '{needle}'"
+        return None, t("error.noMatchFor", query=needle)
     if len(matches) > 1:
         names = ", ".join(c.get("product", "?") for c in matches)
-        return None, f"ambiguous match for '{needle}': matched {len(matches)} entries ({names})"
+        return None, t("error.ambiguousMatchFor", query=needle, count=len(matches), matches=names)
     return matches[0], None
 
 
@@ -279,15 +280,18 @@ def compute_annual_report_stats() -> dict:
     trips_missing_cost = sum(1 for t in trips if t["cost_eur"] is None)
 
     by_mode_acc: dict[str, dict] = {}
-    for t in trips:
-        mode = t["mode"] or "unknown"
+    # `trip`, not `t` — see the identical note in _rail_fare_calibration_ratio() in
+    # engine/calibration.py; this function doesn't call the t() translator today, but a bare
+    # `for t in ...:` here would silently break the first one anyone adds.
+    for trip in trips:
+        mode = trip["mode"] or "unknown"
         row = by_mode_acc.setdefault(
             mode, {"mode": mode, "trips": 0, "distance_km": 0.0, "spend_eur": 0.0, "co2_kg": 0.0}
         )
         row["trips"] += 1
-        row["distance_km"] += t["distance_km"] or 0.0
-        row["spend_eur"] += t["cost_eur"] or 0.0
-        row["co2_kg"] += t["co2_emission_kg"] or 0.0
+        row["distance_km"] += trip["distance_km"] or 0.0
+        row["spend_eur"] += trip["cost_eur"] or 0.0
+        row["co2_kg"] += trip["co2_emission_kg"] or 0.0
 
     by_mode = sorted(by_mode_acc.values(), key=lambda r: r["co2_kg"], reverse=True)
     for row in by_mode:
@@ -480,33 +484,17 @@ def compute_co2_impact_kg(
     # Pure add: no historical trips can be attributed to a mode the user is only now gaining
     # (or a second subscription for a mode they already have) — stated honestly rather than guessed.
     if target_match is None:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. This adds a subscription without removing another, "
-                "so it doesn't change which mode you currently use for any trip."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.pureAdd"))
 
     changed_mode = target_match["mode"]
     if changed_mode not in _MODE_ACCESS_GATED_MODES:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. This changes price/tier only; it doesn't affect "
-                f"which mode of transport you use (you can still use {changed_mode} with or "
-                "without this subscription)."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.priceOnly", mode=changed_mode))
 
     still_covered = (catalog_match is not None and catalog_match["mode"] == changed_mode) or any(
         s["mode"] == changed_mode and s is not target_match for s in subs
     )
     if still_covered:
-        return _result(
-            explanation=(
-                "Neutral — 0 kg CO2/year. You keep another subscription covering "
-                f"{changed_mode}, so access to this mode is unaffected."
-            )
-        )
+        return _result(explanation=t("co2Impact.explanation.stillCovered", mode=changed_mode))
 
     trips = load_travel_history()["trips"]
     affected = [
@@ -524,22 +512,21 @@ def compute_co2_impact_kg(
         t["distance_km"] * generic_factor for t in affected if t.get("distance_km") is not None
     )
     delta_kg = co2_before_kg - co2_after_kg
-    period = "in the period considered" if (date_from or date_to) else "from the past 12 months"
+    period = t("co2Impact.period.scoped") if (date_from or date_to) else t("co2Impact.period.pastYear")
 
     if delta_kg >= 0:
-        explanation = (
-            f"{delta_kg:.1f} kg CO2/year saved. Losing your only {changed_mode} subscription "
-            f"means your {len(affected)} {changed_mode} trip(s) {period} would "
-            f"shift to driving (at {generic_factor * 1000:.0f} g/km), which is actually lower "
-            f"emissions than those trips currently produce ({co2_before_kg:.1f} kg → "
-            f"{co2_after_kg:.1f} kg)."
+        explanation = t(
+            "co2Impact.explanation.saved",
+            delta=f"{delta_kg:.1f}", mode=changed_mode, tripCount=len(affected), period=period,
+            gramsPerKm=f"{generic_factor * 1000:.0f}",
+            before=f"{co2_before_kg:.1f}", after=f"{co2_after_kg:.1f}",
         )
     else:
-        explanation = (
-            f"{abs(delta_kg):.1f} kg CO2/year more emissions. Losing your only {changed_mode} "
-            f"subscription means your {len(affected)} {changed_mode} trip(s) {period} "
-            f"would shift to driving (at {generic_factor * 1000:.0f} g/km), raising "
-            f"emissions from {co2_before_kg:.1f} kg to {co2_after_kg:.1f} kg/year."
+        explanation = t(
+            "co2Impact.explanation.moreEmissions",
+            delta=f"{abs(delta_kg):.1f}", mode=changed_mode, tripCount=len(affected), period=period,
+            gramsPerKm=f"{generic_factor * 1000:.0f}",
+            before=f"{co2_before_kg:.1f}", after=f"{co2_after_kg:.1f}",
         )
 
     return _result(

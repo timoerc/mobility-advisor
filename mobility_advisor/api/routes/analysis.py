@@ -9,6 +9,7 @@ from google.genai import types as gtypes
 from ... import clock, paths
 from ...agents.pipelines import annual_report_pipeline, optimization_pipeline
 from ...engine.stats import compute_annual_report_stats
+from ...i18n import get_language, t
 from ...models import AnalysisHistoryEntry, AnalysisRunResult, CurrentSubscriptions, Recommendation
 from ...reporting.chat_tables import render_by_mode_table, render_glance_table, render_subscription_value
 from ...reporting.pdf import render_annual_report_pdf
@@ -24,6 +25,50 @@ from .chat import _collect_text, _has_function_call
 router = APIRouter()
 
 _MAX_PIPELINE_ATTEMPTS = 2
+
+
+def _resolve_recommendation_language(rec: Recommendation) -> Recommendation:
+    """Swap in the German sibling fields (verdict_de, summaryText_de, ...) seeded on scenario
+    analysis_history.json entries, when the active request is German — see models/api.py's _de
+    fields and CLAUDE.md's i18n notes. A live /api/analyze run never populates these siblings
+    (its LLM output already comes back in the request's language via the agent-prompt
+    directive), so this is always a no-op for freshly-generated recommendations; it only
+    matters for seeded scenario history read back through GET /api/analysis-history."""
+    if get_language() != "de":
+        return rec
+    if rec.verdict_de:
+        rec.verdict = rec.verdict_de
+    if rec.summaryText_de:
+        rec.summaryText = rec.summaryText_de
+    if rec.reasoning_de:
+        rec.reasoning = rec.reasoning_de
+    if rec.assumptions_de:
+        rec.assumptions = rec.assumptions_de
+    for metric in rec.metrics:
+        if metric.label_de:
+            metric.label = metric.label_de
+        if metric.value_de:
+            metric.value = metric.value_de
+    for alt in rec.alternatives:
+        if alt.name_de:
+            alt.name = alt.name_de
+        if alt.tradeoff_de:
+            alt.tradeoff = alt.tradeoff_de
+        if alt.action is not None:
+            if alt.action.title_de:
+                alt.action.title = alt.action.title_de
+            if alt.action.description_de:
+                alt.action.description = alt.action.description_de
+            if alt.action.consequence_de:
+                alt.action.consequence = alt.action.consequence_de
+    return rec
+
+
+def _resolve_history_entry_language(entry: AnalysisHistoryEntry) -> AnalysisHistoryEntry:
+    _resolve_recommendation_language(entry.recommendation)
+    if get_language() == "de" and entry.resolvedMessage_de:
+        entry.resolvedMessage = entry.resolvedMessage_de
+    return entry
 
 
 async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATTEMPTS):
@@ -48,12 +93,7 @@ async def _with_pipeline_retry(attempt_fn, max_attempts: int = _MAX_PIPELINE_ATT
             last_error = exc
     raise HTTPException(
         status_code=500,
-        detail=(
-            f"The pipeline did not produce a result after {max_attempts} attempts "
-            f"(last issue: missing input {last_error}). This can happen when a stage's "
-            "response comes back empty — either an oversized prompt or an intermittent "
-            "backend hiccup. Please try again."
-        ),
+        detail=t("error.pipelineRetryExhausted", attempts=max_attempts, lastError=str(last_error)),
     ) from last_error
 
 
@@ -80,14 +120,17 @@ async def analyze(req: AnalyzeRequest):
                 parts=[gtypes.Part(text="Analyse my current mobility setup and subscriptions.")],
             ),
         ):
+            # `text`, not `t` — `t` is also this module's i18n translate function (imported
+            # from mobility_advisor.i18n), and a bare assignment to `t` here would shadow it
+            # for the rest of this handler, including the t(...) calls later in this function.
             if event.is_final_response():
-                t = _collect_text(event)
-                if t.strip():
-                    last_text = t
+                text = _collect_text(event)
+                if text.strip():
+                    last_text = text
             else:
-                t = _collect_text(event)
-                if t.strip() and not _has_function_call(event):
-                    fallback_text = t
+                text = _collect_text(event)
+                if text.strip() and not _has_function_call(event):
+                    fallback_text = text
 
         # communicator_agent (the pipeline's last stage) has no output_key, so its
         # actual final report is only available from the event stream above — NOT
@@ -106,7 +149,7 @@ async def analyze(req: AnalyzeRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"The recommendation pipeline failed before producing a report: {exc}",
+            detail=t("error.pipelineNoReport", error=str(exc)),
         ) from exc
 
     try:
@@ -123,7 +166,15 @@ async def analyze(req: AnalyzeRequest):
                 # four-stage pipeline run — see extraction._parse_json_response's
                 # docstring for how often this backend needs the tolerance this is
                 # guarding against.
-                print(f"Warning: verdict extraction failed, using deterministic fallbacks: {exc}")
+                # Greppable prefix + active language: a parse failure specifically on German
+                # requests (e.g. from a translated section marker like **Urteil:** the
+                # extractor doesn't recognize) would otherwise degrade silently into a
+                # plausible-looking but empty-summary, medium-confidence result with no signal
+                # anywhere that anything went wrong — this line is the only trace of it.
+                print(
+                    f"VERDICT_EXTRACTION_FALLBACK: language={get_language()!r} "
+                    f"verdict extraction failed, using deterministic fallbacks: {exc}"
+                )
                 verdict = {}
             rec_alt = next((a for a in det_alts if a.isRecommended), det_alts[0])
             metrics = build_headline_metrics(det_alts, detect_pending_portfolio_decision())
@@ -142,7 +193,7 @@ async def analyze(req: AnalyzeRequest):
             rec = await extract_recommendation_json(report_text)
     except Exception as exc:
         raise HTTPException(
-            status_code=500, detail=f"JSON extraction failed: {exc}"
+            status_code=500, detail=t("error.jsonExtractionFailed", error=str(exc))
         ) from exc
 
     entry_id = f"hist_{uuid4().hex[:10]}"
@@ -200,7 +251,7 @@ async def annual_report(req: AnalyzeRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"The annual report pipeline failed before producing a report: {exc}",
+            detail=t("error.annualPipelineNoReport", error=str(exc)),
         ) from exc
 
     # The three data-heavy sections (Year at a Glance, Spend & Emissions by Mode,
@@ -220,7 +271,7 @@ async def annual_report(req: AnalyzeRequest):
     try:
         pdf_bytes = render_annual_report_pdf(report_text)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=t("error.pdfRenderingFailed", error=str(exc))) from exc
 
     return Response(
         content=pdf_bytes,
@@ -235,7 +286,7 @@ async def get_analysis_history():
     oldest-first on disk (mocked ones authored in narrative order, live ones
     appended as they occur), and reversed here for display."""
     hist = load_history()
-    return list(reversed(hist.entries))
+    return [_resolve_history_entry_language(e) for e in reversed(hist.entries)]
 
 
 @router.post("/api/analysis-history/{entry_id}/resolve")
@@ -251,17 +302,17 @@ async def resolve_analysis(entry_id: str, req: ResolveAnalysisRequest):
     async with history_lock:
         hist = load_history()
         if not hist.entries:
-            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+            raise HTTPException(status_code=404, detail=t("error.noAnalysisHistoryEntry", entryId=entry_id))
         newest = hist.entries[-1]
         if newest.id != entry_id:
             raise HTTPException(
                 status_code=409,
-                detail="Only the newest analysis can be resolved; older analyses are read-only.",
+                detail=t("error.onlyNewestCanBeResolved"),
             )
         if newest.outcome == "executed":
             raise HTTPException(
                 status_code=409,
-                detail="This analysis was already executed; revert it before deciding again.",
+                detail=t("error.alreadyExecutedMustRevertFirst"),
             )
         newest.outcome = req.outcome
         newest.resolvedAlternativeId = req.alternative_id
@@ -282,18 +333,18 @@ async def revert_analysis(entry_id: str):
     async with history_lock:
         hist = load_history()
         if not hist.entries:
-            raise HTTPException(status_code=404, detail=f"No analysis history entry '{entry_id}'.")
+            raise HTTPException(status_code=404, detail=t("error.noAnalysisHistoryEntry", entryId=entry_id))
         newest = hist.entries[-1]
         if newest.id != entry_id:
-            raise HTTPException(status_code=409, detail="Only the newest analysis can be reverted.")
+            raise HTTPException(status_code=409, detail=t("error.onlyNewestCanBeReverted"))
         if newest.outcome != "executed" or newest.revertSnapshot is None:
-            raise HTTPException(status_code=409, detail="This analysis has no executed change to revert.")
+            raise HTTPException(status_code=409, detail=t("error.noExecutedChangeToRevert"))
         restored = CurrentSubscriptions.model_validate(newest.revertSnapshot)
         paths.atomic_write_json(paths.DATA_DIR / "current_subscriptions.json", restored.model_dump())
         newest.outcome = "kept_current"
         newest.resolvedAlternativeId = None
-        newest.resolvedMessage = "Reverted — your previous mobility setup has been restored."
+        newest.resolvedMessage = t("revert.resolvedMessage")
         newest.resolvedAt = clock.MOCK_TODAY.isoformat()
         newest.revertSnapshot = None
         save_history(hist)
-    return {"success": True, "message": "Reverted to your previous mobility setup."}
+    return {"success": True, "message": t("revert.message")}

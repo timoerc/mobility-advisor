@@ -6,14 +6,17 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Wanted to see whether my car-share habit sticks before committing to a pass.",
+      "resolvedMessage_de": "Wollte erst sehen, ob sich meine Carsharing-Gewohnheit hält, bevor ich mich auf einen Pass festlege.",
       "resolvedAt": "2026-03-10",
       "recommendation": {
         "verdict": "You're paying full pay-per-use for MILES — a Silber pass would basically pay for itself",
+        "verdict_de": "Sie zahlen bei MILES den vollen Pay-per-Use-Tarif — ein Silber-Pass würde sich praktisch von selbst finanzieren",
         "confidence": "high",
         "summaryText": "You take MILES roughly once a month, always €10+ a ride, all on the pay-per-use tariff. The MILES Silber Pass gives €10/month credit — enough to cover its own €9.99 fee at your cadence — plus 10% off the km-tariff, so it is effectively a free membership that also saves a bit.",
+        "summaryText_de": "Sie nutzen MILES etwa einmal im Monat, immer für 10 €+ pro Fahrt, komplett im Pay-per-Use-Tarif. Der MILES Silber Pass bietet 10 €/Monat Guthaben — genug, um bei Ihrem Tempo die eigene Gebühr von 9,99 € zu decken — plus 10% Rabatt auf den Kilometertarif. Damit ist die Mitgliedschaft effektiv kostenlos und spart zusätzlich etwas.",
         "metrics": [
-          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)", "label_de": "Nettoersparnis mit MILES Silber (Guthaben gleicht die Gebühr aus)" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO2-Auswirkung" }
         ],
         "reasoning": [
           "You are on MILES Basis (pay-per-use) and pay the full km-tariff plus a €1 unlock on every trip",
@@ -21,34 +24,51 @@
           "Silber also discounts the km-tariff by 10% (and time by 5%), which nets a small ongoing saving on top",
           "Higher tiers (Gold/Platin, €50+/month) would leave most of their credit unused at your volume — Silber is the right tier"
         ],
+        "reasoning_de": [
+          "Sie nutzen MILES Basis (Pay-per-Use) und zahlen bei jeder Fahrt den vollen Kilometertarif plus 1 € Freischaltgebühr",
+          "Das monatliche Guthaben von 10 € bei MILES Silber gleicht bei Ihrer monatlichen Nutzung die Gebühr von 9,99 € aus, wodurch die Mitgliedschaft effektiv kostenlos ist",
+          "Silber rabattiert zusätzlich den Kilometertarif um 10% (und den Zeittarif um 5%), was obendrauf eine kleine laufende Ersparnis bringt",
+          "Höhere Stufen (Gold/Platin, 50 €+/Monat) würden bei Ihrem Nutzungsvolumen einen Großteil ihres Guthabens ungenutzt lassen — Silber ist die richtige Stufe"
+        ],
         "assumptions": [
           "Assumes your roughly monthly MILES usage continues at €10+ per ride so the monthly credit is fully used",
           "CO2 impact is neutral — this changes membership tier, not that you use car-share"
+        ],
+        "assumptions_de": [
+          "Setzt voraus, dass Ihre etwa monatliche MILES-Nutzung bei 10 €+ pro Fahrt weiterläuft, sodass das monatliche Guthaben voll ausgeschöpft wird",
+          "CO2-Auswirkung ist neutral — hier ändert sich nur die Mitgliedschaftsstufe, nicht ob Sie Carsharing nutzen"
         ],
         "alternatives": [
           {
             "id": "upgrade_miles_silber",
             "name": "Upgrade to MILES Silber Pass",
+            "name_de": "Upgrade auf MILES Silber Pass",
             "annualCostEur": 120,
             "savingsVsCurrentEur": 20,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "The €10/month credit offsets the fee at your usage, so it is effectively free and adds a 10% km discount. If you stopped using MILES for a few months, the unused credit would be wasted.",
+            "tradeoff_de": "Das monatliche Guthaben von 10 € gleicht bei Ihrer Nutzung die Gebühr aus, sodass die Mitgliedschaft effektiv kostenlos ist und zusätzlich 10% Kilometerrabatt bringt. Würden Sie MILES für einige Monate nicht nutzen, würde das ungenutzte Guthaben verfallen.",
             "isRecommended": true,
             "action": {
               "title": "Upgrade to the MILES Silber Pass",
+              "title_de": "Upgrade auf den MILES Silber Pass",
               "description": "Switch from MILES Basis (pay-per-use) to the MILES Silber Pass — the €10/month credit covers the fee at your usage and you gain a 10% km discount.",
-              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass."
+              "description_de": "Wechseln Sie von MILES Basis (Pay-per-Use) zum MILES Silber Pass — das monatliche Guthaben von 10 € deckt bei Ihrer Nutzung die Gebühr, und Sie erhalten 10% Kilometerrabatt.",
+              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass.",
+              "consequence_de": "Ihr MILES Basis (Pay-per-Use) wird durch einen MILES Silber Pass ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep MILES Basis (Pay-per-use)",
+            "name_de": "MILES Basis (Pay-per-Use) beibehalten",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "No monthly fee, but you keep paying the full km-tariff with no credit — you leave a small saving on the table each month you ride.",
+            "tradeoff_de": "Keine monatliche Gebühr, aber Sie zahlen weiterhin den vollen Kilometertarif ohne Guthaben — Sie lassen jeden Monat, in dem Sie fahren, eine kleine Ersparnis liegen.",
             "isRecommended": false,
             "action": null
           }
@@ -64,11 +84,13 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "Your car-share habit held up — the MILES Silber Pass is worth adding",
+        "verdict_de": "Ihre Carsharing-Gewohnheit hat sich bestätigt — der MILES Silber Pass lohnt sich",
         "confidence": "high",
         "summaryText": "Three more months confirm the pattern: about one MILES ride a month, always above €10. The Silber Pass's €10/month credit covers its fee at that cadence and the 10% km discount saves ~€20/year — an effectively free upgrade. Your Deutschland-Ticket continues to cover local rail.",
+        "summaryText_de": "Drei weitere Monate bestätigen das Muster: etwa eine MILES-Fahrt pro Monat, immer über 10 €. Das monatliche Guthaben des Silber Pass deckt bei diesem Tempo die Gebühr, und der 10%-Kilometerrabatt spart ~20 €/Jahr — ein effektiv kostenloses Upgrade. Ihr Deutschland-Ticket deckt weiterhin den lokalen Nahverkehr ab.",
         "metrics": [
-          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 20, "unit": "€/year", "direction": "save", "label": "Net saving with MILES Silber (credit offsets the fee)", "label_de": "Nettoersparnis mit MILES Silber (Guthaben gleicht die Gebühr aus)" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO2-Auswirkung" }
         ],
         "reasoning": [
           "This is the 2nd review flagging the same opportunity — last time you kept pay-per-use to see if the habit stuck; it has",
@@ -76,34 +98,51 @@
           "Silber's €10/month credit offsets the €9.99 fee at that usage, and its 10% km discount nets ~€20/year",
           "Deutschland-Ticket stays — it covers your local U-/S-Bahn travel, which car-share and BahnCards do not"
         ],
+        "reasoning_de": [
+          "Dies ist die 2. Prüfung, die dieselbe Gelegenheit aufzeigt — letztes Mal haben Sie Pay-per-Use beibehalten, um zu sehen, ob sich die Gewohnheit hält; das hat sie",
+          "14 MILES-Fahrten in den letzten 12 Monaten (~200 €), verteilt auf fast eine pro Monat und immer 10 €+",
+          "Das monatliche Guthaben von Silber gleicht bei dieser Nutzung die Gebühr von 9,99 € aus, und der 10%-Kilometerrabatt bringt netto ~20 €/Jahr",
+          "Das Deutschland-Ticket bleibt bestehen — es deckt Ihre lokalen U-/S-Bahn-Fahrten ab, was Carsharing und BahnCards nicht tun"
+        ],
         "assumptions": [
           "Assumes your monthly MILES cadence continues so the credit is fully used each month",
           "CO2 impact is neutral — you already use car-share; only the tariff tier changes"
+        ],
+        "assumptions_de": [
+          "Setzt voraus, dass Ihr monatlicher MILES-Rhythmus anhält, sodass das Guthaben jeden Monat voll ausgeschöpft wird",
+          "CO2-Auswirkung ist neutral — Sie nutzen bereits Carsharing; es ändert sich nur die Tarifstufe"
         ],
         "alternatives": [
           {
             "id": "upgrade_miles_silber",
             "name": "Upgrade to MILES Silber Pass",
+            "name_de": "Upgrade auf MILES Silber Pass",
             "annualCostEur": 120,
             "savingsVsCurrentEur": 20,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Effectively free at your usage (credit ≈ fee) plus a 10% km discount. Only wasteful if your car-share use drops for months at a time.",
+            "tradeoff_de": "Bei Ihrer Nutzung effektiv kostenlos (Guthaben ≈ Gebühr) plus 10% Kilometerrabatt. Nur nachteilig, wenn Ihre Carsharing-Nutzung über mehrere Monate hinweg einbricht.",
             "isRecommended": true,
             "action": {
               "title": "Upgrade to the MILES Silber Pass",
+              "title_de": "Upgrade auf den MILES Silber Pass",
               "description": "Switch from MILES Basis (pay-per-use) to the MILES Silber Pass — the €10/month credit covers the fee at your usage and you gain a 10% km discount.",
-              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass."
+              "description_de": "Wechseln Sie von MILES Basis (Pay-per-Use) zum MILES Silber Pass — das monatliche Guthaben von 10 € deckt bei Ihrer Nutzung die Gebühr, und Sie erhalten 10% Kilometerrabatt.",
+              "consequence": "Your MILES Basis (Pay-per-use) will be replaced by a MILES Silber Pass.",
+              "consequence_de": "Ihr MILES Basis (Pay-per-Use) wird durch einen MILES Silber Pass ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep MILES Basis (Pay-per-use)",
+            "name_de": "MILES Basis (Pay-per-Use) beibehalten",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "No fee, but you keep paying full price per ride and forgo the monthly credit and km discount.",
+            "tradeoff_de": "Keine Gebühr, aber Sie zahlen weiterhin den vollen Preis pro Fahrt und verzichten auf das monatliche Guthaben und den Kilometerrabatt.",
             "isRecommended": false,
             "action": null
           }

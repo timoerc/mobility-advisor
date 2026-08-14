@@ -1,4 +1,5 @@
 import { TypewriterHeading } from "../../components/TypewriterHeading";
+import { useI18n } from "../../i18n";
 import { BTN_PRIMARY_COMPACT } from "../../ui";
 
 type ConfirmationVariant = "executed" | "no-change";
@@ -9,15 +10,14 @@ type ConfirmationPageProps = {
   onBackToDashboard: () => void;
 };
 
-const HEADING: Record<ConfirmationVariant, string> = {
-  executed: "Done!",
-  "no-change": "Got it — no changes made",
+const HEADING_KEY: Record<ConfirmationVariant, "confirmation.heading.executed" | "confirmation.heading.no_change"> = {
+  executed: "confirmation.heading.executed",
+  "no-change": "confirmation.heading.no_change",
 };
 
-const FOOTNOTE: Record<ConfirmationVariant, string> = {
-  executed:
-    "This updated your saved profile data for this prototype only — no real provider (e.g. Deutsche Bahn) was contacted.",
-  "no-change": "No changes were made to your subscriptions or saved profile data.",
+const FOOTNOTE_KEY: Record<ConfirmationVariant, "confirmation.footnote.executed" | "confirmation.footnote.no_change"> = {
+  executed: "confirmation.footnote.executed",
+  "no-change": "confirmation.footnote.no_change",
 };
 
 export function ConfirmationPage({
@@ -25,6 +25,7 @@ export function ConfirmationPage({
   variant = "executed",
   onBackToDashboard,
 }: ConfirmationPageProps) {
+  const { t, language } = useI18n();
   return (
     <div className="flex flex-col items-center gap-8 text-center py-12 rise-in">
       <div
@@ -35,18 +36,20 @@ export function ConfirmationPage({
       </div>
 
       <div className="flex flex-col gap-3 max-w-sm">
-        <TypewriterHeading text={HEADING[variant]} />
+        {/* key={language} restarts the typewriter cleanly on a language switch instead of
+            stranding a half-typed string in the previous language. */}
+        <TypewriterHeading key={language} text={t(HEADING_KEY[variant])} />
         <p className="text-gray-500 leading-relaxed m-0 text-sm whitespace-pre-wrap">{resultMessage}</p>
       </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 max-w-sm w-full">
         <p className="text-xs text-gray-400 m-0 leading-relaxed text-center">
-          {FOOTNOTE[variant]}
+          {t(FOOTNOTE_KEY[variant])}
         </p>
       </div>
 
       <button type="button" onClick={onBackToDashboard} className={BTN_PRIMARY_COMPACT}>
-        Back to dashboard
+        {t("common.backToDashboard")}
       </button>
     </div>
   );

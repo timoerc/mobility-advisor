@@ -1,5 +1,17 @@
 import type { OnboardingPreferences } from "./types";
 
+// This file is the OFFLINE FALLBACK only — App.tsx:171-184 overwrites DEFAULT_PERSONAS with
+// GET /api/personas on every successful mount, so in normal operation none of this data is
+// actually shown to a user. It's only visible if that fetch fails.
+//
+// Deliberately left English-only rather than half-mirroring the backend's `_de` sibling-field
+// pattern (see CLAUDE.md / mobility_advisor/models.py) here: `tagline` is a pure display string,
+// but `profileData.personal.profession` and `profileData.notes` are free-text values bound to
+// editable onboarding form fields (2_PersonalProfilePage, 9_NotesPage) — translating only the
+// fallback's *default* value for an editable field is a partial fix for a path that's already
+// rare, and would need the same resolve-by-language machinery the backend gets in Phase 5
+// (scenario persona.json `_de` fields) to be done properly. The six real personas' actual
+// served tagline/profession/notes are localized there instead.
 export type Persona = {
   id: string;
   name: string;

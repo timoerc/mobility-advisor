@@ -8,6 +8,7 @@ from google.genai import types as gtypes
 
 from ... import paths
 from ...agent import root_agent
+from ...i18n import t
 from ..deps import CHAT_APP, chat_service
 from ..schemas import ChatRequest
 
@@ -96,17 +97,20 @@ async def chat(req: ChatRequest):
         if any(call.name == "optimization_pipeline" for call in function_calls):
             ran_optimization = True
 
+        # `text`, not `t` — `t` is also this module's i18n translate function (imported from
+        # mobility_advisor.i18n), and a bare assignment to `t` here would shadow it for the
+        # rest of this handler.
         if event.is_final_response():
-            t = _collect_text(event)
-            if t.strip():
-                last_text = t
+            text = _collect_text(event)
+            if text.strip():
+                last_text = text
         else:
-            t = _collect_text(event)
-            if t.strip() and not _has_function_call(event):
-                fallback_text = t
+            text = _collect_text(event)
+            if text.strip() and not _has_function_call(event):
+                fallback_text = text
 
     reply = last_text or fallback_text
     if not reply:
-        raise HTTPException(status_code=500, detail="Agent produced no response")
+        raise HTTPException(status_code=500, detail=t("error.agentNoResponse"))
 
     return {"text": reply, "action_taken": action_taken, "ran_optimization": ran_optimization}

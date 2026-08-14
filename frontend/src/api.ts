@@ -7,18 +7,50 @@ import type {
   ProposedAction,
 } from "./types/recommendation";
 import type { Persona } from "./personas";
+import { getLanguage } from "./i18n";
 
 const BASE = "/api";
+
+// Structured request-failure error. Carries `status`/`detail` as fields (not just baked into
+// `message`) so callers can render a localized wrapper — e.g. t("error.api.request", { status,
+// detail }) — around a backend detail string instead of a hardcoded English template.
+export class ApiError extends Error {
+  constructor(
+    public readonly method: string,
+    public readonly path: string,
+    public readonly status: number,
+    public readonly detail: string,
+  ) {
+    super(`${method} ${path} ${status}: ${detail}`);
+    this.name = "ApiError";
+  }
+}
+
+// Read from the module-level i18n store (not a hook — this file has no React component to call
+// one from). The backend's X-Language middleware (main.py) reads this on every request,
+// including the GET endpoints below that carry no request body of their own.
+function languageHeaders(extra?: Record<string, string>): Record<string, string> {
+  return { "X-Language": getLanguage(), ...extra };
+}
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: languageHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`POST ${path} ${res.status}: ${detail}`);
+    throw new ApiError("POST", path, res.status, detail);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { headers: languageHeaders() });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => res.statusText);
+    throw new ApiError("GET", path, res.status, detail);
   }
   return res.json() as Promise<T>;
 }
@@ -71,9 +103,7 @@ export async function revertAnalysis(entryId: string): Promise<{ success: boolea
 }
 
 export async function fetchAnalysisHistory(): Promise<AnalysisHistoryEntry[]> {
-  const res = await fetch(`${BASE}/analysis-history`);
-  if (!res.ok) throw new Error(`GET /api/analysis-history ${res.status}`);
-  return res.json() as Promise<AnalysisHistoryEntry[]>;
+  return get<AnalysisHistoryEntry[]>("/analysis-history");
 }
 
 export async function sendMessage(
@@ -90,12 +120,12 @@ export async function sendMessage(
 export async function runAnnualReport(sessionId: string): Promise<Blob> {
   const res = await fetch(`${BASE}/annual-report`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: languageHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ session_id: sessionId }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`POST /annual-report ${res.status}: ${detail}`);
+    throw new ApiError("POST", "/annual-report", res.status, detail);
   }
   return res.blob();
 }
@@ -111,9 +141,7 @@ export type CatalogOption = {
 };
 
 export async function fetchCatalog(): Promise<CatalogOption[]> {
-  const res = await fetch(`${BASE}/catalog`);
-  if (!res.ok) throw new Error(`GET /api/catalog ${res.status}`);
-  const data = await res.json() as { options: CatalogOption[] };
+  const data = await get<{ options: CatalogOption[] }>("/catalog");
   return data.options;
 }
 
@@ -136,21 +164,15 @@ export type TravelHistory = {
 };
 
 export async function fetchTravelHistory(): Promise<TravelHistory> {
-  const res = await fetch(`${BASE}/travel-history`);
-  if (!res.ok) throw new Error(`GET /api/travel-history ${res.status}`);
-  const data = await res.json() as { trips: TripRecord[]; reference_date: string };
+  const data = await get<{ trips: TripRecord[]; reference_date: string }>("/travel-history");
   return { trips: data.trips, referenceDate: data.reference_date };
 }
 
 export async function fetchCurrentSubscriptions(): Promise<OnboardingPreferences["subscriptions"]> {
-  const res = await fetch(`${BASE}/current-subscriptions`);
-  if (!res.ok) throw new Error(`GET /api/current-subscriptions ${res.status}`);
-  const data = await res.json() as { subscriptions: OnboardingPreferences["subscriptions"] };
+  const data = await get<{ subscriptions: OnboardingPreferences["subscriptions"] }>("/current-subscriptions");
   return data.subscriptions;
 }
 
 export async function fetchPersonas(): Promise<Persona[]> {
-  const res = await fetch(`${BASE}/personas`);
-  if (!res.ok) throw new Error(`GET /api/personas ${res.status}`);
-  return res.json() as Promise<Persona[]>;
+  return get<Persona[]>("/personas");
 }

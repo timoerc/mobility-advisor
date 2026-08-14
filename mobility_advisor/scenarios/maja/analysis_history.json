@@ -6,11 +6,14 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Wanted to see how the rest of the year shaped up before making a change.",
+      "resolvedMessage_de": "Wollte abwarten, wie sich der Rest des Jahres entwickelt, bevor ich etwas ändere.",
       "resolvedAt": "2026-02-02",
       "recommendation": {
         "verdict": "BahnCard 50 usage is off to a slow start this year",
+        "verdict_de": "BahnCard-50-Nutzung startet dieses Jahr schwach",
         "confidence": "medium",
         "summaryText": "Only a couple of long-distance DB trips are logged so far in 2026 — discounted spend is well below what's needed to justify BahnCard 50's €244/year cost. Downgrading to BahnCard 25 would still cover your usage at less than half the price.",
+        "summaryText_de": "Bisher sind 2026 nur wenige Fernfahrten mit der DB erfasst — die vergünstigten Ausgaben liegen deutlich unter dem, was die BahnCard 50 mit 244 €/Jahr rechtfertigen würde. Ein Downgrade auf die BahnCard 25 würde Ihre Nutzung weiterhin abdecken, für weniger als die Hälfte des Preises.",
         "metrics": [
           { "value": 133, "unit": "€/year", "direction": "save", "label": "Potential saving vs. BahnCard 50" },
           { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
@@ -20,34 +23,50 @@
           "Discounted DB spend so far this year is far below the €488 needed to break even on BahnCard 50",
           "BahnCard 25 costs €111/year and would still apply to the same trips at a lower discount tier"
         ],
+        "reasoning_de": [
+          "Seit Januar wurden nur 2 Fernfahrten mit der Bahn erfasst",
+          "Die bisherigen vergünstigten DB-Ausgaben liegen weit unter den 488 €, die für die Amortisation der BahnCard 50 nötig wären",
+          "Die BahnCard 25 kostet 111 €/Jahr und würde für dieselben Fahrten weiterhin gelten, nur mit einem niedrigeren Rabattsatz"
+        ],
         "assumptions": [
           "Assumes the travel pattern for the rest of the year resembles the first quarter",
           "CO2 impact is neutral — this only changes card tier, not which transport mode you use"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass das Reisemuster für den Rest des Jahres dem ersten Quartal ähnelt",
+          "CO₂-Auswirkung ist neutral — dies ändert nur die Kartenstufe, nicht das genutzte Verkehrsmittel"
         ],
         "alternatives": [
           {
             "id": "downgrade_bc25",
             "name": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "Downgrade auf BahnCard 25 (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 111,
             "savingsVsCurrentEur": 133,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Lower discount (25% vs. 50%) but still profitable at your current usage level.",
+            "tradeoff_de": "Niedrigerer Rabatt (25 % statt 50 %), aber bei Ihrer aktuellen Nutzung weiterhin rentabel.",
             "isRecommended": true,
             "action": {
               "title": "Downgrade to BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Downgrade auf BahnCard 25 (2. Klasse, Standard, Jahresabo)",
               "description": "Replace your BahnCard 50 with the cheaper BahnCard 25 tier before your next renewal.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place."
+              "description_de": "Ersetzen Sie Ihre BahnCard 50 vor der nächsten Verlängerung durch die günstigere BahnCard 25.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and BahnCard 25 (2. Klasse, Standard, Jahresabo) will start in its place.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und die BahnCard 25 (2. Klasse, Standard, Jahresabo) tritt an deren Stelle."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Keeps your existing discount tier in case travel picks up later in the year.",
+            "tradeoff_de": "Behält Ihre aktuelle Rabattstufe bei, falls die Reisetätigkeit später im Jahr zunimmt.",
             "isRecommended": false,
             "action": null
           }
@@ -60,11 +79,14 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Waiting to see if a possible Hamburg trip changes the picture before cancelling.",
+      "resolvedMessage_de": "Warte ab, ob eine mögliche Hamburg-Reise die Lage ändert, bevor ich kündige.",
       "resolvedAt": "2026-04-14",
       "recommendation": {
         "verdict": "BahnCard 50 is on track to lose you money again this year",
+        "verdict_de": "BahnCard 50 wird Sie dieses Jahr voraussichtlich erneut Geld kosten",
         "confidence": "high",
         "summaryText": "Discounted DB spend through mid-April covers less than half of BahnCard 50's €244 annual cost. At this pace you're on track for a net loss of about €132 this year — cancelling would save the full card cost.",
+        "summaryText_de": "Die vergünstigten DB-Ausgaben bis Mitte April decken weniger als die Hälfte der 244 € Jahreskosten der BahnCard 50. Bei diesem Tempo steuern Sie dieses Jahr auf einen Nettoverlust von rund 132 € zu — eine Kündigung würde die vollen Kartenkosten sparen.",
         "metrics": [
           { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
           { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
@@ -74,34 +96,50 @@
           "Trips remain genuinely long-distance Intercity journeys (Köln↔Ulm, Köln↔Freiburg) but too infrequent to justify the card",
           "Cancelling before the 31 December 2026 renewal avoids another year of the same shortfall"
         ],
+        "reasoning_de": [
+          "Die bisherigen vergünstigten DB-Ausgaben liegen weit unter der Amortisationsschwelle von 488 €",
+          "Die Fahrten sind weiterhin echte Fernverbindungen (Köln↔Ulm, Köln↔Freiburg), aber zu selten, um die Karte zu rechtfertigen",
+          "Eine Kündigung vor der Verlängerung am 31. Dezember 2026 vermeidet ein weiteres Jahr mit demselben Defizit"
+        ],
         "assumptions": [
           "Assumes no unplanned surge in long-distance rail travel before year-end",
           "A possible Hamburg trip could change the picture but isn't confirmed on the calendar yet"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass es vor Jahresende keinen ungeplanten Anstieg bei Fernfahrten mit der Bahn gibt",
+          "Eine mögliche Hamburg-Reise könnte die Lage ändern, ist aber im Kalender noch nicht bestätigt"
         ],
         "alternatives": [
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 (2. Klasse, Standard, Jahresabo) kündigen",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
+            "tradeoff_de": "Sparpreis-Tarife zum vollen Preis bleiben verfügbar; es entfällt nur der Rabatt.",
             "isRecommended": true,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Kündigen Sie Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before the 31 December 2026 renewal date to avoid another year of card fees.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "description_de": "Kündigen Sie vor dem Verlängerungstermin am 31. Dezember 2026, um ein weiteres Jahr Kartengebühren zu vermeiden.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und nicht ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Keeps the 50% Flexpreis discount in case a Hamburg trip materializes.",
+            "tradeoff_de": "Behält den 50-%-Flexpreis-Rabatt für den Fall, dass die Hamburg-Reise zustande kommt.",
             "isRecommended": false,
             "action": null
           }
@@ -117,8 +155,10 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "BahnCard 50 did not pay off this year",
+        "verdict_de": "Die BahnCard 50 hat sich dieses Jahr nicht amortisiert",
         "confidence": "high",
         "summaryText": "Your discounted DB spend this year covers less than half of BahnCard 50's €244 cost — cancelling would save the full amount with no change to your travel pattern.",
+        "summaryText_de": "Ihre vergünstigten DB-Ausgaben decken dieses Jahr weniger als die Hälfte der 244 € Kosten der BahnCard 50 — eine Kündigung würde den vollen Betrag sparen, ohne Ihr Reiseverhalten zu ändern.",
         "metrics": [
           { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
           { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
@@ -128,34 +168,50 @@
           "Trips are genuinely long-distance (Köln↔Ulm, Köln↔Freiburg) — the issue is frequency, not distance",
           "Net loss from holding BahnCard 50 this year is about €132"
         ],
+        "reasoning_de": [
+          "5 DB-Fahrten dieses Jahr ergaben 111,70 € vergünstigte Ausgaben, weit unter der Amortisationsschwelle von 488 €",
+          "Die Fahrten sind echte Fernverbindungen (Köln↔Ulm, Köln↔Freiburg) — das Problem ist die Häufigkeit, nicht die Distanz",
+          "Der Nettoverlust durch die BahnCard 50 beträgt dieses Jahr rund 132 €"
+        ],
         "assumptions": [
           "Assumes the remaining months follow the same low-frequency pattern",
           "No Hamburg trip has materialized on the calendar"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass die restlichen Monate demselben Muster geringer Häufigkeit folgen",
+          "Im Kalender ist keine Hamburg-Reise zustande gekommen"
         ],
         "alternatives": [
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 (2. Klasse, Standard, Jahresabo) kündigen",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
+            "tradeoff_de": "Sparpreis-Tarife zum vollen Preis bleiben verfügbar; es entfällt nur der Rabatt.",
             "isRecommended": true,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Kündigen Sie Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before 31 December 2026 to avoid auto-renewal and stop paying for a card you're not using enough.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "description_de": "Kündigen Sie vor dem 31. Dezember 2026, um die automatische Verlängerung zu vermeiden und nicht länger für eine zu wenig genutzte Karte zu zahlen.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und nicht ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Keeps the discount tier unchanged for now.",
+            "tradeoff_de": "Behält die Rabattstufe vorerst unverändert bei.",
             "isRecommended": false,
             "action": null
           }

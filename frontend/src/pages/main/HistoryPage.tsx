@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchAnalysisHistory } from "../../api";
+import { fetchAnalysisHistory, ApiError } from "../../api";
 import { ConfidenceBadge } from "../../components/ConfidenceBadge";
 import { OutcomeBadge } from "../../components/OutcomeBadge";
 import { MetricTile } from "../../components/MetricTile";
 import { AlternativeRow } from "../../components/AlternativeRow";
+import { useI18n, formatDate } from "../../i18n";
 import type { AnalysisHistoryEntry } from "../../types/recommendation";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "../../ui";
 import { Skeleton } from "../../components/Skeleton";
@@ -15,12 +16,6 @@ type HistoryPageProps = {
   // whether the revert succeeded, so the list can be refetched.
   onRevertEntry: (entry: AnalysisHistoryEntry) => Promise<boolean>;
 };
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function HistoryCard({
   entry,
@@ -37,6 +32,7 @@ function HistoryCard({
   onReview: () => void;
   onRevert: () => Promise<boolean>;
 }) {
+  const { language, t } = useI18n();
   const rec = entry.recommendation;
   // An older, never-decided entry: it can no longer be acted on, so don't present it as "Pending".
   const isSuperseded = !isNewest && entry.outcome === "pending";
@@ -46,7 +42,7 @@ function HistoryCard({
   // Read-only cards (and the executed newest) show what was on the table, minus the "Keep current
   // setup" baseline (action null).
   const actionableAlts = rec.alternatives.filter((a) => a.action !== null);
-  const ctaLabel = entry.outcome === "kept_current" ? "Reconsider this decision" : "Review & decide";
+  const ctaLabel = entry.outcome === "kept_current" ? t("history.reconsider") : t("history.reviewAndDecide");
 
   const [confirming, setConfirming] = useState(false);
   const [reverting, setReverting] = useState(false);
@@ -60,7 +56,7 @@ function HistoryCard({
     // there's nothing to reset here; only surface a failure.
     if (!ok) {
       setReverting(false);
-      setRevertError("Couldn't revert right now. Please try again.");
+      setRevertError(t("history.revertFailed"));
     }
   };
 
@@ -78,10 +74,10 @@ function HistoryCard({
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400 font-medium">{formatDate(entry.date)}</span>
+            <span className="text-xs text-gray-400 font-medium">{formatDate(language, entry.date)}</span>
             {isNewest && (
               <span className="text-[10px] font-bold uppercase tracking-wide text-brand-red bg-red-50 rounded-full px-2 py-0.5">
-                Latest
+                {t("history.latest")}
               </span>
             )}
           </div>
@@ -104,7 +100,7 @@ function HistoryCard({
           <ConfidenceBadge level={rec.confidence} />
           {isSuperseded ? (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">
-              Superseded — no decision
+              {t("history.superseded")}
             </span>
           ) : (
             <OutcomeBadge outcome={entry.outcome} />
@@ -123,7 +119,7 @@ function HistoryCard({
           </div>
 
           <div className="flex flex-col gap-2">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">Why this recommendation?</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">{t("dashboard.whyRecommendation")}</h3>
             <ul className="m-0 pl-4 flex flex-col gap-1.5">
               {rec.reasoning.map((r, i) => (
                 <li key={i} className="text-sm text-gray-600 leading-relaxed">{r}</li>
@@ -133,7 +129,7 @@ function HistoryCard({
 
           {rec.assumptions.length > 0 && (
             <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide m-0">Assumptions</h3>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide m-0">{t("history.assumptions")}</h3>
               <ul className="m-0 pl-4 flex flex-col gap-1">
                 {rec.assumptions.map((a, i) => (
                   <li key={i} className="text-xs text-gray-400 leading-relaxed">{a}</li>
@@ -147,7 +143,7 @@ function HistoryCard({
               decision screen. No "Keep current setup" baseline row. */}
           {!canDecide && actionableAlts.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">Options considered</h3>
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide m-0">{t("history.optionsConsidered")}</h3>
               <div className="flex flex-col gap-2">
                 {actionableAlts.map((alt) => (
                   <AlternativeRow
@@ -182,12 +178,12 @@ function HistoryCard({
         <div className="px-4 pb-4 pt-2 border-t border-gray-100">
           {!confirming ? (
             <button type="button" onClick={() => setConfirming(true)} className={`w-full ${BTN_SECONDARY_SM}`}>
-              Revert this change
+              {t("history.revertThisChange")}
             </button>
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-gray-500 m-0">
-                Revert this change? Your previous mobility setup will be restored.
+                {t("history.revertConfirm")}
               </p>
               <div className="flex gap-2">
                 <button
@@ -196,10 +192,10 @@ function HistoryCard({
                   onClick={() => setConfirming(false)}
                   className={`flex-1 ${BTN_SECONDARY_SM}`}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button type="button" disabled={reverting} onClick={doRevert} className={`flex-1 ${BTN_PRIMARY_SM}`}>
-                  {reverting ? "Reverting…" : "Revert"}
+                  {reverting ? t("history.reverting") : t("history.revert")}
                 </button>
               </div>
               {revertError && <p className="text-xs text-red-600 m-0">{revertError}</p>}
@@ -212,6 +208,7 @@ function HistoryCard({
 }
 
 export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) {
+  const { t, language } = useI18n();
   const [entries, setEntries] = useState<AnalysisHistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -223,17 +220,23 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
       return data;
     } catch (err) {
       console.error("Failed to load analysis history:", err);
-      setError(err instanceof Error ? err.message : "Could not load your analysis history.");
+      setError(err instanceof ApiError ? err.detail : t("history.fallbackError"));
       return null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-run on language change too — GET /api/analysis-history resolves each seeded entry's
+  // _de siblings (verdict, summaryText, reasoning, ...) from the X-Language header
+  // (main.py's _resolve_history_entry_language), so a stale fetch would freeze this whole
+  // screen's prose in whichever language was active on first load.
   useEffect(() => {
     load().then((data) => {
-      // Default-expand the newest entry so its context + action are visible on arrival.
-      if (data && data[0]) setExpandedId(data[0].id);
+      // Default-expand the newest entry so its context + action are visible on arrival, but
+      // don't clobber a row the user already opened/collapsed themselves on a re-fetch.
+      if (data && data[0]) setExpandedId((cur) => cur ?? data[0].id);
     });
-  }, [load]);
+  }, [load, language]);
 
   if (error) {
     return (
@@ -245,7 +248,7 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
 
   if (entries === null) {
     return (
-      <div className="flex flex-col gap-3 py-4" aria-label="Loading your analysis history" role="status">
+      <div className="flex flex-col gap-3 py-4" aria-label={t("history.loading")} role="status">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-2xl" />
         ))}
@@ -256,9 +259,9 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
   if (entries.length === 0) {
     return (
       <div className="min-h-[40vh] flex flex-col items-center justify-center gap-2 py-12 text-center">
-        <h2 className="text-lg font-bold text-ink m-0">No analyses yet</h2>
+        <h2 className="text-lg font-bold text-ink m-0">{t("history.noAnalysesYet")}</h2>
         <p className="text-sm text-gray-500 m-0 max-w-xs">
-          Run your first analysis from Home and it'll show up here.
+          {t("history.noAnalysesYet.body")}
         </p>
       </div>
     );
@@ -267,8 +270,8 @@ export function HistoryPage({ onReviewEntry, onRevertEntry }: HistoryPageProps) 
   return (
     <div className="flex flex-col gap-4 rise-in">
       <div>
-        <h1 className="text-2xl font-bold leading-tight mb-1">History</h1>
-        <p className="text-gray-500 text-sm m-0">Past analyses and the decisions you made.</p>
+        <h1 className="text-2xl font-bold leading-tight mb-1">{t("history.heading")}</h1>
+        <p className="text-gray-500 text-sm m-0">{t("history.subheading")}</p>
       </div>
 
       <div className="flex flex-col gap-3 pb-4">

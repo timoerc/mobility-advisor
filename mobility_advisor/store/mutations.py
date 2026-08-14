@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from .. import clock, paths
 from ..engine.stats import _resolve_unique_match
+from ..i18n import t
 from ..models import CurrentSubscriptions, Subscription
 from .loaders import load_mobility_catalog
 
@@ -80,9 +81,9 @@ def apply_subscription_change(
         }
 
     if action in ("remove", "replace") and not target_subscription:
-        return _error(f"target_subscription is required for action={action!r}")
+        return _error(t("subscriptionChange.error.targetRequired", action=repr(action)))
     if action in ("add", "replace") and not new_product:
-        return _error(f"new_product is required for action={action!r}")
+        return _error(t("subscriptionChange.error.newProductRequired", action=repr(action)))
 
     # Load raw dicts to preserve all fields beyond the Pydantic model.
     raw_file = json.loads((paths.DATA_DIR / "current_subscriptions.json").read_text(encoding="utf-8"))
@@ -120,7 +121,7 @@ def apply_subscription_change(
         try:
             Subscription.model_validate(new_sub)
         except (ValueError, ValidationError) as exc:
-            return _error(f"new subscription entry failed validation: {exc}", before_count)
+            return _error(t("subscriptionChange.error.newEntryInvalid", error=str(exc)), before_count)
 
     if (
         action == "replace"
@@ -128,10 +129,7 @@ def apply_subscription_change(
         and catalog_match is not None
         and target_match["product"] == catalog_match["product"]
     ):
-        warnings.append(
-            f"replace target and new_product both resolved to '{catalog_match['product']}' — "
-            "this resets the renewal clock on an unchanged product, not a real swap."
-        )
+        warnings.append(t("subscriptionChange.warn.replaceIsNoOp", product=catalog_match["product"]))
 
     removed = [target_match] if target_match is not None else []
     added = [new_sub] if new_sub is not None else []
@@ -143,7 +141,7 @@ def apply_subscription_change(
     try:
         CurrentSubscriptions.model_validate({"subscriptions": new_subs_list})
     except (ValueError, ValidationError) as exc:
-        return _error(f"resulting subscriptions failed validation: {exc}", before_count)
+        return _error(t("subscriptionChange.error.resultInvalid", error=str(exc)), before_count)
 
     # Write raw dicts (not model_dump) to preserve all fields beyond the pipeline schema.
     paths.atomic_write_json(paths.DATA_DIR / "current_subscriptions.json", {"subscriptions": new_subs_list})

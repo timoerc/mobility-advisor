@@ -6,14 +6,17 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "On money it's a wash, so I left it for now — will revisit after a few more trips.",
+      "resolvedMessage_de": "Finanziell gleicht es sich aus, deshalb habe ich es vorerst so gelassen — schaue nach ein paar weiteren Fahrten noch einmal drauf.",
       "resolvedAt": "2026-02-15",
       "recommendation": {
         "verdict": "Your rail usage sits right on the BahnCard 25 / BahnCard 50 break-even line",
+        "verdict_de": "Ihre Bahnnutzung liegt genau auf der Amortisationsgrenze zwischen BahnCard 25 und BahnCard 50",
         "confidence": "medium",
         "summaryText": "Your long-distance spend puts you almost exactly on the crossover between BahnCard 25 and BahnCard 50 — on cost alone the two are within a couple of euros a year. Because you book late and value flexibility, BahnCard 50 is the better fit, but it is close enough that keeping BahnCard 25 is defensible too.",
+        "summaryText_de": "Ihre Fernverkehrsausgaben liegen fast genau am Wendepunkt zwischen BahnCard 25 und BahnCard 50 — allein bei den Kosten liegen beide innerhalb weniger Euro pro Jahr. Da Sie spät buchen und Flexibilität schätzen, passt die BahnCard 50 besser zu Ihnen, aber es ist knapp genug, dass auch das Beibehalten der BahnCard 25 vertretbar wäre.",
         "metrics": [
-          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash" },
-          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)" }
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash", "label_de": "Nettokostenunterschied — praktisch ausgeglichen" },
+          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)", "label_de": "Flexpreis-Abdeckung mit BC50 (ggü. 25 % heute)" }
         ],
         "reasoning": [
           "Your long-distance rail spend implies a full-price equivalent around €536/year — almost exactly the €532 point where BahnCard 50 starts to out-save BahnCard 25",
@@ -21,34 +24,51 @@
           "Your fares are flexible Flexpreis tickets: BahnCard 50 discounts those by 50% versus only 25% on BahnCard 25 — the extra card fee is almost entirely recovered by the deeper flex-fare discount",
           "Time is your highest-weighted priority (0.50) and you value time over money, so the near-tie breaks toward the more flexible card"
         ],
+        "reasoning_de": [
+          "Ihre Fernverkehrsausgaben entsprechen einem Vollpreiswert von rund 536 €/Jahr — fast genau der Punkt bei 532 €, ab dem die BahnCard 50 die BahnCard 25 übertrifft",
+          "Auf diesem Niveau liegen beide Karten nur etwa 1–2 €/Jahr auseinander, die Kosten entscheiden also nicht",
+          "Ihre Tickets sind flexible Flexpreis-Tickets: Die BahnCard 50 rabattiert diese um 50 % gegenüber nur 25 % bei der BahnCard 25 — die höhere Kartengebühr wird durch den tieferen Flexpreis-Rabatt fast vollständig ausgeglichen",
+          "Zeit ist Ihre am höchsten gewichtete Priorität (0,50) und Sie schätzen Zeit mehr als Geld, daher fällt die knappe Entscheidung zugunsten der flexibleren Karte aus"
+        ],
         "assumptions": [
           "Assumes your late-booking / flexible-fare pattern continues — if you switched to advance Sparpreis fares, BahnCard 25 would be the cleaner pick, since Sparpreis discounts are identical (25%) on both cards",
           "CO2 impact is neutral — this only changes discount tier, not which transport mode you use"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass Ihr Muster aus Spätbuchungen und flexiblen Tarifen anhält — bei einem Wechsel zu vorausgebuchten Sparpreis-Tickets wäre die BahnCard 25 die klarere Wahl, da die Sparpreis-Rabatte bei beiden Karten identisch sind (25 %)",
+          "CO₂-Auswirkung ist neutral — dies ändert nur die Rabattstufe, nicht das genutzte Verkehrsmittel"
         ],
         "alternatives": [
           {
             "id": "upgrade_bc50",
             "name": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "Upgrade auf BahnCard 50 (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Costs about the same overall — the deeper Flexpreis discount offsets the higher card fee. You gain full-flex 50% fares, which protects your time when plans change.",
+            "tradeoff_de": "Kostet insgesamt etwa gleich viel — der tiefere Flexpreis-Rabatt gleicht die höhere Kartengebühr aus. Sie erhalten 50 % Rabatt auf voll flexible Tarife, was Ihre Zeit schützt, wenn sich Pläne ändern.",
             "isRecommended": true,
             "action": {
               "title": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Upgrade auf BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Replace your BahnCard 25 with a BahnCard 50 before the 30 November 2026 renewal — it is cost-neutral at your usage and covers your flexible fares at 50%.",
-              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place."
+              "description_de": "Ersetzen Sie Ihre BahnCard 25 vor der Verlängerung am 30. November 2026 durch eine BahnCard 50 — bei Ihrer Nutzung kostenneutral und deckt Ihre flexiblen Tarife zu 50 % ab.",
+              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place.",
+              "consequence_de": "Ihre BahnCard 25 (2. Klasse, Standard, Jahresabo) wird gekündigt und eine BahnCard 50 (2. Klasse, Standard, Jahresabo) tritt an deren Stelle."
             }
           },
           {
             "id": "keep",
             "name": "Keep BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 25 (2. Klasse, Standard, Jahresabo) behalten",
             "annualCostEur": 111,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Defensible only if you shift to booking cheaper advance Sparpreis fares — you would lose the deeper flex discount that suits your last-minute style.",
+            "tradeoff_de": "Nur vertretbar, wenn Sie auf günstigere, vorausgebuchte Sparpreis-Tickets umsteigen — Sie würden den tieferen Flex-Rabatt verlieren, der zu Ihrem Last-Minute-Stil passt.",
             "isRecommended": false,
             "action": null
           }
@@ -64,11 +84,13 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "Still a cost coin-flip — your preference for flexibility tips it to BahnCard 50",
+        "verdict_de": "Bei den Kosten weiterhin ein Kopf-oder-Zahl-Entscheid — Ihre Präferenz für Flexibilität gibt den Ausschlag für die BahnCard 50",
         "confidence": "medium",
         "summaryText": "Another five months of trips confirm the picture: on price, BahnCard 25 and BahnCard 50 are a dead heat for you. What breaks the tie is that you book late and reschedule often — BahnCard 50's 50% flex-fare discount is worth more to you than the marginal saving of staying on BahnCard 25.",
+        "summaryText_de": "Fünf weitere Monate mit Fahrten bestätigen das Bild: Preislich liegen BahnCard 25 und BahnCard 50 für Sie gleichauf. Den Ausschlag gibt, dass Sie spät buchen und häufig umbuchen — der 50-%-Flexpreis-Rabatt der BahnCard 50 ist für Sie mehr wert als die geringfügige Ersparnis durch das Beibehalten der BahnCard 25.",
         "metrics": [
-          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash" },
-          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)" }
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Net cost difference — essentially a wash", "label_de": "Nettokostenunterschied — praktisch ausgeglichen" },
+          { "value": 50, "unit": "% flex discount", "direction": "increase", "label": "Flexpreis coverage with BC50 (vs 25% today)", "label_de": "Flexpreis-Abdeckung mit BC50 (ggü. 25 % heute)" }
         ],
         "reasoning": [
           "This is the 2nd review flagging the same BahnCard tier decision — last time you kept BahnCard 25 while the picture settled; it has settled at a near-tie",
@@ -76,34 +98,51 @@
           "All your long-distance fares are flexible Flexpreis tickets, which BahnCard 50 halves (50%) versus BahnCard 25's 25% — that deeper discount recovers almost all of the higher card fee",
           "Your priorities weight time at 0.50 (your highest) and you value time over money, so the flexibility of BahnCard 50 is the deciding factor"
         ],
+        "reasoning_de": [
+          "Dies ist die 2. Prüfung, die dieselbe BahnCard-Entscheidung aufwirft — beim letzten Mal haben Sie die BahnCard 25 behalten, während sich das Bild klärte; es hat sich zu einem knappen Gleichstand entwickelt",
+          "Der Vollpreiswert der Fernverkehrsausgaben liegt bei rund 536 €/Jahr, genau am Wendepunkt von 532 € zwischen BahnCard 25 und 50",
+          "Alle Ihre Fernverkehrstickets sind flexible Flexpreis-Tickets, die die BahnCard 50 um die Hälfte (50 %) reduziert, gegenüber 25 % bei der BahnCard 25 — dieser tiefere Rabatt gleicht die höhere Kartengebühr fast vollständig aus",
+          "Ihre Prioritäten gewichten Zeit mit 0,50 (Ihr höchster Wert), und Sie schätzen Zeit mehr als Geld — daher ist die Flexibilität der BahnCard 50 ausschlaggebend"
+        ],
         "assumptions": [
           "Assumes you keep booking flexible, late-changeable fares rather than locking into advance Sparpreis tickets",
           "CO2 impact is neutral — this changes discount tier only, not transport mode"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass Sie weiterhin flexible, spät änderbare Tarife buchen, statt sich auf vorausgebuchte Sparpreis-Tickets festzulegen",
+          "CO₂-Auswirkung ist neutral — dies ändert nur die Rabattstufe, nicht das Verkehrsmittel"
         ],
         "alternatives": [
           {
             "id": "upgrade_bc50",
             "name": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "Upgrade auf BahnCard 50 (2. Klasse, Standard, Jahresabo)",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Cost-neutral at your usage; the win is time and flexibility, not money. If your travel dropped sharply, BahnCard 25 would become the cheaper hedge.",
+            "tradeoff_de": "Bei Ihrer Nutzung kostenneutral; der Gewinn liegt bei Zeit und Flexibilität, nicht beim Geld. Sollte Ihre Reisetätigkeit stark sinken, wäre die BahnCard 25 die günstigere Absicherung.",
             "isRecommended": true,
             "action": {
               "title": "Upgrade to BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Upgrade auf BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Replace your BahnCard 25 with a BahnCard 50 before the 30 November 2026 renewal — same overall cost, but your flexible fares are discounted at 50%.",
-              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place."
+              "description_de": "Ersetzen Sie Ihre BahnCard 25 vor der Verlängerung am 30. November 2026 durch eine BahnCard 50 — insgesamt gleiche Kosten, aber Ihre flexiblen Tarife werden mit 50 % rabattiert.",
+              "consequence": "Your BahnCard 25 (2. Klasse, Standard, Jahresabo) will be cancelled and a BahnCard 50 (2. Klasse, Standard, Jahresabo) will start in its place.",
+              "consequence_de": "Ihre BahnCard 25 (2. Klasse, Standard, Jahresabo) wird gekündigt und eine BahnCard 50 (2. Klasse, Standard, Jahresabo) tritt an deren Stelle."
             }
           },
           {
             "id": "keep",
             "name": "Keep BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 25 (2. Klasse, Standard, Jahresabo) behalten",
             "annualCostEur": 111,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Only the better choice if you start booking cheaper advance Sparpreis fares — at odds with your last-minute travel style.",
+            "tradeoff_de": "Nur die bessere Wahl, wenn Sie beginnen, günstigere vorausgebuchte Sparpreis-Tickets zu buchen — das widerspricht Ihrem Last-Minute-Reisestil.",
             "isRecommended": false,
             "action": null
           }

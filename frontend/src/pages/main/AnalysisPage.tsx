@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusMessage } from "../../components/StatusMessage";
-import { runAnalysis } from "../../api";
+import { runAnalysis, ApiError } from "../../api";
+import { useT } from "../../i18n";
 import type { AnalysisRunResult } from "../../types/recommendation";
 import { BTN_PRIMARY_COMPACT } from "../../ui";
-
-const STATUS_MESSAGES = [
-  "Loading your travel history…",
-  "Checking subscription costs…",
-  "Forecasting upcoming travel…",
-  "Comparing contract alternatives…",
-  "Computing CO₂ impact…",
-  "Preparing your recommendation…",
-  "Almost there…",
-];
 
 type AnalysisPageProps = {
   sessionId: string;
@@ -20,6 +11,19 @@ type AnalysisPageProps = {
 };
 
 export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
+  const t = useT();
+  const STATUS_MESSAGES = useMemo(
+    () => [
+      t("analysis.status.1"),
+      t("analysis.status.2"),
+      t("analysis.status.3"),
+      t("analysis.status.4"),
+      t("analysis.status.5"),
+      t("analysis.status.6"),
+      t("analysis.status.7"),
+    ],
+    [t],
+  );
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
@@ -35,7 +39,9 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
       })
       .catch((err) => {
         console.error("Analysis failed:", err);
-        setError(err instanceof Error ? err.message : "The analysis pipeline failed. Please try again.");
+        // ApiError.detail is the backend's message on its own, without the "POST /path 500:"
+        // transport prefix — cleaner to show.
+        setError(err instanceof ApiError ? err.detail : t("analysis.fallbackError"));
       });
   };
 
@@ -57,11 +63,11 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
           </svg>
         </div>
         <div className="flex flex-col gap-2 max-w-xs">
-          <h2 className="text-xl font-bold text-ink m-0">Analysis failed</h2>
+          <h2 className="text-xl font-bold text-ink m-0">{t("analysis.failed")}</h2>
           <p className="text-sm text-gray-500 m-0 leading-relaxed">{error}</p>
         </div>
         <button type="button" onClick={start} className={BTN_PRIMARY_COMPACT}>
-          Try again
+          {t("common.tryAgain")}
         </button>
       </div>
     );
@@ -74,7 +80,7 @@ export function AnalysisPage({ sessionId, onComplete }: AnalysisPageProps) {
       </div>
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <h2 className="text-2xl font-bold text-ink m-0">Analysing your setup…</h2>
+        <h2 className="text-2xl font-bold text-ink m-0">{t("analysis.heading")}</h2>
         <StatusMessage messages={STATUS_MESSAGES} intervalMs={4200} />
       </div>
 

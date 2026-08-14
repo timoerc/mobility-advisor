@@ -3,6 +3,7 @@ whether an unresolved, near-term portfolio-resetting life event exists."""
 from datetime import date, timedelta
 
 from .. import clock
+from ..i18n import t
 from .loaders import load_life_events
 
 # Signals whose arrival would, on their own, invalidate the current commute-based
@@ -65,12 +66,10 @@ def detect_pending_portfolio_decision() -> dict:
         return {"exists": False, "reason": "", "revisit_after": None, "events": []}
 
     revisit_after = max(event_date for _, event_date in qualifying)
-    categories = "/".join(sorted({event["category"] for event, _ in qualifying}))
-    reason = (
-        f"A pending {categories} is expected to take effect by "
-        f"{revisit_after.isoformat()}, which would reset the current commute-based "
-        f"portfolio — acting now risks a change the decision could immediately reverse."
+    categories = "/".join(
+        t(f"lifeEvent.category.{c}") for c in sorted({event["category"] for event, _ in qualifying})
     )
+    reason = t("pending.reason", categories=categories, date=revisit_after.isoformat())
     return {
         "exists": True,
         "reason": reason,

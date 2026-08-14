@@ -4,6 +4,7 @@ from its output (never executing anything itself)."""
 from google.adk.agents import LlmAgent
 
 from ..engine.optimizer import optimize_all_categories
+from ..i18n import localized
 from ..store.history import load_recommendation_history
 from .model import _MEDIUM_REPORT_TOKENS, _OPTIMIZER_TOKENS, _TODAY, _MODEL, build_content_config
 
@@ -66,7 +67,12 @@ communicator_agent = LlmAgent(
     name="communicator",
     model=_MODEL,
     description="Presents the portfolio optimization results as a clear, scannable report for the user.",
-    instruction=f"""\
+    # localized() wraps this into an InstructionProvider that appends the active request's
+    # language directive at call time (see i18n.py) — the six user-facing agents (this one,
+    # the annual communicator, coordinator, execution/qa/reject) get this treatment; the
+    # intermediate pipeline stages (analyst/forecaster/optimizer/annual_*) stay plain English
+    # strings since their output is never shown to the user (see CLAUDE.md's i18n section).
+    instruction=localized(f"""\
 You are the Communicator agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -144,7 +150,7 @@ pull in different directions or the numbers are close]
 Use all numbers from the Optimizer's output. Do not invent figures.
 Speak directly to the user as "you"/"your" — not by name.
 If "No subscriptions" is the best option, say so clearly.
-""",
+"""),
     tools=[load_recommendation_history],
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
     include_contents="none",

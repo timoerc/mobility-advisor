@@ -1,16 +1,19 @@
 import type { TripRecord } from "./api";
+import type { TranslationKey } from "./i18n";
 import type { SubscriptionEntry } from "./types";
 
 /** Time-range presets for the home dashboard, in display order. */
 export type RangeKey = "1m" | "6m" | "1y" | "ytd" | "5y" | "all";
 
-export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
-  { key: "1m", label: "1M" },
-  { key: "6m", label: "6M" },
-  { key: "1y", label: "1Y" },
-  { key: "ytd", label: "YTD" },
-  { key: "5y", label: "5Y" },
-  { key: "all", label: "All" },
+// labelKey, not label — the component resolves it via t() so this module stays pure/testable
+// and doesn't need a language argument threaded through.
+export const RANGE_OPTIONS: { key: RangeKey; labelKey: TranslationKey }[] = [
+  { key: "1m", labelKey: "range.1m" },
+  { key: "6m", labelKey: "range.6m" },
+  { key: "1y", labelKey: "range.1y" },
+  { key: "ytd", labelKey: "range.ytd" },
+  { key: "5y", labelKey: "range.5y" },
+  { key: "all", labelKey: "range.all" },
 ];
 
 export const DEFAULT_RANGE: RangeKey = "1y";

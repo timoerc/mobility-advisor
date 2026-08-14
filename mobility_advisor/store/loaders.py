@@ -4,6 +4,7 @@ per-agent context helpers that save a tool-call round-trip."""
 import json
 
 from .. import clock, paths
+from ..i18n import pick, t
 from ..models import (
     CalendarEvents,
     CarUsage,
@@ -64,7 +65,13 @@ def load_life_events() -> dict:
     if not path.exists():
         return {"events": []}
     raw = json.loads(path.read_text())
-    return LifeEvents.model_validate(raw).model_dump()
+    events = LifeEvents.model_validate(raw).model_dump()
+    # summary_de sibling on seeded scenario fixtures, resolved for the active request's
+    # language (see i18n.pick()) — this summary reaches the user both via the Forecaster's
+    # restated life-event report and detect_pending_portfolio_decision()'s reason sentence.
+    for event in events["events"]:
+        event["summary"] = pick(event, "summary")
+    return events
 
 def load_car_usage() -> dict:
     """Load the active user's private car ownership/usage facts from the mock data store.
@@ -173,11 +180,11 @@ def _travel_history_result(trips: list) -> dict:
     for trip in trips:
         label = f"{trip.date} {trip.origin}→{trip.destination}"
         if trip.cost_eur is None:
-            warnings.append(f"{label}: cost_eur is null — excluded from spend totals")
+            warnings.append(t("data.tripExcludedNullCost", label=label))
         if not trip.mode:
-            warnings.append(f"{label}: mode is empty — excluded from CO₂ and mode aggregations")
+            warnings.append(t("data.tripExcludedEmptyMode", label=label))
         elif trip.mode not in _KNOWN_MODES:
-            warnings.append(f"{label}: unknown mode '{trip.mode}' — excluded from CO₂ and mode aggregations")
+            warnings.append(t("data.tripExcludedUnknownMode", label=label, mode=trip.mode))
 
     result = {"trips": [t.model_dump() for t in trips]}
     if warnings:
@@ -225,7 +232,12 @@ def load_calendar_events() -> dict:
     else:
         from ..integrations.outlook_calendar import fetch_calendar_events
         raw = fetch_calendar_events()
-    return CalendarEvents.model_validate(raw).model_dump()
+    events = CalendarEvents.model_validate(raw).model_dump()
+    # description_de sibling on seeded scenario fixtures, resolved for the active request's
+    # language (see i18n.pick()) — restated verbatim in the Forecaster's summary.
+    for event in events["events"]:
+        event["description"] = pick(event, "description")
+    return events
 
 
 def load_annual_analyst_context() -> dict:

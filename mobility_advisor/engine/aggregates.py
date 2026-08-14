@@ -4,6 +4,7 @@ commute (which never appears in travel history at all)."""
 import json
 
 from .. import paths
+from ..i18n import t
 from ..models import ProjectedTrip, RouteAlternative
 from ..store.loaders import load_car_usage
 from .calibration import _dominant_fare_class
@@ -58,7 +59,7 @@ def _build_local_aggregate_trip(
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Local/regional travel ({len(local_aggregate)} route(s), aggregated)",
+        route=t("route.localRegional", count=len(local_aggregate)),
         origin="various",
         destination="various",
         frequency_per_year=damped_freq,
@@ -68,11 +69,11 @@ def _build_local_aggregate_trip(
         alternatives=alternatives,
         fare_class=fare_class,
     )
-    warning = (
-        f"Aggregated {len(local_aggregate)} regional route(s) each seen under 2x/yr "
-        f"individually ({total_freq}/yr combined, ~{avg_dist}km avg) into one projected "
-        f"local-travel trip, instead of dropping them — this is the demand a "
-        f"Deutschlandticket or regional pass actually prices against."
+    warning = t(
+        "warn.aggregatedRegionalRoutes",
+        count=len(local_aggregate),
+        totalFreq=total_freq,
+        avgDist=avg_dist,
     )
     return trip.model_dump(), warning
 
@@ -162,7 +163,7 @@ def _build_intra_city_aggregate_trip(
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Intra-city car travel ({len(car_trips)} trip(s) observed, aggregated)",
+        route=t("route.intraCityCar", count=len(car_trips)),
         origin="various",
         destination="various",
         frequency_per_year=annual_freq,
@@ -172,11 +173,11 @@ def _build_intra_city_aggregate_trip(
         alternatives=alternatives,
         fare_class=fare_class,
     )
-    warning = (
-        f"Aggregated {len(car_trips)} same-city car-share/car-rental trip(s) "
-        f"(avg ~{avg_dist}km) into one projected intra-city trip ({annual_freq}/yr) instead "
-        f"of dropping them — this is the demand a car-share membership actually prices "
-        f"against. No rail alternative is offered for it (see this function's docstring)."
+    warning = t(
+        "warn.aggregatedIntraCityCar",
+        count=len(car_trips),
+        avgDist=avg_dist,
+        freq=annual_freq,
     )
     return trip.model_dump(), warning
 
@@ -243,7 +244,7 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
         alternatives.append(alt.model_dump())
 
     trip = ProjectedTrip(
-        route=f"Home-city commute (~{len(office_days)}x/week office, ~{dist}km one-way)",
+        route=t("route.homeCommute", n=len(office_days), km=dist),
         origin="various",
         destination="various",
         frequency_per_year=damped_freq,
@@ -254,11 +255,11 @@ def _build_commute_aggregate_trip(reduction_factor: float) -> tuple[dict | None,
         fare_class="spar",
         tariff="local",
     )
-    warning = (
-        f"Modelled {len(office_days)} office day(s)/week as a recurring home-city commute "
-        f"at ~{dist}km one-way (typical urban commute distance, not from actual data — "
-        f"travel history only records inter-city trips) — {damped_freq}/yr legs. This is "
-        f"the demand a Deutschlandticket or regional pass is actually priced against."
+    warning = t(
+        "warn.modelledCommute",
+        n=len(office_days),
+        km=dist,
+        freq=damped_freq,
     )
     return trip.model_dump(), warning
 

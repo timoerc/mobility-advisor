@@ -6,6 +6,7 @@ import time
 from datetime import date, datetime
 
 from .. import paths
+from ..i18n import t
 from ..integrations.ors import ORS_API_KEY
 from ..models import ProjectedTrip, ProjectedTripSet, RouteAlternative
 from ..store.loaders import load_car_usage, load_travel_history
@@ -418,7 +419,7 @@ def derive_car_usage_trips() -> dict:
             alternatives.append(alt.model_dump())
 
         trip = ProjectedTrip(
-            route=f"Car usage ({cat['name']}, ~{dist}km)",
+            route=t("route.carUsage", name=cat["name"], km=dist),
             origin="various",
             destination="various",
             frequency_per_year=freq,
@@ -534,15 +535,16 @@ def merge_projected_trip_sets() -> dict:
                 # supports) is already bounded below by _UNCORROBORATED_CALENDAR_FREQUENCY_CAP.
                 merged_freq = max(trip["frequency_per_year"], existing["frequency_per_year"])
                 if merged_freq > trip["frequency_per_year"]:
-                    warnings.append(
-                        f"Dedup: {key[0]} ↔ {key[1]} — calendar route data used, but "
-                        f"frequency kept at history's higher {merged_freq}/yr rather than "
-                        f"calendar's {trip['frequency_per_year']}/yr"
-                    )
+                    warnings.append(t(
+                        "warn.dedupCalendarWins",
+                        a=key[0], b=key[1], merged=merged_freq, calFreq=trip["frequency_per_year"],
+                    ))
                 else:
-                    warnings.append(
-                        f"Dedup: {key[0]} ↔ {key[1]} — calendar ({trip['frequency_per_year']}/yr) replaces history ({existing['frequency_per_year']}/yr)"
-                    )
+                    warnings.append(t(
+                        "warn.dedupCalendarReplaces",
+                        a=key[0], b=key[1],
+                        calFreq=trip["frequency_per_year"], histFreq=existing["frequency_per_year"],
+                    ))
                 trip["frequency_per_year"] = merged_freq
                 _merge_fare_class(trip, existing)
                 deduped[key] = trip
@@ -558,12 +560,11 @@ def merge_projected_trip_sets() -> dict:
         if trip.get("source") != "calendar" or key in history_route_keys:
             continue
         if trip["frequency_per_year"] > _UNCORROBORATED_CALENDAR_FREQUENCY_CAP:
-            warnings.append(
-                f"Uncorroborated calendar demand: {trip['route']} was projected at "
-                f"{trip['frequency_per_year']}/yr from calendar events alone, with no "
-                f"supporting trip in travel history — capped at "
-                f"{_UNCORROBORATED_CALENDAR_FREQUENCY_CAP}/yr."
-            )
+            warnings.append(t(
+                "warn.uncorroboratedCalendarDemand",
+                route=trip["route"], freq=trip["frequency_per_year"],
+                cap=_UNCORROBORATED_CALENDAR_FREQUENCY_CAP,
+            ))
             trip["frequency_per_year"] = _UNCORROBORATED_CALENDAR_FREQUENCY_CAP
 
     all_trips = list(deduped.values()) + car_usage_trips

@@ -1,14 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusMessage } from "../../components/StatusMessage";
 import { runAnnualReport } from "../../api";
-
-const STATUS_MESSAGES = [
-  "Reviewing your year of travel…",
-  "Calculating subscription ROI…",
-  "Adding up CO₂ savings…",
-  "Building your forward outlook…",
-  "Finalizing your report…",
-];
+import { useT } from "../../i18n";
 
 type AnnualReportPageProps = {
   sessionId: string;
@@ -17,6 +10,17 @@ type AnnualReportPageProps = {
 };
 
 export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: AnnualReportPageProps) {
+  const t = useT();
+  const STATUS_MESSAGES = useMemo(
+    () => [
+      t("annualReport.status.1"),
+      t("annualReport.status.2"),
+      t("annualReport.status.3"),
+      t("annualReport.status.4"),
+      t("annualReport.status.5"),
+    ],
+    [t],
+  );
   const [report, setReport] = useState<Blob | null>(cachedReport);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
       })
       .catch((err) => {
         console.warn("Annual report failed:", err);
-        setError("Couldn't generate your annual report right now. Please try again.");
+        setError(t("annualReport.error"));
       });
   }, [sessionId, cachedReport, onReportReady]);
 
@@ -73,7 +77,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
           <img className="w-full h-full object-contain" src="/assets/advisor.svg" alt="" />
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
-          <h2 className="text-2xl font-bold text-ink m-0">Building your annual report…</h2>
+          <h2 className="text-2xl font-bold text-ink m-0">{t("annualReport.building")}</h2>
           <StatusMessage messages={STATUS_MESSAGES} intervalMs={4200} />
         </div>
 
@@ -94,7 +98,7 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
     <div className="py-4">
       <iframe
         src={pdfUrl}
-        title="Your Annual Mobility Review"
+        title={t("annualReport.iframeTitle")}
         className="w-full h-[88vh] rounded-lg border border-gray-200 bg-white"
       />
     </div>

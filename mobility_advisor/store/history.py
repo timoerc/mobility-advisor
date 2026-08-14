@@ -5,6 +5,7 @@ import json
 from pydantic import ValidationError
 
 from .. import paths
+from ..i18n import get_language
 from ..models import AnalysisHistory
 
 
@@ -28,16 +29,24 @@ def load_recommendation_history(limit: int = 3) -> dict:
         return {"history": []}
     raw = json.loads(path.read_text())
     entries = AnalysisHistory.model_validate(raw).entries[-limit:]
+    is_de = get_language() == "de"
     history = []
     for entry in entries:
         recommended = next(
             (alt for alt in entry.recommendation.alternatives if alt.isRecommended), None
         )
+        # _de siblings on seeded scenario analysis_history.json entries, resolved for the
+        # active request's language — same fields main.py's _resolve_recommendation_language
+        # resolves for GET /api/analysis-history; live entries never populate these siblings.
+        verdict = (entry.recommendation.verdict_de or entry.recommendation.verdict) if is_de else entry.recommendation.verdict
+        action_name = ""
+        if recommended:
+            action_name = (recommended.name_de or recommended.name) if is_de else recommended.name
         history.append({
             "date": entry.date,
-            "verdict": entry.recommendation.verdict,
+            "verdict": verdict,
             "outcome": entry.outcome,
-            "recommended_action": recommended.name if recommended else "",
+            "recommended_action": action_name,
         })
     return {"history": history}
 

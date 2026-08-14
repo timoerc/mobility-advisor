@@ -1,3 +1,5 @@
+import { useT } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import type { CarProfile } from "../types";
 import { INPUT } from "../ui";
 
@@ -10,7 +12,24 @@ const inputClass = INPUT;
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-sm text-gray-700";
 
+// CarProfile.type/.size store these exact English strings as DATA VALUES (they round-trip
+// through the backend's ProfilePayload and the six scenario persona.json fixtures) — only the
+// <option> DISPLAY TEXT is localized here, via this lookup into car.type.*/car.size.*.
+const FUEL_TYPE_LABEL_KEYS: Record<string, TranslationKey> = {
+  "Petrol": "car.type.Petrol",
+  "Diesel": "car.type.Diesel",
+  "Hybrid": "car.type.Hybrid",
+  "Plug-in Hybrid": "car.type.Plug-in Hybrid",
+  "Electric": "car.type.Electric",
+};
+const CAR_SIZE_LABEL_KEYS: Record<string, TranslationKey> = {
+  "Small car": "car.size.Small car",
+  "Medium car": "car.size.Medium car",
+  "Large car": "car.size.Large car",
+};
+
 export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
+  const t = useT();
   const set = <K extends keyof CarProfile>(key: K, value: CarProfile[K]) =>
     onChange({ ...car, [key]: value });
 
@@ -32,21 +51,20 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold leading-tight mb-2">
-          Do you own a car?
+          {t("onboarding.carProfile.heading")}
         </h1>
         <p className="text-gray-500 leading-relaxed m-0">
-          If you drive regularly, we can factor your car into the cost and
-          emissions comparison.
+          {t("onboarding.carProfile.subheading")}
         </p>
       </div>
 
       <div className="flex gap-3">
         {[
-          { value: true, label: "Yes" },
-          { value: false, label: "No" },
-        ].map(({ value, label }) => (
+          { value: true, labelKey: "onboarding.carProfile.yes" as const },
+          { value: false, labelKey: "onboarding.carProfile.no" as const },
+        ].map(({ value, labelKey }) => (
           <button
-            key={label}
+            key={labelKey}
             type="button"
             onClick={() => toggleCar(value)}
             className={`flex-1 py-3 rounded-lg border-2 text-sm font-semibold cursor-pointer transition-colors duration-150 active:scale-[0.98] ${
@@ -55,7 +73,7 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300"
             }`}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -63,7 +81,7 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
       {car.owns_car && (
         <div className="flex flex-col gap-4 p-4 bg-white rounded-lg border border-gray-200">
           <label className={labelClass}>
-            <span className={labelTextClass}>Fuel type</span>
+            <span className={labelTextClass}>{t("onboarding.carProfile.fuelType")}</span>
             <select
               value={car.type ?? ""}
               onChange={(e) =>
@@ -74,17 +92,15 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
               }
               className={inputClass}
             >
-              <option value="">— select —</option>
-              <option value="Petrol">Petrol</option>
-              <option value="Diesel">Diesel</option>
-              <option value="Hybrid">Hybrid</option>
-              <option value="Plug-in Hybrid">Plug-in Hybrid</option>
-              <option value="Electric">Electric</option>
+              <option value="">{t("common.selectPlaceholder")}</option>
+              {Object.entries(FUEL_TYPE_LABEL_KEYS).map(([value, labelKey]) => (
+                <option key={value} value={value}>{t(labelKey)}</option>
+              ))}
             </select>
           </label>
 
           <label className={labelClass}>
-            <span className={labelTextClass}>Car size</span>
+            <span className={labelTextClass}>{t("onboarding.carProfile.carSize")}</span>
             <select
               value={car.size ?? ""}
               onChange={(e) =>
@@ -95,15 +111,15 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
               }
               className={inputClass}
             >
-              <option value="">— select —</option>
-              <option value="Small car">Small car</option>
-              <option value="Medium car">Medium car</option>
-              <option value="Large car">Large car</option>
+              <option value="">{t("common.selectPlaceholder")}</option>
+              {Object.entries(CAR_SIZE_LABEL_KEYS).map(([value, labelKey]) => (
+                <option key={value} value={value}>{t(labelKey)}</option>
+              ))}
             </select>
           </label>
 
           <label className={labelClass}>
-            <span className={labelTextClass}>Estimated monthly km</span>
+            <span className={labelTextClass}>{t("onboarding.carProfile.estimatedMonthlyKm")}</span>
             <input
               type="number"
               min="0"
@@ -115,7 +131,7 @@ export function CarProfilePage({ car, onChange }: CarProfilePageProps) {
                   e.target.value ? Number(e.target.value) : null
                 )
               }
-              placeholder="e.g. 800"
+              placeholder={t("onboarding.carProfile.estimatedMonthlyKm.placeholder")}
               className={inputClass}
             />
           </label>

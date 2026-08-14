@@ -4,6 +4,7 @@ fallback in extraction.py."""
 import json
 
 from ... import paths
+from ...i18n import t
 from ...models import Alternative, DeltaVsCurrent, ProposedAction
 from ...store.decisions import detect_pending_portfolio_decision
 
@@ -124,12 +125,12 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         if is_keep:
             alts.append(Alternative(
                 id="keep",
-                name="Keep current setup",
+                name=t("alt.keep.name"),
                 annualCostEur=s["total_annual_cost_eur"],
                 savingsVsCurrentEur=0,
-                co2Impact="Neutral",
+                co2Impact=t("alt.co2.neutral"),
                 co2ImpactKg=0.0,
-                tradeoff="No change to cost or emissions",
+                tradeoff=t("alt.keep.tradeoff"),
                 isRecommended=s.get("is_recommended", False),
                 action=None,
                 deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
@@ -165,24 +166,21 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         removed_joined = " + ".join(removed_names)
 
         if added_names and removed_names:
-            action_title = f"Replace {removed_joined} with {added_joined}"
-            name = f"Switch to {s['label']}"
-            consequence = (
-                f"Your {removed_joined} will be cancelled and "
-                f"{added_joined} will start in its place."
-            )
+            action_title = t("alt.action.replace.title", removed=removed_joined, added=added_joined)
+            name = t("alt.action.replace.name", label=s["label"])
+            consequence = t("alt.action.replace.consequence", removed=removed_joined, added=added_joined)
         elif added_names:
-            action_title = f"Add {added_joined}"
-            name = f"Add {s['label']}"
-            consequence = f"{added_joined} will be added to your portfolio."
+            action_title = t("alt.action.add.title", added=added_joined)
+            name = t("alt.action.add.name", label=s["label"])
+            consequence = t("alt.action.add.consequence", added=added_joined)
         elif removed_names:
-            action_title = f"Cancel {removed_joined}"
-            name = f"Cancel {removed_joined}"
-            consequence = f"{removed_joined} will be cancelled."
+            action_title = t("alt.action.cancel.title", removed=removed_joined)
+            name = t("alt.action.cancel.name", removed=removed_joined)
+            consequence = t("alt.action.cancel.consequence", removed=removed_joined)
         else:
             action_title = s["label"]
             name = s["label"]
-            consequence = "No change."
+            consequence = t("alt.action.noChange.consequence")
 
         # Generate tradeoff string from deltas vs. the user's CURRENT setup — every row's
         # own card states what the user is being asked to give up or gain relative to what
@@ -193,19 +191,19 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         tradeoff_parts = []
         if abs(d_cost) >= 1:
             if d_cost > 0:
-                tradeoff_parts.append(f"€{round(d_cost)} more per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreExpensive", amount=round(d_cost)))
             else:
-                tradeoff_parts.append(f"€{round(abs(d_cost))} cheaper per year")
+                tradeoff_parts.append(t("alt.tradeoff.cheaper", amount=round(abs(d_cost))))
         if abs(d_time) >= 10:
             if d_time > 0:
-                tradeoff_parts.append(f"+{round(d_time)} min travel time per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreTime", minutes=round(d_time)))
             else:
-                tradeoff_parts.append(f"{round(d_time)} min travel time per year")
+                tradeoff_parts.append(t("alt.tradeoff.lessTime", minutes=round(d_time)))
         if abs(d_co2) >= 1:
             if d_co2 > 0:
-                tradeoff_parts.append(f"+{round(d_co2)} kg CO₂ per year")
+                tradeoff_parts.append(t("alt.tradeoff.moreCo2", kg=round(d_co2)))
             else:
-                tradeoff_parts.append(f"{round(d_co2)} kg CO₂ per year")
+                tradeoff_parts.append(t("alt.tradeoff.lessCo2", kg=round(d_co2)))
 
         # Break-even for this row's resulting portfolio as a whole, not for its added/removed
         # subscriptions scored independently. optimize_all_categories() now computes
@@ -222,29 +220,33 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         break_even_parts = []
         row_break_even = break_even_by_ids.get(tuple(sorted(ids)))
         if row_break_even is not None:
-            verb = "breaks even" if row_break_even["breaks_even"] else "runs a net loss"
-            break_even_parts.append(
-                f"{s['label']} {verb}: €{row_break_even['discount_value_eur']:.0f} discount "
-                f"value vs. €{row_break_even['annual_fee_eur']:.0f} fee"
-            )
+            verb = t("alt.breakEven.breaksEven") if row_break_even["breaks_even"] else t("alt.breakEven.netLoss")
+            break_even_parts.append(t(
+                "alt.breakEven.line",
+                label=s["label"], verb=verb,
+                discount=f"{row_break_even['discount_value_eur']:.0f}",
+                fee=f"{row_break_even['annual_fee_eur']:.0f}",
+            ))
         else:
             for sid in sorted(added | removed):
                 break_even = break_even_by_ids.get((sid,))
                 if break_even is None:
                     continue
-                verb = "breaks even" if break_even["breaks_even"] else "runs a net loss"
+                verb = t("alt.breakEven.breaksEven") if break_even["breaks_even"] else t("alt.breakEven.netLoss")
                 product = catalog_by_id.get(sid, {}).get("product", break_even["label"])
-                break_even_parts.append(
-                    f"{product} {verb}: €{break_even['discount_value_eur']:.0f} discount value vs. "
-                    f"€{break_even['annual_fee_eur']:.0f} fee"
-                )
+                break_even_parts.append(t(
+                    "alt.breakEven.line",
+                    label=product, verb=verb,
+                    discount=f"{break_even['discount_value_eur']:.0f}",
+                    fee=f"{break_even['annual_fee_eur']:.0f}",
+                ))
         if break_even_parts:
             tradeoff_parts.append("; ".join(break_even_parts))
 
         if tradeoff_parts:
             tradeoff = "; ".join(tradeoff_parts)
         else:
-            tradeoff = "Same cost, travel time, and CO₂ as your current setup"
+            tradeoff = t("alt.tradeoff.sameAsCurrent")
 
         # CO2 impact vs. current setup (positive = saves CO2), consistent with
         # savingsVsCurrentEur's baseline.
@@ -257,7 +259,7 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         # opposite outcomes, on a field that's part of the wire contract (persisted into
         # analysis_history.json) even though today's frontend doesn't render it.
         d_co2_rounded = round(d_co2)
-        co2_impact_str = f"{d_co2_rounded:+d} kg CO₂/year" if d_co2_rounded != 0 else "Neutral"
+        co2_impact_str = t("alt.co2Impact.value", delta=d_co2_rounded) if d_co2_rounded != 0 else t("alt.co2.neutral")
 
         slug = "_".join(s["subscription_ids"]) if s["subscription_ids"] else "none"
 
@@ -272,7 +274,7 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
             isRecommended=s.get("is_recommended", False),
             action=ProposedAction(
                 title=action_title,
-                description=f"{action_title}. This changes your mobility portfolio.",
+                description=t("alt.action.description", title=action_title),
                 consequence=consequence,
             ),
             deltaCostVsRecommendedEur=s.get("delta_cost_eur", 0),
@@ -300,10 +302,10 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
     if decision["exists"]:
         alts.append(Alternative(
             id="hold",
-            name="Hold pending decision",
+            name=t("alt.hold.name"),
             annualCostEur=keep_cost,
             savingsVsCurrentEur=0,
-            co2Impact="Neutral",
+            co2Impact=t("alt.co2.neutral"),
             co2ImpactKg=0.0,
             tradeoff=decision["reason"],
             isRecommended=False,
@@ -336,10 +338,10 @@ def build_alternatives_from_optimization() -> list[Alternative] | None:
         baseline_id = "keep_baseline" if "keep" in existing_ids else "keep"
         alts.append(Alternative(
             id=baseline_id,
-            name="Keep current setup",
+            name=t("alt.keep.name"),
             annualCostEur=keep_cost,
             savingsVsCurrentEur=0,
-            tradeoff="No change to cost or emissions",
+            tradeoff=t("alt.keep.tradeoff"),
             isRecommended=False,
             action=None,
             deltaVsCurrent=DeltaVsCurrent(),

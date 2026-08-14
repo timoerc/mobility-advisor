@@ -208,6 +208,11 @@ class CalendarEvent(BaseModel):
     time_end: str | None = None
     type: str
     description: str
+    # German sibling of `description`, read by i18n.pick() when the request
+    # language is "de". Optional and unmodeled-extra-safe: without this field, a scenario's
+    # description_de would silently validate away and never reach any consumer — see
+    # CLAUDE.md's note on Pydantic dropping unmodeled extra fields.
+    description_de: str | None = None
     location: str | None = None
     signals: list[str] = []
 
@@ -237,6 +242,8 @@ class LifeEvent(BaseModel):
         "relocation", "job_change", "subscription_change", "household_change", "other"
     ]
     summary: str
+    # See CalendarEvent.description_de above — same pattern.
+    summary_de: str | None = None
     event_date: str | None = None
     signals: list[str] = []
     source_mail_id: str | None = None

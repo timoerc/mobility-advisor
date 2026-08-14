@@ -6,48 +6,67 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Wanted to see how spring Frankfurt travel shaped up before cancelling.",
+      "resolvedMessage_de": "Wollte abwarten, wie sich die Frankfurt-Reisen im Frühjahr entwickeln, bevor ich kündige.",
       "resolvedAt": "2026-01-15",
       "recommendation": {
         "verdict": "BahnCard 50 usage is borderline this year",
+        "verdict_de": "BahnCard-50-Nutzung ist dieses Jahr grenzwertig",
         "confidence": "medium",
         "summaryText": "Your discounted DB spend so far this year sits right at the edge of BahnCard 50's break-even point — usage has been thin and irregular.",
+        "summaryText_de": "Ihre bisherigen vergünstigten DB-Ausgaben liegen dieses Jahr genau an der Amortisationsgrenze der BahnCard 50 — die Nutzung war gering und unregelmäßig.",
         "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if cancelled" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if cancelled", "label_de": "Mögliche Ersparnis bei Kündigung" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO₂-Auswirkung" }
         ],
         "reasoning": [
           "Only a handful of DB trips are recorded so far this year, well under the pace needed to clear the €488 breakeven threshold",
           "No relocation or other major schedule change is on the calendar yet",
           "Deutschland-Ticket and MILES Silber Pass continue to cover regional and car-share needs separately"
         ],
+        "reasoning_de": [
+          "Bisher sind nur wenige DB-Fahrten dieses Jahr erfasst, deutlich unter dem Tempo, das für die Amortisationsschwelle von 488 € nötig wäre",
+          "Im Kalender steht bisher kein Umzug oder eine andere größere Terminänderung",
+          "Deutschland-Ticket und MILES Silber Pass decken weiterhin getrennt den Regional- und Carsharing-Bedarf ab"
+        ],
         "assumptions": [
           "Assumes the travel pattern stays similar for the rest of the year",
           "No account taken of unquantified car-ownership costs (fuel/insurance/maintenance) — not present in the available data"
+        ],
+        "assumptions_de": [
+          "Geht davon aus, dass das Reisemuster für den Rest des Jahres ähnlich bleibt",
+          "Nicht bezifferte Kosten des Autobesitzes (Kraftstoff/Versicherung/Wartung) sind nicht berücksichtigt — in den verfügbaren Daten nicht enthalten"
         ],
         "alternatives": [
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 (2. Klasse, Standard, Jahresabo) kündigen",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Full-price Sparpreis fares remain available; only the discount is lost.",
+            "tradeoff_de": "Sparpreis-Tarife zum vollen Preis bleiben verfügbar; es entfällt nur der Rabatt.",
             "isRecommended": true,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Kündigen Sie Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before the 15 January 2027 renewal to avoid another year of card fees.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "description_de": "Kündigen Sie vor der Verlängerung am 15. Januar 2027, um ein weiteres Jahr Kartengebühren zu vermeiden.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und nicht ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Keeps the discount in case business travel picks up later in the year.",
+            "tradeoff_de": "Behält den Rabatt für den Fall, dass die Geschäftsreisen später im Jahr zunehmen.",
             "isRecommended": false,
             "action": null
           }
@@ -60,48 +79,67 @@
       "outcome": "kept_current",
       "resolvedAlternativeId": "keep",
       "resolvedMessage": "Chose to wait and revisit after the Hamburg decision in August.",
+      "resolvedMessage_de": "Habe mich entschieden abzuwarten und nach der Hamburg-Entscheidung im August erneut zu prüfen.",
       "resolvedAt": "2026-04-20",
       "recommendation": {
         "verdict": "Your mobility setup is in limbo pending the Hamburg decision",
+        "verdict_de": "Ihr Mobilitäts-Setup hängt in der Schwebe, bis die Hamburg-Entscheidung fällt",
         "confidence": "low",
         "summaryText": "A possible relocation to Hamburg could reset your whole commute pattern — it's too early to act on BahnCard 50, Deutschland-Ticket, or MILES until that's resolved.",
+        "summaryText_de": "Ein möglicher Umzug nach Hamburg könnte Ihr gesamtes Pendelmuster verändern — es ist zu früh, bei BahnCard 50, Deutschland-Ticket oder MILES zu handeln, solange das nicht geklärt ist.",
         "metrics": [
-          { "value": 1, "unit": "decision", "direction": "neutral", "label": "Pending: Hamburg move (by 15 Aug 2026)" },
-          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Recommended change right now" }
+          { "value": 1, "unit": "decision", "direction": "neutral", "label": "Pending: Hamburg move (by 15 Aug 2026)", "label_de": "Ausstehend: Umzug nach Hamburg (bis 15.08.2026)" },
+          { "value": 0, "unit": "€/year", "direction": "neutral", "label": "Recommended change right now", "label_de": "Aktuell empfohlene Änderung" }
         ],
         "reasoning": [
           "An apartment-viewing event for Hamburg appeared on the calendar this quarter, with a job-offer decision due by 15 August 2026",
           "If the move goes ahead, the car commute disappears and rail/Deutschland-Ticket demand resets entirely — the current break-even analysis wouldn't apply",
           "BahnCard 50 usage remains borderline in the meantime, but acting now risks the wrong call either way"
         ],
+        "reasoning_de": [
+          "Ein Besichtigungstermin für eine Wohnung in Hamburg erschien in diesem Quartal im Kalender, mit einer Entscheidung über das Stellenangebot bis 15. August 2026",
+          "Kommt der Umzug zustande, entfällt das Auto-Pendeln und der Bedarf an Bahn/Deutschland-Ticket ändert sich komplett — die aktuelle Amortisationsanalyse würde dann nicht mehr gelten",
+          "Die BahnCard-50-Nutzung bleibt in der Zwischenzeit grenzwertig, aber jetzt zu handeln riskiert in beide Richtungen die falsche Entscheidung"
+        ],
         "assumptions": [
           "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
           "Assumes the 15 August 2026 decision date holds"
+        ],
+        "assumptions_de": [
+          "Für den Autobesitz (Kraftstoff/Versicherung/Wartung) liegt in den verfügbaren Daten keine Kostenangabe vor — als nicht beziffert markiert, nicht als null angenommen",
+          "Geht davon aus, dass der Entscheidungstermin am 15. August 2026 Bestand hat"
         ],
         "alternatives": [
           {
             "id": "hold_pending_relocation",
             "name": "Hold all subscriptions pending the Hamburg decision",
+            "name_de": "Alle Abonnements bis zur Hamburg-Entscheidung zurückstellen",
             "annualCostEur": 1120,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "No savings captured now, but avoids a change the relocation decision could immediately reverse.",
+            "tradeoff_de": "Aktuell keine Ersparnis, vermeidet aber eine Änderung, die durch die Umzugsentscheidung sofort wieder rückgängig gemacht werden könnte.",
             "isRecommended": true,
             "action": {
               "title": "Postpone any subscription changes until after the 15 August 2026 relocation decision",
+              "title_de": "Abo-Änderungen bis nach der Umzugsentscheidung am 15. August 2026 verschieben",
               "description": "Hold BahnCard 50, Deutschland-Ticket, and MILES Silber Pass as-is until the Hamburg job offer is resolved.",
-              "consequence": "No subscriptions change now; this analysis should be revisited once the relocation decision is made."
+              "description_de": "Behalten Sie BahnCard 50, Deutschland-Ticket und MILES Silber Pass unverändert bei, bis das Hamburg-Stellenangebot geklärt ist.",
+              "consequence": "No subscriptions change now; this analysis should be revisited once the relocation decision is made.",
+              "consequence_de": "Aktuell ändert sich an Ihren Abonnements nichts; diese Analyse sollte nach der Umzugsentscheidung erneut geprüft werden."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 1120,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Equivalent outcome to holding pending the decision.",
+            "tradeoff_de": "Entspricht dem Ergebnis, die Entscheidung abzuwarten.",
             "isRecommended": false,
             "action": null
           }
@@ -117,11 +155,13 @@
       "resolvedAt": null,
       "recommendation": {
         "verdict": "BahnCard 50's future depends on the Hamburg decision",
+        "verdict_de": "Die Zukunft der BahnCard 50 hängt von der Hamburg-Entscheidung ab",
         "confidence": "low",
         "summaryText": "If the Hamburg move doesn't happen, BahnCard 50 is no longer worth its cost given your irregular usage this year — cancelling would save the full €244. If the move goes ahead, the whole subscription stack needs re-evaluating after relocation.",
+        "summaryText_de": "Findet der Umzug nach Hamburg nicht statt, lohnt sich die BahnCard 50 angesichts Ihrer unregelmäßigen Nutzung dieses Jahr nicht mehr — eine Kündigung würde die vollen 244 € sparen. Kommt der Umzug zustande, muss das gesamte Abo-Portfolio nach dem Umzug neu bewertet werden.",
         "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if no relocation" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving if no relocation", "label_de": "Mögliche Ersparnis ohne Umzug" },
+          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact", "label_de": "CO₂-Auswirkung" }
         ],
         "reasoning": [
           "BahnCard 50 savings this year (~€239) are almost exactly equal to its €244 cost — a marginal net loss either way",
@@ -129,34 +169,51 @@
           "If the 15 August 2026 relocation decision goes ahead, commute patterns reset entirely and this analysis no longer applies",
           "This recommendation assumes no relocation — cancelling BahnCard 50 is the safer default until the decision is made"
         ],
+        "reasoning_de": [
+          "Die Ersparnis durch die BahnCard 50 dieses Jahr (~239 €) entspricht fast genau ihren Kosten von 244 € — so oder so ein geringer Nettoverlust",
+          "Bahn- und MILES-Nutzung bleiben unregelmäßig und häufen sich in wenigen Monaten mit langen Lücken dazwischen",
+          "Kommt die Umzugsentscheidung am 15. August 2026 zustande, ändert sich das Pendelmuster komplett und diese Analyse gilt nicht mehr",
+          "Diese Empfehlung geht von keinem Umzug aus — die Kündigung der BahnCard 50 ist bis zur Entscheidung die sicherere Standardwahl"
+        ],
         "assumptions": [
           "No cost figure exists for car ownership (fuel/insurance/maintenance) in the available data — flagged as unquantified, not assumed zero",
           "If relocation is confirmed, revisit Deutschland-Ticket and MILES Silber Pass as well, not just BahnCard 50"
+        ],
+        "assumptions_de": [
+          "Für den Autobesitz (Kraftstoff/Versicherung/Wartung) liegt in den verfügbaren Daten keine Kostenangabe vor — als nicht beziffert markiert, nicht als null angenommen",
+          "Wird der Umzug bestätigt, sollten auch Deutschland-Ticket und MILES Silber Pass neu geprüft werden, nicht nur die BahnCard 50"
         ],
         "alternatives": [
           {
             "id": "cancel_bc50",
             "name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+            "name_de": "BahnCard 50 (2. Klasse, Standard, Jahresabo) kündigen",
             "annualCostEur": 0,
             "savingsVsCurrentEur": 244,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Assumes no relocation; if the Hamburg move goes ahead, revisit the whole stack instead.",
+            "tradeoff_de": "Geht von keinem Umzug aus; kommt der Umzug nach Hamburg zustande, sollte stattdessen das gesamte Portfolio neu geprüft werden.",
             "isRecommended": true,
             "action": {
               "title": "Cancel your BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+              "title_de": "Kündigen Sie Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo)",
               "description": "Cancel before the 15 January 2027 renewal — savings this year barely covered the card's cost.",
-              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced."
+              "description_de": "Kündigen Sie vor der Verlängerung am 15. Januar 2027 — die Ersparnis deckte dieses Jahr kaum die Kartenkosten.",
+              "consequence": "Your BahnCard 50 (2. Klasse, Standard, Jahresabo) will be cancelled and not replaced.",
+              "consequence_de": "Ihre BahnCard 50 (2. Klasse, Standard, Jahresabo) wird gekündigt und nicht ersetzt."
             }
           },
           {
             "id": "keep",
             "name": "Keep current setup",
+            "name_de": "Aktuelles Setup beibehalten",
             "annualCostEur": 244,
             "savingsVsCurrentEur": 0,
             "co2Impact": "Neutral",
             "co2ImpactKg": 0,
             "tradeoff": "Holds everything pending the 15 August 2026 relocation decision.",
+            "tradeoff_de": "Stellt alles bis zur Umzugsentscheidung am 15. August 2026 zurück.",
             "isRecommended": false,
             "action": null
           }

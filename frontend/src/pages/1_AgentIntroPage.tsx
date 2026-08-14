@@ -1,9 +1,25 @@
-import { useEffect, useState } from "react";
-
-const introText =
-  "Hi, I am your mobility advisor.\n\nI will help you understand your mobility portfolio and find travel options that fit your preferences.\n\nLet us get you started!";
+import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../i18n";
 
 export function AgentIntroPage() {
+  const { t, language } = useI18n();
+
+  // Rebuilt whenever the language changes. Joined from three separate translation keys (rather
+  // than one key with embedded "\n\n") so each paragraph is independently translatable text
+  // in en.ts/de.ts, not an opaque blob with baked-in formatting.
+  const introText = useMemo(
+    () =>
+      [
+        t("onboarding.agentIntro.headline"),
+        t("onboarding.agentIntro.paragraph1"),
+        t("onboarding.agentIntro.paragraph2"),
+      ].join("\n\n"),
+    [t],
+  );
+  // Derived once from introText itself, rather than duplicated as separate literals, so the
+  // typing-progress comparisons below stay correct regardless of which language introText is in.
+  const [fullHeadline = "", fullFirstParagraph = ""] = introText.split("\n\n");
+
   const [visibleText, setVisibleText] = useState("");
 
   useEffect(() => {
@@ -20,18 +36,17 @@ export function AgentIntroPage() {
     }, 28);
 
     return () => window.clearInterval(typingTimer);
-  }, []);
+    // Re-run (and restart the typewriter from scratch) whenever the language changes, since
+    // introText itself changed — `language` is otherwise unused here but is the real trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introText, language]);
 
   const [headline = "", firstParagraph = "", secondParagraph = ""] =
     visibleText.split("\n\n");
   const isTyping = visibleText.length < introText.length;
-  const headlineIsTyping =
-    headline.length < "Hi, I am your mobility advisor.".length;
+  const headlineIsTyping = headline.length < fullHeadline.length;
   const firstParagraphIsTyping =
-    !headlineIsTyping &&
-    firstParagraph.length <
-      "I will help you understand your mobility portfolio and find travel options that fit your preferences."
-        .length;
+    !headlineIsTyping && firstParagraph.length < fullFirstParagraph.length;
 
   return (
     <div className="flex flex-col gap-6">

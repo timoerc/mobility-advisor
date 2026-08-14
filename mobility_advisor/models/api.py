@@ -18,12 +18,27 @@ class MetricDelta(BaseModel):
     unit: str
     direction: Literal["save", "extra_cost", "reduce", "increase", "neutral"]
     label: str
+    # German sibling for seeded scenario analysis_history.json entries — see
+    # CalendarEvent.description_de in models/fixtures.py. Live runs never populate this (their
+    # MetricDelta.label values are already built in the request's language via t()/main.py's
+    # metric builders).
+    label_de: str | None = None
+    # Some seeded entries' `value` is itself a short English word rather than a number (e.g.
+    # a pending-decision tile's "relocation") — this is that value's German counterpart, kept
+    # separate from label_de since value and label are independent fields.
+    value_de: str | None = None
 
 
 class ProposedAction(BaseModel):
     title: str
     description: str
     consequence: str
+    # German siblings for seeded analysis_history.json entries — see
+    # CalendarEvent.description_de in models/fixtures.py for why these must be declared, not
+    # left as extras.
+    title_de: str | None = None
+    description_de: str | None = None
+    consequence_de: str | None = None
 
 
 class DeltaVsCurrent(BaseModel):
@@ -38,6 +53,12 @@ class DeltaVsCurrent(BaseModel):
 class Alternative(BaseModel):
     id: str
     name: str
+    # German siblings, populated only on seeded scenario analysis_history.json entries (see
+    # CalendarEvent.description_de in models/fixtures.py) — a live /api/analyze run never sets
+    # these; its LLM output already comes back in the request's language via the agent-prompt
+    # directive.
+    name_de: str | None = None
+    tradeoff_de: str | None = None
     annualCostEur: float
     savingsVsCurrentEur: float
     co2Impact: str = "Neutral"
@@ -73,6 +94,13 @@ class Recommendation(BaseModel):
     reasoning: list[str]
     assumptions: list[str] = []
     alternatives: list[Alternative]
+    # German siblings for seeded scenario analysis_history.json entries — see
+    # CalendarEvent.description_de in models/fixtures.py. Live runs never populate these (see
+    # Alternative.name_de).
+    verdict_de: str | None = None
+    summaryText_de: str | None = None
+    reasoning_de: list[str] | None = None
+    assumptions_de: list[str] | None = None
     # Deterministic warnings from the trip-projection engine (engine/) — malformed travel
     # history entries (null costs, empty/unknown modes), travel-reduction damping applied,
     # rail-fare calibration notes, uncorroborated calendar demand caps, etc. Populated from
@@ -129,7 +157,15 @@ class AnalysisHistoryEntry(BaseModel):
     outcome: Literal["pending", "kept_current", "executed"] = "pending"
     resolvedAlternativeId: str | None = None
     resolvedMessage: str | None = None
+    # German sibling for seeded scenario entries — see CalendarEvent.description_de in
+    # models/fixtures.py.
+    resolvedMessage_de: str | None = None
     resolvedAt: str | None = None
+    # The language this entry's recommendation prose was generated/seeded in. Lets the
+    # frontend and the Communicator's continuity read (load_recommendation_history()) tell a
+    # German live analysis apart from an older English one instead of assuming everything in
+    # history matches the currently selected language.
+    language: Literal["en", "de"] = "en"
     # Subscription stack captured just before an executed change, kept so the newest executed entry
     # can be reverted (restored) as a true undo. Present only while outcome == "executed"; cleared on
     # revert. Shape: a CurrentSubscriptions dump ({"subscriptions": [...]}).

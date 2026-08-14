@@ -3,6 +3,7 @@ deterministic path (builder.py) and the LLM-extraction fallback (extraction.py):
 metric tiles, the pending-decision hold override, cost/CO2 normalization, and the
 actionable-alternatives cap."""
 from ...engine.simulation import _generalized_cost_rates
+from ...i18n import t
 from ...models import Alternative, DeltaVsCurrent, MetricDelta, Recommendation
 from ...store.decisions import detect_pending_portfolio_decision
 from .builder import load_optimization_context, load_optimization_weights
@@ -42,12 +43,10 @@ def _co2_methodology_assumption(weights: dict | None) -> str:
     price entirely.
     """
     value_of_time, co2_price = _generalized_cost_rates(weights)
-    return (
-        "A subscription changes what each transport mode costs you; projected mode usage "
-        "shifts in response (a gradual mode-share shift, not a hard switch), and travel "
-        f"time and CO2 follow. For this persona, time is valued at €{value_of_time:.2f}/hour "
-        f"and CO2 at €{co2_price:.3f}/kg when weighing mode choice, derived from their "
-        "stated cost/time/sustainability priorities."
+    return t(
+        "assumption.co2Methodology",
+        valueOfTime=f"{value_of_time:.2f}",
+        co2Price=f"{co2_price:.3f}",
     )
 
 
@@ -88,8 +87,8 @@ def _format_time_headline(abs_time_min: float) -> tuple[float, str]:
     """Minutes below 90 render as whole minutes; above that, hours to 1 decimal — same
     breakpoint AlternativeRow uses for the vs-current strip."""
     if abs_time_min < 90:
-        return round(abs_time_min), "min/year"
-    return round(abs_time_min / 60, 1), "h/year"
+        return round(abs_time_min), t("metric.unit.minPerYear")
+    return round(abs_time_min / 60, 1), t("metric.unit.hPerYear")
 
 
 def build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> list[MetricDelta]:
@@ -102,21 +101,24 @@ def build_pending_decision_metrics(alts: list[Alternative], decision: dict) -> l
         default=None,
     )
     value_on_hold = best_deferred.savingsVsCurrentEur if best_deferred else 0.0
-    category = decision["events"][0]["category"] if decision.get("events") else "life event"
+    category_key = decision["events"][0]["category"] if decision.get("events") else None
+    category_label = (
+        t(f"lifeEvent.category.{category_key}") if category_key else t("metric.pendingDecision.lifeEvent")
+    )
     return [
-        MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label="Revisit by"),
+        MetricDelta(value=decision["revisit_after"], unit="", direction="neutral", label=t("metric.pendingDecision.revisitBy")),
         MetricDelta(
             # max(0, ...), not abs(...) — savingsVsCurrentEur is negative when even the best
             # deferred alternative is WORSE than the status quo (no candidate improves on
             # holding), and abs() flipped that into a positive "Value on hold €X" figure,
             # implying value is being left on the table when there is none.
             value=max(0, round(value_on_hold)),
-            unit="€/year",
+            unit=t("metric.unit.eurPerYear"),
             direction="neutral",
-            label="Value on hold",
+            label=t("metric.pendingDecision.valueOnHold"),
         ),
         MetricDelta(
-            value=category.replace("_", " "), unit="", direction="neutral", label="Decision pending"
+            value=category_label, unit="", direction="neutral", label=t("metric.pendingDecision.decisionPending")
         ),
     ]
 
@@ -153,22 +155,22 @@ def build_headline_metrics(alts: list[Alternative], decision: dict) -> list[Metr
 
     cost_metric = MetricDelta(
         value=abs(round(delta.costEur)),
-        unit="€/year",
+        unit=t("metric.unit.eurPerYear"),
         direction="save" if delta.costEur < 0 else ("extra_cost" if delta.costEur > 0 else "neutral"),
-        label="Potential saving" if delta.costEur < 0 else ("Extra cost" if delta.costEur > 0 else "No change"),
+        label=t("metric.potentialSaving") if delta.costEur < 0 else (t("metric.extraCost") if delta.costEur > 0 else t("metric.noChange")),
     )
     co2_metric = MetricDelta(
         value=abs(round(delta.co2Kg, 1)),
-        unit="kg CO₂/year",
+        unit=t("metric.unit.kgCo2PerYear"),
         direction="reduce" if delta.co2Kg < 0 else ("increase" if delta.co2Kg > 0 else "neutral"),
-        label="CO₂ reduction" if delta.co2Kg < 0 else ("CO₂ increase" if delta.co2Kg > 0 else "No CO₂ change"),
+        label=t("metric.co2Reduction") if delta.co2Kg < 0 else (t("metric.co2Increase") if delta.co2Kg > 0 else t("metric.noCo2Change")),
     )
     time_value, time_unit = _format_time_headline(abs(delta.timeMin))
     time_metric = MetricDelta(
         value=time_value,
         unit=time_unit,
         direction="reduce" if delta.timeMin < 0 else ("increase" if delta.timeMin > 0 else "neutral"),
-        label="Time saved" if delta.timeMin < 0 else ("Extra travel time" if delta.timeMin > 0 else "No time change"),
+        label=t("metric.timeSaved") if delta.timeMin < 0 else (t("metric.extraTravelTime") if delta.timeMin > 0 else t("metric.noTimeChange")),
     )
 
     ranked = sorted(
@@ -205,13 +207,10 @@ def enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     decision = detect_pending_portfolio_decision()
     if not decision["exists"]:
         return rec
+    # Matched on id alone (not a name substring like "hold pending") so this survives the
+    # alternative's display name being translated — see CLAUDE.md's i18n section.
     hold = next(
-        (
-            a
-            for a in rec.alternatives
-            if a.action is None
-            and (a.id == "hold" or "hold pending" in a.name.lower())
-        ),
+        (a for a in rec.alternatives if a.action is None and a.id == "hold"),
         None,
     )
     if hold is None or hold.isRecommended:
@@ -220,7 +219,7 @@ def enforce_hold_when_decision_pending(rec: Recommendation) -> Recommendation:
     for alt in rec.alternatives:
         alt.isRecommended = alt is hold
     revisit = decision["revisit_after"]
-    rec.verdict = f"Hold your current setup until the pending decision resolves ({revisit})"
+    rec.verdict = t("verdict.holdUntilResolved", revisit=revisit)
     rec.summaryText = decision["reason"]
     rec.confidence = "low"
     rec.metrics = build_pending_decision_metrics(rec.alternatives, decision)

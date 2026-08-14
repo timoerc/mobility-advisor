@@ -4,6 +4,7 @@ from a near-term life-event signal."""
 from datetime import date, timedelta
 
 from .. import clock
+from ..i18n import t
 from ..store.loaders import load_current_subscriptions, load_life_events, load_travel_history
 from .factors import estimate_trip_price
 from .geo import _RAIL_DISTANCE_THRESHOLD_KM
@@ -104,13 +105,19 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     synthetic_total = 0.0
     max_dist = 0.0
     n = 0
-    for t in trips:
-        if t.get("mode") != "rail":
+    # NB: loop variable named `trip`, not `t` — `t` is also this module's i18n translate
+    # function (see the `from ..i18n import t` at the top of the file), and Python treats any
+    # name assigned anywhere in a function body as local to the whole function. A `for t in
+    # trips:` here would silently shadow the translator for every t(...) call below, in every
+    # branch this loop can fall through to — not a crash on every path, so easy to miss in
+    # ad-hoc testing; a `for trip in trips:` elsewhere in this file already avoids exactly this.
+    for trip in trips:
+        if trip.get("mode") != "rail":
             continue
-        if "deutsche bahn" not in (t.get("provider") or "").lower():
+        if "deutsche bahn" not in (trip.get("provider") or "").lower():
             continue
-        cost = t.get("cost_eur")
-        dist = t.get("distance_km")
+        cost = trip.get("cost_eur")
+        dist = trip.get("distance_km")
         if cost is None or not dist or dist <= 0:
             continue
         if dist <= _RAIL_DISTANCE_THRESHOLD_KM:
@@ -118,7 +125,7 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
             # _apply_rail_calibration) — a regional-distance fare here would fit the ratio
             # against a fare structure it never actually scales.
             continue
-        ticket_type_lower = (t.get("ticket_type") or "").lower()
+        ticket_type_lower = (trip.get("ticket_type") or "").lower()
         if cost == 0 or "deutschland-ticket" in ticket_type_lower or "bahncard 100" in ticket_type_lower:
             continue
         fare_class = "flex" if "flex" in ticket_type_lower else "spar"
@@ -134,9 +141,7 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
 
     if n < _RAIL_FARE_CALIBRATION_MIN_TRIPS or synthetic_total <= 0:
         return 1.0, 0.0, [
-            f"Rail fare calibration skipped ({n} usable DB trip(s) with cost+distance data; "
-            f"need >= {_RAIL_FARE_CALIBRATION_MIN_TRIPS}) — projected rail prices use the "
-            f"uncalibrated synthetic price curve, not observed fares."
+            t("warn.railCalibrationSkipped", n=n, minTrips=_RAIL_FARE_CALIBRATION_MIN_TRIPS)
         ]
 
     ratio = full_price_total / synthetic_total
@@ -146,16 +151,12 @@ def _rail_fare_calibration_ratio() -> tuple[float, float, list[str]]:
     )
     lo, hi = _RAIL_FARE_CALIBRATION_CLAMP
     if ratio < lo or ratio > hi:
-        warning = (
-            f"Rail fare calibration ratio {round(ratio, 2)}x (from {n} observed DB trips) "
-            f"looked like an outlier and was clamped to [{lo}, {hi}]."
-        )
+        warning = t("warn.railCalibrationClamped", ratio=round(ratio, 2), n=n, lo=lo, hi=hi)
         ratio = max(lo, min(hi, ratio))
     else:
-        warning = (
-            f"Rail prices calibrated to observed fares: synthetic price curve scaled "
-            f"{round(ratio, 2)}x from {n} observed DB Sparpreis/Flexpreis trip(s) up to "
-            f"{round(max_distance_km)}km; routes beyond that use the uncalibrated curve."
+        warning = t(
+            "warn.railCalibrationApplied",
+            ratio=round(ratio, 2), n=n, maxDist=round(max_distance_km),
         )
     return ratio, max_distance_km, [warning]
 
@@ -219,11 +220,7 @@ def _travel_reduction_factor() -> tuple[float, list[str]]:
 
     nearest = min(qualifying)
     factor = max(0.0, min(1.0, (nearest - clock.MOCK_TODAY).days / 365))
-    warning = (
-        f"Travel-reduction signal detected (event date {nearest.isoformat()}) — projected "
-        f"trip frequencies damped by a factor of {round(factor, 2)} to reflect reduced "
-        f"travel after this date, rather than extrapolating history unchanged."
-    )
+    warning = t("warn.travelReductionDetected", date=nearest.isoformat(), factor=round(factor, 2))
     return factor, [warning]
 
 

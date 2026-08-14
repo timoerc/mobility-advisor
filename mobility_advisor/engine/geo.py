@@ -6,6 +6,7 @@ import re
 import time
 
 from .. import paths
+from ..i18n import t
 from ..integrations.ors import (
     ORS_API_KEY,
     clean_location,
@@ -201,7 +202,7 @@ def compute_route_alternatives(origin: str, destination: str) -> dict:
             else:
                 dist_km = hav_km * 1.3
                 dur_min = estimate_duration_min("car", dist_km)
-                warnings.append(f"{mode}: driving route API failed, using heuristic")
+                warnings.append(t("warn.drivingRouteFailed", mode=mode))
         elif mode.startswith("rail"):
             dist_km = round(hav_km * 1.3, 1)
             dur_min = estimate_duration_min(mode, dist_km)

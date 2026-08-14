@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { PersonaCard } from "../../components/PersonaCard";
+import { LanguageSwitcher } from "../../components/LanguageSwitcher";
+import { useT } from "../../i18n";
 import type { Persona } from "../../personas";
 
 type PseudoLoginPageProps = {
@@ -9,6 +11,7 @@ type PseudoLoginPageProps = {
 };
 
 export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageProps) {
+  const t = useT();
   const [logoVisible, setLogoVisible] = useState(false);
 
   useEffect(() => {
@@ -17,12 +20,15 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
   }, []);
 
   return (
-    <div className="min-h-screen bg-canvas flex flex-col items-center px-4 py-12">
+    <div className="relative min-h-screen bg-canvas flex flex-col items-center px-4 py-12">
+      {/* This page has no shared header (see AppShell/App.tsx's onboarding+editing headers), so
+          the switcher is positioned independently rather than folded into one. */}
+      <LanguageSwitcher className="absolute top-4 right-4 z-10" />
       {onBack && (
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={t("common.back")}
           className="self-start mb-4 h-9 w-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 hover:shadow-card active:scale-95 flex items-center justify-center cursor-pointer flex-shrink-0 transition-[background-color,border-color,box-shadow,transform] duration-150 ease-soft"
         >
           <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
@@ -37,8 +43,8 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
             <span className="text-white font-bold">DB</span>
           </object>
         </div>
-        <h1 className="text-xl font-semibold text-ink mt-4 m-0">Select a profile to continue</h1>
-        <p className="text-sm text-gray-500 m-0">Demo mode — no real authentication</p>
+        <h1 className="text-xl font-semibold text-ink mt-4 m-0">{t("login.selectProfile")}</h1>
+        <p className="text-sm text-gray-500 m-0">{t("login.demoMode")}</p>
       </div>
 
       <div className="w-full max-w-md flex flex-col gap-3">
@@ -55,14 +61,14 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
             +
           </div>
           <div>
-            <p className="font-semibold text-gray-500 m-0">Add new profile</p>
-            <p className="text-sm text-gray-400 m-0 mt-0.5">Start fresh with empty data</p>
+            <p className="font-semibold text-gray-500 m-0">{t("login.addNewProfile")}</p>
+            <p className="text-sm text-gray-400 m-0 mt-0.5">{t("login.startFresh")}</p>
           </div>
         </button>
       </div>
 
       <p className="text-xs text-gray-400 mt-12 text-center max-w-xs">
-        BCG × Deutsche Bahn university project prototype. No data is stored outside your browser.
+        {t("login.disclaimer")}
       </p>
     </div>
   );

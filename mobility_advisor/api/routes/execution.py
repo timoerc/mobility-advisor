@@ -9,6 +9,7 @@ from google.genai import types as gtypes
 
 from ... import clock, paths
 from ...agents.execution import execution_agent
+from ...i18n import t
 from ...models import CurrentSubscriptions
 from ...store.history import load_history, save_history
 from ..deps import history_lock
@@ -61,18 +62,21 @@ async def execute(req: ExecuteRequest):
         for fr in event.get_function_responses():
             if fr.name == "apply_subscription_change":
                 tool_result = fr.response
+        # `text`, not `t` — `t` is also this module's i18n translate function (imported from
+        # mobility_advisor.i18n), and a bare assignment to `t` here would shadow it for the
+        # rest of this handler, including the t(...) calls later in this function.
         if event.is_final_response():
-            t = _collect_text(event)
-            if t.strip():
-                last_text = t
+            text = _collect_text(event)
+            if text.strip():
+                last_text = text
         else:
-            t = _collect_text(event)
-            if t.strip() and not _has_function_call(event):
-                fallback_text = t
+            text = _collect_text(event)
+            if text.strip() and not _has_function_call(event):
+                fallback_text = text
 
     reply = last_text or fallback_text
     if not reply:
-        raise HTTPException(status_code=500, detail="Execution agent produced no response")
+        raise HTTPException(status_code=500, detail=t("error.executionAgentNoResponse"))
 
     success = bool(tool_result and tool_result.get("status") == "applied")
 
@@ -98,10 +102,6 @@ async def execute(req: ExecuteRequest):
                 # left the user with an applied change that silently can never be reverted
                 # through the history UI, with the response still claiming plain success.
                 print(f"Warning: applied change but could not record it against analysis {req.analysis_id}")
-                reply = (
-                    f"{reply}\n\n(Note: this change was applied, but could not be linked "
-                    f"to its originating analysis — likely because a newer analysis ran in "
-                    f"the meantime. It will not appear as revertible in your history.)"
-                )
+                reply = f"{reply}\n\n{t('error.unlinkedExecutionNote')}"
 
     return {"success": success, "message": reply}

@@ -5,9 +5,9 @@ export function Skeleton({ className = "" }: { className?: string }) {
 }
 
 /** Mirrors HomePage's loaded layout: greeting, KPI band, two insight cards + aside. */
-export function DashboardSkeleton() {
+export function DashboardSkeleton({ ariaLabel = "Loading your dashboard" }: { ariaLabel?: string }) {
   return (
-    <div className="flex flex-col gap-5" aria-label="Loading your dashboard" role="status">
+    <div className="flex flex-col gap-5" aria-label={ariaLabel} role="status">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-[76px] rounded-xl" />
