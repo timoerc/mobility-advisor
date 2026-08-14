@@ -1,6 +1,7 @@
 import { ProfileDropdown } from "./ProfileDropdown";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useT } from "../i18n";
+import { BTN_ICON } from "../ui";
 
 type AppShellProps = {
   personaName: string;
@@ -40,8 +41,8 @@ export function AppShell({
   const t = useT();
   const widthClass = wide ? "max-w-6xl" : "max-w-2xl";
   return (
-    <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen flex flex-col bg-canvas">
+      <header className="bg-white/80 backdrop-blur-md border-b border-hairline sticky top-0 z-10">
         <div className={`${widthClass} mx-auto px-4 py-3 flex items-center gap-3`}>
           {onBack ? (
             <>
@@ -49,7 +50,7 @@ export function AppShell({
                 type="button"
                 onClick={onBack}
                 aria-label={t("common.back")}
-                className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer flex-shrink-0 transition-colors"
+                className={BTN_ICON}
               >
                 <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
               </button>
@@ -77,7 +78,7 @@ export function AppShell({
               type="button"
               onClick={onChatOpen}
               title={t("nav.openChat")}
-              className="h-8 w-8 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer text-gray-500 transition-colors"
+              className={BTN_ICON}
               aria-label={t("nav.openChat")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

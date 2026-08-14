@@ -112,7 +112,7 @@ export function Combobox<T>({
         className={className}
       />
       {open && filtered.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+        <ul className="pop-in absolute z-10 mt-1 w-full max-h-56 overflow-auto bg-white border border-gray-200 rounded-lg shadow-pop py-1">
           {filtered.map((item, idx) => (
             <li
               key={getKey(item)}

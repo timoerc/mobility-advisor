@@ -26,7 +26,7 @@ export function MetricTile({ metric }: { metric: MetricDelta }) {
   // Numbers stay large and tight; strings get a smaller size and are allowed to wrap.
   const isNumeric = typeof metric.value === "number";
   return (
-    <div className={`flex-1 min-w-0 rounded-xl p-4 border ${s.bg} ${s.border} text-center`}>
+    <div className={`flex-1 min-w-0 rounded-xl p-4 border shadow-card ${s.bg} ${s.border} text-center`}>
       <p
         className={`m-0 ${s.value} ${
           isNumeric

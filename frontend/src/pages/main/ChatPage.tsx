@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "../../components/ChatInput";
 import { sendMessage } from "../../api";
@@ -14,6 +14,15 @@ type ChatPageProps = {
 
 export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPageProps) {
   const t = useT();
+  const EXAMPLE_QUESTIONS = useMemo(
+    () => [
+      t("chat.example.subscriptions"),
+      t("chat.example.optimal"),
+      t("chat.example.co2"),
+      t("chat.example.renewal"),
+    ],
+    [t],
+  );
   const [messages, setMessages] = useState<Message[]>(() => [
     { role: "agent", text: t("chat.initialMessage"), id: "init" },
   ]);
@@ -70,11 +79,11 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
           <ChatBubble key={msg.id} role={msg.role} text={msg.text} />
         ))}
         {thinking && (
-          <div className="flex items-end gap-2">
+          <div className="rise-in flex items-end gap-2">
             <div className="w-7 h-7 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
               <img src="/assets/advisor.svg" alt="" className="w-full h-full object-contain" />
             </div>
-            <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-gray-200">
+            <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-gray-200 shadow-card">
               <div className="flex gap-1 items-center">
                 {[0, 1, 2].map((i) => (
                   <span
@@ -89,12 +98,22 @@ export function ChatPage({ sessionId, onRunAnalysis, onDataChanged }: ChatPagePr
         )}
         <div ref={bottomRef} />
       </div>
-      <style>{`
-        @keyframes dotBounce {
-          0%, 60%, 100% { transform: translateY(0) }
-          30%            { transform: translateY(-5px) }
-        }
-      `}</style>
+      {messages.length === 1 && !thinking && (
+        <div className="px-4 pb-2">
+          <div className="max-w-2xl mx-auto flex flex-wrap gap-2">
+            {EXAMPLE_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => handleSend(q)}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-ink/80 hover:border-brand-red hover:text-brand-red hover:bg-red-50 transition-colors duration-150 cursor-pointer"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <ChatInput onSend={handleSend} disabled={thinking} />
     </div>
   );

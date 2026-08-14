@@ -2,7 +2,7 @@
  *  delta-oriented and forces a +/- prefix. Used by the home dashboard's stat row. */
 export function StatTile({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
-    <div className="rounded-xl p-4 border bg-white border-gray-200 text-center">
+    <div className="rounded-xl p-4 border bg-white border-hairline shadow-card text-center">
       <p className="text-2xl font-black m-0 leading-none text-gray-900">
         {value}
         {unit && <span className="text-sm font-semibold ml-1 text-gray-500">{unit}</span>}

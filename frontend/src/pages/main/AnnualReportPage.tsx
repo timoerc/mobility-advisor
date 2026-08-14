@@ -72,33 +72,24 @@ export function AnnualReportPage({ sessionId, cachedReport, onReportReady }: Ann
 
   if (!pdfUrl) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 py-12 text-center">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 py-12 text-center rise-in">
         <div className="w-24 h-24 flex-shrink-0" aria-hidden="true">
           <img className="w-full h-full object-contain" src="/assets/advisor.svg" alt="" />
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
-          <h2 className="text-2xl font-bold text-[#1f1f1f] m-0">{t("annualReport.building")}</h2>
+          <h2 className="text-2xl font-bold text-ink m-0">{t("annualReport.building")}</h2>
           <StatusMessage messages={STATUS_MESSAGES} intervalMs={4200} />
         </div>
 
-        <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden progress-shimmer">
           <div
             className="h-full bg-brand-red rounded-full transition-all duration-700"
             style={{
               width: done ? "100%" : undefined,
-              animation: done ? "none" : "annualReportProgress 40s ease-out forwards",
+              animation: done ? "none" : "fakeProgress 40s ease-out forwards",
             }}
           />
         </div>
-
-        <style>{`
-          @keyframes annualReportProgress {
-            0%   { width: 0% }
-            30%  { width: 40% }
-            70%  { width: 72% }
-            100% { width: 85% }
-          }
-        `}</style>
       </div>
     );
   }

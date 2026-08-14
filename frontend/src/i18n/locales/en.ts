@@ -158,6 +158,10 @@ export const en = {
   // ── main: chat ───────────────────────────────────────────────────────────────────────────
   "chat.initialMessage": "Hi! I'm your mobility advisor. Ask me anything about your travel costs, subscriptions, CO₂ footprint, or upcoming trips.",
   "chat.error": "I couldn't reach the advisor right now. Please try again.",
+  "chat.example.subscriptions": "What are my current mobility subscriptions?",
+  "chat.example.optimal": "Is my mobility setup optimal right now?",
+  "chat.example.co2": "How much CO₂ have I emitted this year?",
+  "chat.example.renewal": "When does my BahnCard renew?",
 
   // ── main: annual report ──────────────────────────────────────────────────────────────────
   "annualReport.status.1": "Reviewing your year of travel…",

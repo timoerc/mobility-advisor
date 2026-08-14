@@ -1,13 +1,13 @@
 import { useT } from "../i18n";
 import type { PersonalProfile } from "../types";
+import { INPUT } from "../ui";
 
 type PersonalProfilePageProps = {
   profile: PersonalProfile;
   onChange: (profile: PersonalProfile) => void;
 };
 
-const inputClass =
-  "border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100 bg-white";
+const inputClass = INPUT;
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-sm text-gray-700";
 

@@ -24,7 +24,7 @@ export function NotesPage({ notes, onChange }: NotesPageProps) {
           value={notes}
           onChange={(event) => onChange(event.target.value)}
           placeholder={t("onboarding.notes.placeholder")}
-          className="border border-gray-300 rounded-lg px-4 py-3 min-h-[180px] resize-y w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100"
+          className="border border-gray-300 rounded-lg px-4 py-3 min-h-[180px] resize-y w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100 transition-[border-color,box-shadow] duration-150"
         />
       </label>
     </div>

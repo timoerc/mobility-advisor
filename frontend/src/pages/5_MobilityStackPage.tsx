@@ -10,6 +10,7 @@ import type {
   MobilityMode,
   SubscriptionEntry,
 } from "../types";
+import { INPUT } from "../ui";
 
 type MobilityStackPageProps = {
   subscriptions: SubscriptionEntry[];
@@ -35,8 +36,7 @@ function emptyForm(mode: MobilityMode): FormState {
   };
 }
 
-const inputClass =
-  "border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-red-100 bg-white text-sm";
+const inputClass = `${INPUT} text-sm`;
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-xs text-gray-600";
 
@@ -159,7 +159,7 @@ function SubscriptionForm({
           type="button"
           onClick={onSave}
           disabled={!form.provider || !form.product || !form.started || !form.next_renewal_date}
-          className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-lg border-0 cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-semibold bg-brand-red text-white rounded-lg border-0 cursor-pointer hover:bg-brand-red-hover active:bg-brand-red-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
         >
           {saveLabel}
         </button>

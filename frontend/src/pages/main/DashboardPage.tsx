@@ -5,6 +5,7 @@ import { AlternativeRow } from "../../components/AlternativeRow";
 import { useT } from "../../i18n";
 import type { Alternative, Recommendation } from "../../types/recommendation";
 import type { MobilityArchetype } from "../../mobility-archetypes";
+import { CARD, BTN_PRIMARY } from "../../ui";
 
 type DashboardPageProps = {
   recommendation: Recommendation;
@@ -30,9 +31,9 @@ export function DashboardPage({
   return (
     <div className="flex flex-col gap-4">
       {/* Summary card */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3">
+      <div className={`${CARD} p-5 flex flex-col gap-3`}>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold leading-tight text-[#1f1f1f] m-0">
+          <h1 className="text-2xl font-bold leading-tight text-ink m-0">
             {rec.verdict}
           </h1>
           <ConfidenceBadge level={rec.confidence} />
@@ -50,7 +51,7 @@ export function DashboardPage({
       </div>
 
       {/* Reasoning */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3">
+      <div className={`${CARD} p-5 flex flex-col gap-3`}>
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide m-0">
           {t("dashboard.whyRecommendation")}
         </h2>
@@ -82,7 +83,7 @@ export function DashboardPage({
       {/* Data quality warnings — deterministic, from the trip-projection engine, not the
           narrative text, so they surface even if the LLM's prose doesn't mention them */}
       {rec.dataQualityWarnings && rec.dataQualityWarnings.length > 0 && (
-        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex flex-col gap-2">
+        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex flex-col gap-2 shadow-card">
           <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide m-0">
             {t("dashboard.dataQualityNotes")}
           </h2>
@@ -98,7 +99,7 @@ export function DashboardPage({
 
       {/* Mobility archetype */}
       {mobilityArchetype && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3">
+        <div className={`${CARD} p-5 flex flex-col gap-3`}>
           <div className="flex items-center gap-2">
             <span
               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${mobilityArchetype.color}`}
@@ -108,7 +109,7 @@ export function DashboardPage({
             </h2>
           </div>
           <div>
-            <p className="font-semibold text-[#1f1f1f] m-0 text-sm">
+            <p className="font-semibold text-ink m-0 text-sm">
               {t(mobilityArchetype.nameKey)}
             </p>
             <p className="text-xs text-gray-500 m-0 mt-0.5">
@@ -158,7 +159,7 @@ export function DashboardPage({
         <button
           type="button"
           onClick={() => onProceed(selected)}
-          className="w-full bg-brand-red text-white rounded-full px-8 py-3.5 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm transition-opacity"
+          className={`w-full ${BTN_PRIMARY}`}
         >
           {selected.action === null
             ? t("dashboard.confirmKeepCurrent")

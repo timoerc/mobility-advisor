@@ -20,7 +20,7 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#f5f5f3] flex flex-col items-center px-4 py-12">
+    <div className="relative min-h-screen bg-canvas flex flex-col items-center px-4 py-12">
       {/* This page has no shared header (see AppShell/App.tsx's onboarding+editing headers), so
           the switcher is positioned independently rather than folded into one. */}
       <LanguageSwitcher className="absolute top-4 right-4 z-10" />
@@ -29,7 +29,7 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
           type="button"
           onClick={onBack}
           aria-label={t("common.back")}
-          className="self-start mb-4 h-9 w-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+          className="self-start mb-4 h-9 w-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 hover:shadow-card active:scale-95 flex items-center justify-center cursor-pointer flex-shrink-0 transition-[background-color,border-color,box-shadow,transform] duration-150 ease-soft"
         >
           <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
         </button>
@@ -43,7 +43,7 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
             <span className="text-white font-bold">DB</span>
           </object>
         </div>
-        <h1 className="text-xl font-semibold text-[#1f1f1f] mt-4 m-0">{t("login.selectProfile")}</h1>
+        <h1 className="text-xl font-semibold text-ink mt-4 m-0">{t("login.selectProfile")}</h1>
         <p className="text-sm text-gray-500 m-0">{t("login.demoMode")}</p>
       </div>
 
@@ -55,7 +55,7 @@ export function PseudoLoginPage({ personas, onSelect, onBack }: PseudoLoginPageP
         <button
           type="button"
           onClick={() => onSelect("new")}
-          className="w-full text-left bg-white rounded-2xl border-2 border-dashed border-gray-300 p-5 flex items-center gap-4 hover:border-brand-red transition-colors cursor-pointer group"
+          className="w-full text-left bg-white rounded-2xl border-2 border-dashed border-gray-300 p-5 flex items-center gap-4 hover:border-brand-red hover:shadow-lift hover:-translate-y-0.5 active:translate-y-0 transition-[border-color,box-shadow,transform] duration-200 ease-soft cursor-pointer group"
         >
           <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl font-light flex-shrink-0">
             +

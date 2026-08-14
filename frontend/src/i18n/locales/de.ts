@@ -132,6 +132,10 @@ export const de: Record<TranslationKey, string> = {
 
   "chat.initialMessage": "Hallo! Ich bin Ihr Mobility Advisor. Fragen Sie mich alles zu Ihren Reisekosten, Abonnements, Ihrem CO₂-Fußabdruck oder anstehenden Reisen.",
   "chat.error": "Ich konnte den Advisor gerade nicht erreichen. Bitte versuchen Sie es erneut.",
+  "chat.example.subscriptions": "Welche Mobilitäts-Abonnements habe ich derzeit?",
+  "chat.example.optimal": "Ist mein Mobilitäts-Setup gerade optimal?",
+  "chat.example.co2": "Wie viel CO₂ habe ich dieses Jahr verursacht?",
+  "chat.example.renewal": "Wann verlängert sich meine BahnCard?",
 
   "annualReport.status.1": "Ihr Reisejahr wird ausgewertet…",
   "annualReport.status.2": "Abo-Rendite wird berechnet…",

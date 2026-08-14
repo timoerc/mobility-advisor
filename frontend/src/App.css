@@ -65,3 +65,172 @@
     opacity: 0;
   }
 }
+
+/* ── Entry / interaction motion primitives ──────────────────────────────── */
+
+.rise-in {
+  animation: riseIn 0.38s var(--ease-soft) both;
+}
+
+.pop-in {
+  animation: popIn 0.14s var(--ease-soft) both;
+}
+
+.bar-fill {
+  transform-origin: left;
+  animation: growBar 0.6s var(--ease-soft) both;
+}
+
+.col-fill {
+  transform-origin: bottom;
+  animation: growCol 0.6s var(--ease-soft) both;
+}
+
+@keyframes riseIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes growBar {
+  0% {
+    transform: scaleX(0);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes growCol {
+  0% {
+    transform: scaleY(0);
+  }
+
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* ── Skeleton loading state ──────────────────────────────────────────────── */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #ececea;
+  border-radius: 0.5rem;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.55),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Fake-progress bars (analysis / execution / annual report waits) ────── */
+
+@keyframes fakeProgress {
+  0% {
+    width: 0%;
+  }
+
+  30% {
+    width: 40%;
+  }
+
+  70% {
+    width: 72%;
+  }
+
+  100% {
+    width: 85%;
+  }
+}
+
+@keyframes executionProgress {
+  0% {
+    width: 0%;
+  }
+
+  50% {
+    width: 55%;
+  }
+
+  100% {
+    width: 85%;
+  }
+}
+
+@keyframes dotBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Progress-bar shimmer overlay, so the time-based fake-progress bars read as
+   actively working rather than merely growing. */
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.45),
+    transparent
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

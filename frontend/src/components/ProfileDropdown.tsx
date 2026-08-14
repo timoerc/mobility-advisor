@@ -26,7 +26,7 @@ function DropdownItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 cursor-pointer border-0 bg-transparent transition-colors text-[#1f1f1f]"
+      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 cursor-pointer border-0 bg-transparent transition-colors text-ink"
     >
       <span className="flex-1">
         <span className="block font-medium leading-snug">{label}</span>
@@ -85,17 +85,17 @@ export function ProfileDropdown({
         aria-label={t("profileDropdown.profileAndSettings")}
         aria-expanded={open}
         aria-haspopup="true"
-        className="h-8 w-8 rounded-full text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+        className="h-8 w-8 rounded-full text-white text-xs font-bold flex items-center justify-center cursor-pointer hover:brightness-110 active:scale-95 transition-[filter,transform] duration-150"
         style={{ backgroundColor: avatarBg }}
       >
         {initials}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 w-60 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+        <div className="pop-in absolute right-0 top-10 w-60 bg-white rounded-xl shadow-pop border border-gray-100 z-50 overflow-hidden">
           {/* Persona header — non-interactive */}
           <div className="px-4 py-3 border-b border-gray-100">
-            <p className="font-semibold text-sm text-[#1f1f1f] m-0 truncate">{name}</p>
+            <p className="font-semibold text-sm text-ink m-0 truncate">{name}</p>
             <p className="text-xs text-gray-500 m-0 mt-0.5 truncate">{tagline}</p>
           </div>
 

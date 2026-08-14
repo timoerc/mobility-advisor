@@ -9,6 +9,7 @@ import type { TranslationKey } from "./i18n";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
 import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis, revertAnalysis } from "./api";
 import type { Alternative, AnalysisHistoryEntry, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
+import { BTN_PRIMARY_COMPACT } from "./ui";
 import {
   classifyArchetype,
   MOBILITY_ARCHETYPES,
@@ -496,10 +497,10 @@ export default function App() {
     const showSkip = onboardingStep >= 4 && onboardingStep <= 8 && onboardingStep !== 7;
 
     return (
-      <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
+      <div className="min-h-screen flex flex-col bg-canvas">
         <ProgressBar step={onboardingStep} total={TOTAL_ONBOARDING_STEPS} />
 
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <header className="bg-white/80 backdrop-blur-md border-b border-hairline sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
             <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
             <span className="font-bold text-sm">{t("nav.appName")}</span>
@@ -527,7 +528,7 @@ export default function App() {
               type="button"
               onClick={returnToMain !== null ? handleSaveAndReturn : goBack}
               aria-label={returnToMain !== null ? t("onboarding.backToApp") : t("common.back")}
-              className="h-[52px] w-[52px] rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer flex-shrink-0"
+              className="h-[52px] w-[52px] rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 hover:shadow-card active:scale-95 cursor-pointer flex-shrink-0 transition-[background-color,border-color,box-shadow,transform] duration-150 ease-soft"
             >
               <span className="nav-arrow nav-arrow-dark nav-arrow-back" aria-hidden="true" />
             </button>
@@ -536,7 +537,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleSaveAndReturn}
-              className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
+              className={`flex-1 ${BTN_PRIMARY_COMPACT}`}
             >
               {t("onboarding.saveAndReturn")}
             </button>
@@ -547,7 +548,7 @@ export default function App() {
                   type="button"
                   onClick={goNext}
                   aria-label={t("common.continue")}
-                  className="h-[52px] w-[52px] rounded-full bg-brand-red flex items-center justify-center hover:opacity-90 cursor-pointer border-0 flex-shrink-0"
+                  className="h-[52px] w-[52px] rounded-full bg-brand-red flex items-center justify-center hover:bg-brand-red-hover active:bg-brand-red-deep active:scale-95 cursor-pointer border-0 flex-shrink-0 shadow-[0_1px_2px_rgba(236,0,22,0.25)] hover:shadow-[0_5px_14px_-3px_rgba(236,0,22,0.4)] transition-[background-color,box-shadow,transform] duration-150 ease-soft"
                 >
                   <span className="nav-arrow nav-arrow-white" aria-hidden="true" />
                 </button>
@@ -566,8 +567,8 @@ export default function App() {
     const isLast = editConfig.currentIndex === editConfig.steps.length - 1;
 
     return (
-      <div className="min-h-screen flex flex-col bg-[#f5f5f3]">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="min-h-screen flex flex-col bg-canvas">
+        <header className="bg-white/80 backdrop-blur-md border-b border-hairline sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
             <img src="/assets/db-logo.svg" className="h-5 w-8 object-contain block" alt="" />
             <span className="font-bold text-sm">{t(editConfig.labelKey)}</span>
@@ -592,14 +593,14 @@ export default function App() {
           <button
             type="button"
             onClick={handleEditCancel}
-            className="h-[52px] px-6 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50 cursor-pointer flex-shrink-0"
+            className="h-[52px] px-6 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] cursor-pointer flex-shrink-0 transition-[background-color,border-color,transform] duration-150 ease-soft"
           >
             {t("common.cancel")}
           </button>
           <button
             type="button"
             onClick={isLast ? handleEditSave : handleEditNext}
-            className="flex-1 bg-brand-red text-white rounded-full px-8 py-3 font-semibold hover:opacity-90 cursor-pointer border-0 text-sm"
+            className={`flex-1 ${BTN_PRIMARY_COMPACT}`}
           >
             {isLast ? t("common.save") : t("common.next")}
           </button>

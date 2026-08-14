@@ -10,9 +10,13 @@ import type { AnalysisHistoryEntry } from "../../types/recommendation";
 import { modeLabel } from "../../labels";
 import { StatTile } from "../../components/StatTile";
 import { useI18n, formatInt, formatKg, formatDate as fmtDateFor, formatCurrency, formatCurrencyPrecise } from "../../i18n";
+import { DashboardSkeleton } from "../../components/Skeleton";
+import { SpendChart } from "../../components/SpendChart";
+import { CARD, CARD_INTERACTIVE, BTN_PRIMARY_SM } from "../../ui";
 import {
   aggregateTrips,
   bucketByMode,
+  bucketSpendOverTime,
   DEFAULT_RANGE,
   filterTripsByRange,
   RANGE_OPTIONS,
@@ -39,7 +43,7 @@ function greetingKey(): "home.greeting.morning" | "home.greeting.afternoon" | "h
 // ── small presentational pieces ───────────────────────────────────────────────
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5">
+    <div className={`${CARD} p-5`}>
       <div className="mb-3">
         <p className="text-sm font-bold text-gray-900 m-0">{title}</p>
         {subtitle && <p className="text-xs text-gray-400 m-0 mt-0.5">{subtitle}</p>}
@@ -62,7 +66,10 @@ function MeasureBar({ label, valueText, pct, color }: { label: string; valueText
         <span className="text-sm font-semibold text-gray-900 tabular-nums">{valueText}</span>
       </div>
       <div className="h-2 rounded-full bg-gray-100">
-        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: color }} />
+        <div
+          className="h-full rounded-full bar-fill"
+          style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: color }}
+        />
       </div>
     </div>
   );
@@ -74,9 +81,9 @@ function ActionCard({ icon, title, subtitle, onClick }: ActionCardProps) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-5 py-4 text-left transition-all cursor-pointer hover:border-brand-red hover:shadow-sm active:scale-[0.99]"
+      className={`w-full flex items-center gap-4 rounded-xl px-5 py-4 text-left hover:border-brand-red/50 active:scale-[0.99] ${CARD_INTERACTIVE}`}
     >
-      <div className="w-11 h-11 rounded-xl bg-[#f5f5f3] flex items-center justify-center flex-shrink-0 text-gray-700">
+      <div className="w-11 h-11 rounded-xl bg-canvas flex items-center justify-center flex-shrink-0 text-gray-700">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -141,6 +148,11 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const recent = useMemo(() => recentTrips(filtered, 5), [filtered]);
   const maxUsage = usageSorted[0]?.trips ?? 0;
   const maxCo2 = co2Sorted[0]?.co2Kg ?? 0;
+  const spend = useMemo(
+    () => (travel ? bucketSpendOverTime(travel.trips, subscriptions, travel.referenceDate, range) : null),
+    [travel, subscriptions, range],
+  );
+  const hasSpend = !!spend && spend.buckets.some((b) => b.tripEur > 0 || b.subEur > 0);
 
   // General (non-range) derivations. Only the newest analysis is "live" — nudge on it iff it's still
   // undecided (pending), so a stale older pending never resurfaces here.
@@ -164,6 +176,19 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const firstName = personaName.trim().split(/\s+/)[0] || personaName;
 
   // ── widget blocks (declared once, placed by the responsive layout below) ─────
+  const spendCard = (
+    <Card
+      title="Mobility spend"
+      subtitle="Trip costs plus subscriptions, assumed active since they started"
+    >
+      {!hasSpend || !spend ? (
+        <EmptyState text="No spend in this range." />
+      ) : (
+        <SpendChart buckets={spend.buckets} unit={spend.unit} />
+      )}
+    </Card>
+  );
+
   const modesCard = (
     <Card title={t("home.modesByUsage")} subtitle={t("home.modesByUsage.subtitle")}>
       {usageSorted.length === 0 ? (
@@ -350,12 +375,12 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-400 py-8 text-center">{t("home.loadingDashboard")}</div>
+        <DashboardSkeleton ariaLabel={t("home.loadingDashboard")} />
       ) : (
         <>
           {/* Open-recommendation nudge — opens the decision screen for the newest, undecided analysis. */}
           {openRec && (
-            <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-2xl p-4">
+            <div className="rise-in flex items-center gap-3 bg-red-50 border border-red-100 rounded-2xl p-4 shadow-card">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 m-0">
                   {pendingSavings > 0
@@ -367,7 +392,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               <button
                 type="button"
                 onClick={() => onReviewRecommendation(openRec)}
-                className="bg-brand-red text-white rounded-full px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer flex-shrink-0"
+                className={`${BTN_PRIMARY_SM} flex-shrink-0`}
               >
                 {t("home.review")}
               </button>
@@ -383,7 +408,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                   type="button"
                   aria-pressed={range === opt.key}
                   onClick={() => setRange(opt.key)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-semibold flex-shrink-0 cursor-pointer transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold flex-shrink-0 cursor-pointer transition-colors duration-150 active:scale-95 ${
                     range === opt.key
                       ? "bg-brand-red text-white"
                       : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
@@ -400,7 +425,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
 
           {/* Full-width KPI band */}
           {!travelFailed && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rise-in grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatTile value={fmtKg(stats.totalCo2Kg)} unit="kg" label={t("home.kpi.co2Footprint")} />
               <StatTile value={fmtEur(stats.totalSpendEur)} label={t("home.kpi.travelSpend")} />
               <StatTile value={fmtInt(stats.totalDistanceKm)} unit="km" label={t("home.kpi.distance")} />
@@ -411,13 +436,14 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
           {/* Content: main column (trip insights) + sidebar (subscriptions & actions).
               Stacks to a single column below `lg`, matching the narrow/mobile view. */}
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-            <div className="flex flex-col gap-5 min-w-0 lg:flex-1">
+            <div className="rise-in flex flex-col gap-5 min-w-0 lg:flex-1" style={{ animationDelay: "40ms" }}>
               {travelFailed ? (
                 <Card title={t("home.travelInsights")}>
                   <EmptyState text={t("home.travelDataLoadError")} />
                 </Card>
               ) : (
                 <>
+                  {spendCard}
                   <div className="grid gap-5 sm:grid-cols-2">
                     {modesCard}
                     {co2Card}
@@ -427,7 +453,10 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
               )}
             </div>
 
-            <aside className="flex flex-col gap-5 lg:w-[360px] lg:flex-shrink-0">
+            <aside
+              className="rise-in flex flex-col gap-5 lg:w-[360px] lg:flex-shrink-0"
+              style={{ animationDelay: "80ms" }}
+            >
               {subscriptionsCard}
               {quickActions}
             </aside>

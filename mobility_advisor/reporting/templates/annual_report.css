@@ -1,0 +1,135 @@
+/* Annual Mobility Review — print stylesheet for WeasyPrint.
+   Brand tokens mirrored from frontend/src/index.css:
+     --color-brand-red: #ec0016   body text: #1f1f1f   table header bg: #f5f5f3 */
+
+@page {
+  size: A4;
+  margin: 30mm 20mm 22mm 20mm;
+
+  @top-left {
+    /* __MASTHEAD_LEFT__ etc.: plain-text tokens substituted by reporting/pdf.py before this
+       stylesheet is handed to WeasyPrint — see that module for why (a static .css file can't
+       vary per request/language, so the localized text is filled in at render time). Kept as
+       distinct single-value tokens (not e.g. the whole `content:` line) so the counter(page)/
+       counter(pages) generated-content calls around __PAGE_LABEL__/__OF_LABEL__ survive the
+       substitution untouched. */
+    content: "__MASTHEAD_LEFT__";
+    font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 8pt;
+    color: #8a8a86;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  @top-right {
+    content: "__MASTHEAD_RIGHT__";
+    font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 8pt;
+    color: #8a8a86;
+  }
+  @bottom-center {
+    content: "__PAGE_LABEL__" counter(page) "__OF_LABEL__" counter(pages);
+    font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 8pt;
+    color: #8a8a86;
+  }
+}
+
+/* No running header on the title page — the big h1 rule below is masthead enough. */
+@page :first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  color: #1f1f1f;
+}
+
+h1 {
+  font-size: 25pt;
+  font-weight: 700;
+  margin: 0 0 18pt 0;
+  padding-bottom: 10pt;
+  border-bottom: 3pt solid #ec0016;
+  break-after: avoid;
+}
+
+h2 {
+  font-size: 14pt;
+  font-weight: 700;
+  margin: 22pt 0 10pt 0;
+  padding-left: 9pt;
+  border-left: 4pt solid #ec0016;
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 11.5pt;
+  font-weight: 700;
+  margin: 14pt 0 6pt 0;
+  break-after: avoid;
+}
+
+p { margin: 0 0 8pt 0; }
+strong { font-weight: 700; }
+
+hr {
+  border: none;
+  border-top: 0.75pt solid #d8d8d4;
+  margin: 16pt 0;
+}
+
+/* list-style-position: inside (rather than the default outside) keeps each
+   marker glued to its <li> content as one fragment — with outside markers,
+   WeasyPrint can strand a page's worth of bare bullet dots when the list
+   breaks across a page boundary, leaving their text on the next page. */
+ul, ol { margin: 4pt 0 10pt 0; padding-left: 8pt; list-style-position: inside; }
+li { margin-bottom: 4pt; break-inside: avoid; }
+
+blockquote {
+  margin: 12pt 0;
+  padding: 8pt 12pt;
+  background: #fdf0f1;
+  border-left: 3pt solid #ec0016;
+  font-style: italic;
+  break-inside: avoid;
+}
+
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 10pt 0 16pt 0;
+  font-size: 10pt;
+  break-inside: avoid;
+}
+
+thead th,
+tbody td {
+  overflow-wrap: anywhere;
+}
+
+thead th {
+  background: #f5f5f3;
+  text-align: left;
+  font-weight: 700;
+  padding: 7pt 10pt;
+  border-bottom: 1pt solid #d8d8d4;
+}
+
+tbody td {
+  padding: 6pt 10pt;
+  border-bottom: 0.75pt solid #ececea;
+}
+
+tbody td:first-child { font-weight: 600; }
+
+/* Numeric columns (trips/distance/spend/CO2 in the by-mode table) read better
+   right-aligned; the label column stays left-aligned via td:first-child above. */
+tbody td:not(:first-child) { text-align: right; }
+thead th:not(:first-child) { text-align: right; }

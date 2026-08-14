@@ -18,7 +18,7 @@ A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming 
 
 The Communicator only ever *drafts* a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
 
-The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/sub_agents.py::build_model()`.
+The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/agents/model.py::build_model()`.
 
 ---
 
@@ -88,7 +88,7 @@ Open **http://localhost:5173**. Vite proxies `/api/*` to `localhost:8000` — if
 | `POST /api/execute` | Apply an explicitly-approved subscription change |
 | `POST /api/activate` | Switch the active persona/scenario |
 
-See `main.py` for the complete list (profile onboarding, history, catalog, etc.).
+See `mobility_advisor/api/routes/` for the complete list (profile onboarding, history, catalog, etc.), or run the backend and open `/docs` for the live OpenAPI schema.
 
 ### Agent-only debugging (no frontend)
 
@@ -102,23 +102,40 @@ uv run adk web
 ## Project structure
 
 ```
-mobility_advisor/
-├── agent.py              # Coordinator (root_agent) — routes to the 5 tools below
-├── pipeline.py            # optimization_pipeline, annual_report_pipeline (SequentialAgents)
-├── sub_agents.py          # analyst, forecaster, optimizer, communicator, annual_communicator
-├── qa_agent.py / execution_agent.py / reject_agent.py
-├── tools.py                # loader + compute functions + the deterministic optimizer engine
-├── models.py                # Pydantic models for all fixtures
-├── route_utils.py            # ORS geocoding/routing, CO2 + price curve helpers
-├── distance_enricher.py      # offline distance/CO2 enrichment for travel history
-├── outlook_calendar.py       # MSAL-based live Outlook calendar ingestion
-├── mail_processor.py / mail_filter.py   # ETL over mail_raw.json feeding life-event extraction
-├── life_event_extractor.py   # distills life_events.json signals from processed mail
-├── report_pdf.py            # Markdown -> PDF for the annual report (WeasyPrint)
-├── templates/                # annual_report.html / .css
-├── static/mobility_catalog.json   # market catalog (shared across all personas)
-├── data/                     # active dataset (swapped by activate_scenario.sh)
-└── scenarios/                 # 6 persona fixture sets — see Personas above
+mobility-advisor/
+├── main.py                 # uvicorn entry point — 3-line shim over mobility_advisor/api/app.py
+└── mobility_advisor/
+    ├── agent.py             # Coordinator (root_agent) — routes to the 5 tools below
+    ├── paths.py             # single source of truth for data/static/scenario dirs + scratch files
+    ├── clock.py              # MOCK_TODAY / REVIEW_YEAR, frozen to the active persona's reference date
+    ├── env.py                 # KIConnect proxy env bootstrap, imported before anything touches litellm
+    ├── agents/                 # ADK agent definitions
+    │   ├── model.py             # shared LiteLlm singleton + generation config
+    │   ├── analysis.py           # analyst_agent, forecaster_agent
+    │   ├── optimization.py        # optimizer_agent, communicator_agent
+    │   ├── annual.py               # the 4 annual-pipeline agents
+    │   ├── qa.py / execution.py / reject.py
+    │   └── pipelines.py            # optimization_pipeline, annual_report_pipeline
+    ├── engine/                  # deterministic compute: geocoding, fare calibration, trip
+    │                              # aggregation/projection, pricing, portfolio simulation,
+    │                              # the optimizer, and travel/annual-report statistics
+    ├── store/                   # fixture I/O: loaders, history, the pending-decision gate,
+    │                              # subscription mutations, scenario activation
+    ├── api/                      # FastAPI app
+    │   ├── app.py                  # app + CORS + router wiring
+    │   ├── schemas.py                # request-body models
+    │   ├── deps.py                    # shared process-lifetime state
+    │   ├── routes/                     # personas, data, analysis, execution, chat
+    │   └── recommendation/              # builder (deterministic), extraction (LLM fallback),
+    │                                      # finalize (shared post-processing chain)
+    ├── integrations/              # ORS client + the offline mail/calendar ETL scripts
+    ├── reporting/                  # annual report PDF rendering + Markdown table renderers
+    │   └── templates/                # annual_report.html / .css
+    ├── models/                      # Pydantic models (fixtures / projections / API wire contract)
+    ├── static/mobility_catalog.json   # market catalog (shared across all personas)
+    ├── data/                          # active dataset (swapped by activate_scenario.sh)
+    └── scenarios/                      # 6 persona fixture sets — see Personas above
+tests/                                  # pytest suite (mirrors the package layout above)
 ```
 
 ---

@@ -4,7 +4,7 @@
 // before or after this splash is never more than one screen away.
 export function LogoIntroPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f3]">
+    <div className="min-h-screen flex items-center justify-center bg-canvas">
       <div
         className="logo-animation bg-brand-red rounded-lg flex items-center justify-center overflow-hidden"
         style={{ width: 160, height: 120 }}

@@ -115,9 +115,9 @@ function LikertControl({
             title={t(LIKERT_KEYS[score])}
             aria-label={t(LIKERT_KEYS[score])}
             aria-pressed={value === score}
-            className={`flex-1 py-2 rounded text-xs font-semibold border transition-colors cursor-pointer ${
+            className={`flex-1 py-2 rounded text-xs font-semibold border transition-colors duration-150 cursor-pointer active:scale-95 ${
               value === score
-                ? "bg-brand-red text-white border-brand-red"
+                ? "bg-brand-red text-white border-brand-red shadow-card"
                 : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
             }`}
           >
@@ -139,7 +139,7 @@ function WeightBar({ label, pct, color }: { label: string; pct: number; color: s
       <span className="w-24 text-xs font-semibold text-gray-600 flex-shrink-0">{label}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-2">
         <div
-          className={`h-2 rounded-full transition-all duration-300 ${color}`}
+          className={`h-2 rounded-full transition-all duration-300 ease-soft ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
