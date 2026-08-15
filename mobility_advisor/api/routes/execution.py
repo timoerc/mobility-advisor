@@ -9,7 +9,7 @@ from google.genai import types as gtypes
 
 from ... import clock, paths
 from ...agents.execution import execution_agent
-from ...i18n import t
+from ...i18n import get_language, t
 from ...models import CurrentSubscriptions
 from ...store.history import load_history, save_history
 from ..deps import history_lock
@@ -91,6 +91,7 @@ async def execute(req: ExecuteRequest):
                 newest.outcome = "executed"
                 newest.resolvedAlternativeId = req.alternative_id
                 newest.resolvedMessage = reply
+                newest.resolvedMessageLanguage = get_language()
                 newest.resolvedAt = clock.MOCK_TODAY.isoformat()
                 newest.revertSnapshot = previous_subscriptions
                 save_history(hist)

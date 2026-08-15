@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { useI18n } from "./i18n";
 import type { TranslationKey } from "./i18n";
 import { DEFAULT_PERSONAS, type Persona } from "./personas";
-import { saveProfile, activatePersona, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis, revertAnalysis } from "./api";
+import { saveProfile, activatePersona, fetchAnalysisHistory, fetchCurrentSubscriptions, fetchPersonas, resolveAnalysis, revertAnalysis } from "./api";
 import type { Alternative, AnalysisHistoryEntry, AnalysisRunResult, ExecutionResult, Recommendation } from "./types/recommendation";
 import { BTN_PRIMARY_COMPACT } from "./ui";
 import {
@@ -198,6 +198,28 @@ export default function App() {
       cancelled = true;
     };
   }, [language]);
+
+  // ── Re-sync the in-session recommendation with its persisted (and possibly newly-
+  // translated) copy on every language switch ────────────────────────────────
+  // /api/analyze persists the recommendation it returns, so liveRecommendation is just that
+  // response cached in state — without this, switching language after an analysis left the
+  // dashboard frozen in whichever language the pipeline happened to run in, even though
+  // GET /api/analysis-history (which HistoryPage already refetches on language change) would
+  // serve the same entry translated. Re-fetching by currentAnalysisId picks up
+  // backfill_translations()'s lazily-populated siblings for free, on the same round trip.
+  useEffect(() => {
+    if (!currentAnalysisId) return;
+    let cancelled = false;
+    fetchAnalysisHistory()
+      .then((entries) => entries.find((e) => e.id === currentAnalysisId))
+      .then((entry) => {
+        if (entry && !cancelled) setLiveRecommendation(entry.recommendation);
+      })
+      .catch(console.warn);
+    return () => {
+      cancelled = true;
+    };
+  }, [language, currentAnalysisId]);
 
   // ── Step renderer (shared by onboarding and editing phases) ───────────────
 

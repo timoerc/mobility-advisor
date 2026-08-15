@@ -8,6 +8,10 @@ model actually lives in:
 - api.py         — the camelCase wire contract with the frontend
 """
 from .api import (
+    ACTION_LANGUAGE_FIELDS,
+    ALTERNATIVE_LANGUAGE_FIELDS,
+    METRIC_LANGUAGE_FIELDS,
+    RECOMMENDATION_LANGUAGE_FIELDS,
     AnalysisHistory,
     AnalysisHistoryEntry,
     AnalysisRunResult,
@@ -44,6 +48,10 @@ from .fixtures import (
 from .projections import ProjectedTrip, ProjectedTripSet, RouteAlternative
 
 __all__ = [
+    "ACTION_LANGUAGE_FIELDS",
+    "ALTERNATIVE_LANGUAGE_FIELDS",
+    "METRIC_LANGUAGE_FIELDS",
+    "RECOMMENDATION_LANGUAGE_FIELDS",
     "AnalysisHistory",
     "AnalysisHistoryEntry",
     "AnalysisRunResult",

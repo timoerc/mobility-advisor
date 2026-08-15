@@ -133,6 +133,17 @@ pull in different directions or the numbers are close]
 - [bullet 2: TRADE-OFF ACROSS DIMENSIONS — name the trade-off across cost, CO2, and travel
   time when they disagree, e.g. "cheaper but slower" or "greener but more expensive". If all
   three point the same direction, say so instead of manufacturing a trade-off.
+  WHY TRAVEL TIME MOVES — a scenario's travel time is never a fixed property of "your
+  trips"; the engine picks a mode per trip by generalized cost (price + time + CO2 combined),
+  so gaining or losing a subscription discount changes which mode wins that trade-off even
+  though the user's actual travel needs didn't change. Concretely: dropping a rail discount
+  (e.g. a BahnCard) makes full-price rail less competitive against a faster-but-higher-emission
+  alternative such as car-share, so some trips shift onto that faster alternative — this is
+  why "no subscriptions" can look simultaneously cheaper AND faster while CO2 rises, and why
+  adding a rail discount can slow trips back down while cutting CO2. Whenever cost and time
+  move together while CO2 moves the other way (or vice versa), say so explicitly in this
+  bullet — do not just report that time changed as if it were incidental to the subscription
+  decision.
 - [bullet 3: BREAK-EVEN — if the recommended or currently-held subscription appears in the
   Optimizer's break_even list, state its discount_value_eur vs. annual_fee_eur and whether
   it breaks even (net_eur >= 0) or runs a net loss. This is the concrete "does this

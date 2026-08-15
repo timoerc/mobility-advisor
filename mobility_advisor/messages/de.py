@@ -43,6 +43,10 @@ MESSAGES: dict[str, str] = {
     "metric.unit.hPerYear": "Std./Jahr",
     "metric.unit.eurPerYear": "€/Jahr",
     "metric.unit.kgCo2PerYear": "kg CO₂/Jahr",
+    "metric.unit.kgCo2": "kg CO₂",
+    "metric.unit.flexDiscountPct": "% Flex-Rabatt",
+    "metric.unit.trips": "Fahrten",
+    "metric.unit.decision": "Entscheidung",
     "metric.pendingDecision.revisitBy": "Erneut prüfen bis",
     "metric.pendingDecision.valueOnHold": "Wert zurückgestellt",
     "metric.pendingDecision.decisionPending": "Entscheidung ausstehend",
@@ -195,6 +199,29 @@ MESSAGES: dict[str, str] = {
     "report.pdf.pageLabel": "Seite ",
     "report.pdf.ofLabel": " von ",
 
+    "report.periodCovered": "**Berichtszeitraum:** 1. Januar – 31. Dezember {year}",
+    "report.section1": "1. Jahresüberblick",
+    "report.section2": "2. Ausgaben & Emissionen nach Verkehrsmittel",
+    "report.section3": "3. Nachhaltigkeit",
+    "report.section4": "4. Abo-Wert",
+    "report.section5": "5. Empfehlungen & Maßnahmen",
+    "report.section6": "6. Ausblick",
+    "report.section7": "7. Methodik & Annahmen",
+    "report.actionsTakenNoneLine": "> **Maßnahmen in diesem Jahr:** Keine.",
+    "report.pendingProposalLine": "> **Ausstehender Vorschlag:** wartet auf Ihre Zustimmung (siehe unten).",
+    "report.footerDisclaimer": "⚠️ **Dieser Bericht dient nur zur Information. An Ihren Abonnements wurden keine Änderungen vorgenommen.**",
+    "report.dataQualityNotesNone": "Keine.",
+
+    "report.optimizer.proposedChange": "**Vorgeschlagene Änderung:**",
+    "report.optimizer.currentMonthlyCost": "**Aktuelle monatliche Kosten:**",
+    "report.optimizer.proposedMonthlyCost": "**Vorgeschlagene monatliche Kosten:**",
+    "report.optimizer.monthlySaving": "**Monatliche Ersparnis:**",
+    "report.optimizer.co2Impact": "**CO₂-Auswirkung:**",
+    "report.optimizer.actionDeadline": "**Frist für Maßnahme:**",
+    "report.optimizer.cancelChangeBefore": "Vor dem {date} kündigen/ändern, um die automatische Verlängerung zu vermeiden.",
+    "report.optimizer.whatStaysAndWhy": "**Was bleibt und warum:**",
+    "report.optimizer.whyThisChange": "**Warum diese Änderung:**",
+
     "error.noMatchFor": "keine Übereinstimmung für '{query}'",
     "error.ambiguousMatchFor": "mehrdeutige Übereinstimmung für '{query}': {count} Einträge gefunden ({matches})",
 
@@ -234,4 +261,6 @@ MESSAGES: dict[str, str] = {
         "Ersetzungsziel und new_product lösten beide zu '{product}' auf — dies setzt nur den "
         "Verlängerungszyklus eines unveränderten Produkts zurück, kein echter Wechsel."
     ),
+
+    "persona.newUser": "Neuer Nutzer",
 }

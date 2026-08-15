@@ -149,8 +149,8 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
   const maxUsage = usageSorted[0]?.trips ?? 0;
   const maxCo2 = co2Sorted[0]?.co2Kg ?? 0;
   const spend = useMemo(
-    () => (travel ? bucketSpendOverTime(travel.trips, subscriptions, travel.referenceDate, range) : null),
-    [travel, subscriptions, range],
+    () => (travel ? bucketSpendOverTime(travel.trips, subscriptions, travel.referenceDate, range, language) : null),
+    [travel, subscriptions, range, language],
   );
   const hasSpend = !!spend && spend.buckets.some((b) => b.tripEur > 0 || b.subEur > 0);
 

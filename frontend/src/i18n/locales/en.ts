@@ -383,6 +383,8 @@ export const en = {
   "alternativeRow.cost": "cost",
   "alternativeRow.co2": "CO₂",
   "alternativeRow.travelTime": "travel time",
+  "alternativeRow.perYear": "/ year",
+  "alternativeRow.perYearShort": "/yr",
 
   // ── confidence.* — display labels for the backend's confidence enum (high/medium/low).
   // Never translate the enum value itself; only look it up through this family. ─────────────

@@ -12,6 +12,7 @@
       "age": 22,
       "employment_status": "student",
       "profession": "Student",
+      "profession_de": "Studentin",
       "household_context": "single"
     },
     "location": {
@@ -45,6 +46,7 @@
         "Nextbike"
       ]
     },
-    "notes": "Frankfurt-based student at Goethe-Universität; commutes locally by U-Bahn and S-Bahn, occasional long-distance rail trips home to Hamburg."
+    "notes": "Frankfurt-based student at Goethe-Universität; commutes locally by U-Bahn and S-Bahn, occasional long-distance rail trips home to Hamburg.",
+    "notes_de": "In Frankfurt lebende Studentin an der Goethe-Universität; pendelt lokal mit U-Bahn und S-Bahn, gelegentliche Fernfahrten mit der Bahn nach Hause nach Hamburg."
   }
 }

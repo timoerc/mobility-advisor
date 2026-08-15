@@ -40,9 +40,9 @@ function vsCurrentSlots(alt: Alternative): VsCurrentSlots {
 // Signed delta formatters. Take `lang` explicitly (rather than reading useI18n() themselves)
 // because they're built once per render into plain `(value) => string` closures below and
 // handed to <DeltaBadge format={...}> — that keeps DeltaBadge itself formatting-agnostic.
-function formatEurDelta(lang: Language, value: number): string {
+function formatEurDelta(lang: Language, value: number, perYear: string): string {
   const sign = value < 0 ? "−" : "+"; // U+2212 minus sign, not a hyphen — matches the design's typography
-  return `${sign}${formatCurrency(lang, Math.abs(value))} /yr`;
+  return `${sign}${formatCurrency(lang, Math.abs(value))} ${perYear}`;
 }
 
 function formatCo2Delta(lang: Language, value: number): string {
@@ -110,7 +110,7 @@ function DeltaBadge({
 
 export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: AlternativeRowProps) {
   const { language, t } = useI18n();
-  const formatEur = (value: number) => formatEurDelta(language, value);
+  const formatEur = (value: number) => formatEurDelta(language, value, t("alternativeRow.perYearShort"));
   const formatCo2 = (value: number) => formatCo2Delta(language, value);
   const formatTime = (value: number) => formatTimeDelta(language, value);
   const savingsPositive = alt.savingsVsCurrentEur > 0;
@@ -150,7 +150,7 @@ export function AlternativeRow({ alt, selected, onSelect, readOnly = false }: Al
         </div>
         <div className="text-right flex-shrink-0">
           <p className="text-sm font-bold text-ink m-0">
-            {formatCurrency(language, alt.annualCostEur)} / year
+            {formatCurrency(language, alt.annualCostEur)} {t("alternativeRow.perYear")}
           </p>
           {!savingsNeutral && (
             <p

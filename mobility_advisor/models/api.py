@@ -18,27 +18,34 @@ class MetricDelta(BaseModel):
     unit: str
     direction: Literal["save", "extra_cost", "reduce", "increase", "neutral"]
     label: str
-    # German sibling for seeded scenario analysis_history.json entries — see
-    # CalendarEvent.description_de in models/fixtures.py. Live runs never populate this (their
-    # MetricDelta.label values are already built in the request's language via t()/main.py's
-    # metric builders).
+    # Per-language siblings for this entry's OTHER language — see CalendarEvent.description_de
+    # in models/fixtures.py for the original pattern. Seeded scenario fixtures populate `_de`
+    # (their base fields are English); a live run's `_en`/`_de` siblings, whichever is not the
+    # base fields' own language, are filled lazily by
+    # api/recommendation/translation.backfill_translations() the first time that entry is read
+    # in the other language — see AnalysisHistoryEntry.language for how the base language is
+    # known.
     label_de: str | None = None
+    label_en: str | None = None
     # Some seeded entries' `value` is itself a short English word rather than a number (e.g.
-    # a pending-decision tile's "relocation") — this is that value's German counterpart, kept
-    # separate from label_de since value and label are independent fields.
+    # a pending-decision tile's "relocation") — this is that value's counterpart in the other
+    # language, kept separate from label_* since value and label are independent fields.
     value_de: str | None = None
+    value_en: str | None = None
 
 
 class ProposedAction(BaseModel):
     title: str
     description: str
     consequence: str
-    # German siblings for seeded analysis_history.json entries — see
-    # CalendarEvent.description_de in models/fixtures.py for why these must be declared, not
-    # left as extras.
+    # Per-language siblings — see MetricDelta.label_de/label_en above for why both directions
+    # exist and who populates them.
     title_de: str | None = None
+    title_en: str | None = None
     description_de: str | None = None
+    description_en: str | None = None
     consequence_de: str | None = None
+    consequence_en: str | None = None
 
 
 class DeltaVsCurrent(BaseModel):
@@ -53,12 +60,11 @@ class DeltaVsCurrent(BaseModel):
 class Alternative(BaseModel):
     id: str
     name: str
-    # German siblings, populated only on seeded scenario analysis_history.json entries (see
-    # CalendarEvent.description_de in models/fixtures.py) — a live /api/analyze run never sets
-    # these; its LLM output already comes back in the request's language via the agent-prompt
-    # directive.
+    # Per-language siblings — see MetricDelta.label_de/label_en above.
     name_de: str | None = None
+    name_en: str | None = None
     tradeoff_de: str | None = None
+    tradeoff_en: str | None = None
     annualCostEur: float
     savingsVsCurrentEur: float
     co2Impact: str = "Neutral"
@@ -94,13 +100,15 @@ class Recommendation(BaseModel):
     reasoning: list[str]
     assumptions: list[str] = []
     alternatives: list[Alternative]
-    # German siblings for seeded scenario analysis_history.json entries — see
-    # CalendarEvent.description_de in models/fixtures.py. Live runs never populate these (see
-    # Alternative.name_de).
+    # Per-language siblings — see MetricDelta.label_de/label_en above.
     verdict_de: str | None = None
+    verdict_en: str | None = None
     summaryText_de: str | None = None
+    summaryText_en: str | None = None
     reasoning_de: list[str] | None = None
+    reasoning_en: list[str] | None = None
     assumptions_de: list[str] | None = None
+    assumptions_en: list[str] | None = None
     # Deterministic warnings from the trip-projection engine (engine/) — malformed travel
     # history entries (null costs, empty/unknown modes), travel-reduction damping applied,
     # rail-fare calibration notes, uncorroborated calendar demand caps, etc. Populated from
@@ -157,15 +165,22 @@ class AnalysisHistoryEntry(BaseModel):
     outcome: Literal["pending", "kept_current", "executed"] = "pending"
     resolvedAlternativeId: str | None = None
     resolvedMessage: str | None = None
-    # German sibling for seeded scenario entries — see CalendarEvent.description_de in
-    # models/fixtures.py.
+    # Per-language siblings — see MetricDelta.label_de/label_en above.
     resolvedMessage_de: str | None = None
+    resolvedMessage_en: str | None = None
     resolvedAt: str | None = None
     # The language this entry's recommendation prose was generated/seeded in. Lets the
     # frontend and the Communicator's continuity read (load_recommendation_history()) tell a
     # German live analysis apart from an older English one instead of assuming everything in
-    # history matches the currently selected language.
+    # history matches the currently selected language. Actually stamped with get_language() at
+    # construction by api/routes/analysis.py — see that module for the one place this is set.
     language: Literal["en", "de"] = "en"
+    # resolvedMessage is written by a DIFFERENT request than the one that created the entry —
+    # api/routes/execution.py's execute endpoint, or the /resolve endpoint — so it can
+    # legitimately be in a different language than `language` above. None until resolvedMessage
+    # itself is set; falls back to `language` when resolving (see
+    # _resolve_history_entry_language in api/routes/analysis.py).
+    resolvedMessageLanguage: Literal["en", "de"] | None = None
     # Subscription stack captured just before an executed change, kept so the newest executed entry
     # can be reverted (restored) as a true undo. Present only while outcome == "executed"; cleared on
     # revert. Shape: a CurrentSubscriptions dump ({"subscriptions": [...]}).
@@ -174,3 +189,14 @@ class AnalysisHistoryEntry(BaseModel):
 
 class AnalysisHistory(BaseModel):
     entries: list[AnalysisHistoryEntry]
+
+
+# Field-name tuples declaring which prose fields on each model above carry per-language `_en`/
+# `_de` siblings (see e.g. MetricDelta.label_de/label_en) — consumed by
+# i18n.apply_language_siblings()/language_sibling() at api/routes/analysis.py's history
+# resolvers and store/history.py's continuity summary, so both stay in sync with this file
+# without duplicating the field list.
+RECOMMENDATION_LANGUAGE_FIELDS = ("verdict", "summaryText", "reasoning", "assumptions")
+METRIC_LANGUAGE_FIELDS = ("label", "value")
+ALTERNATIVE_LANGUAGE_FIELDS = ("name", "tradeoff")
+ACTION_LANGUAGE_FIELDS = ("title", "description", "consequence")

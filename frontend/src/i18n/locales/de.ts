@@ -337,6 +337,8 @@ export const de: Record<TranslationKey, string> = {
   "alternativeRow.cost": "Kosten",
   "alternativeRow.co2": "CO₂",
   "alternativeRow.travelTime": "Reisezeit",
+  "alternativeRow.perYear": "/ Jahr",
+  "alternativeRow.perYearShort": "/J.",
 
   "confidence.high": "Hohe Konfidenz",
   "confidence.medium": "Mittlere Konfidenz",

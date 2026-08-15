@@ -12,6 +12,7 @@
       "age": 44,
       "employment_status": "employed",
       "profession": "Key Account Manager",
+      "profession_de": "Key Account Managerin",
       "household_context": "family"
     },
     "location": {
@@ -45,6 +46,7 @@
         "FreeNow"
       ]
     },
-    "notes": "Lots of last-minute client travel across Germany. Books late and reschedules often — flexible tickets matter more to me than the cheapest fare."
+    "notes": "Lots of last-minute client travel across Germany. Books late and reschedules often — flexible tickets matter more to me than the cheapest fare.",
+    "notes_de": "Viele kurzfristige Kundenreisen quer durch Deutschland. Bucht spät und ändert oft um — flexible Tickets sind mir wichtiger als der günstigste Preis."
   }
 }

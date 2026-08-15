@@ -4,8 +4,10 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`skeleton ${className}`} aria-hidden="true" />;
 }
 
-/** Mirrors HomePage's loaded layout: greeting, KPI band, two insight cards + aside. */
-export function DashboardSkeleton({ ariaLabel = "Loading your dashboard" }: { ariaLabel?: string }) {
+/** Mirrors HomePage's loaded layout: greeting, KPI band, two insight cards + aside.
+ *  ariaLabel is required (not defaulted) so this component never silently falls back to an
+ *  untranslated English string — HomePage always supplies t("home.loadingDashboard"). */
+export function DashboardSkeleton({ ariaLabel }: { ariaLabel: string }) {
   return (
     <div className="flex flex-col gap-5" aria-label={ariaLabel} role="status">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

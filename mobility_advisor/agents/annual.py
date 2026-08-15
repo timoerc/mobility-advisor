@@ -11,7 +11,7 @@ InstructionProvider function as no non-annual counterpart exists for it to deriv
 from google.adk.agents import LlmAgent
 
 from ..engine.stats import compute_annual_report_stats, compute_co2_impact_kg
-from ..i18n import LANGUAGE_DIRECTIVE, get_language
+from ..i18n import LANGUAGE_DIRECTIVE, get_language, t
 from ..store.loaders import (
     load_annual_analyst_context,
     load_annual_optimizer_context,
@@ -123,7 +123,37 @@ annual_forecaster_agent = LlmAgent(
 # written against this single-candidate shape and must not receive optimizer_agent's
 # multi-candidate/deterministic output.
 _ANNUAL_OPTIMIZER_DESCRIPTION_BASE = "Proposes one concrete contract change based on analysis, forecast, preferences, and catalog."
-_ANNUAL_OPTIMIZER_INSTRUCTION_BASE = f"""\
+
+
+async def _annual_optimizer_instruction(_ctx: ReadonlyContext) -> str:
+    """Built fresh per invocation (not a module-level constant), because its Step 3 output
+    labels (**Proposed change:** etc.) are looked up via t() — see i18n.py's HARD RULE against
+    calling t() at module scope, which would freeze in whatever language happened to be active
+    at import time.
+
+    This agent's own instruction previously hardcoded those Step 3 labels as literal English
+    text and relied on a general "write ALL prose in German" directive (appended further down
+    via LANGUAGE_DIRECTIVE) to translate them — but a template explicitly framed as "output
+    your recommendation in this exact structure" reads to the model as fixed structural
+    markup, not prose it's free to translate, so it kept reproducing these labels verbatim in
+    English even in German mode (the exact same failure mode _annual_communicator_instruction's
+    section headers had, before those were moved to t() too). Since this agent's Step 3 output
+    is quoted directly into annual_communicator's Section 5 ("include the optimizer's proposed
+    change from {annual_recommendation}") and reaches the user near-verbatim, translating these
+    labels deterministically in code — instead of hoping the LLM does it — is the only reliable
+    fix, same reasoning as the report skeleton's <!-- ..._PLACEHOLDER --> labels.
+    """
+    proposed_change = t("report.optimizer.proposedChange")
+    current_monthly_cost = t("report.optimizer.currentMonthlyCost")
+    proposed_monthly_cost = t("report.optimizer.proposedMonthlyCost")
+    monthly_saving = t("report.optimizer.monthlySaving")
+    co2_impact = t("report.optimizer.co2Impact")
+    action_deadline = t("report.optimizer.actionDeadline")
+    cancel_change_before = t("report.optimizer.cancelChangeBefore", date="[next_renewal_date]")
+    what_stays_and_why = t("report.optimizer.whatStaysAndWhy")
+    why_this_change = t("report.optimizer.whyThisChange")
+
+    raw_instruction = f"""\
 You are the Optimizer agent for your Mobility Advisor.
 Today's date: {_TODAY}.
 
@@ -148,7 +178,7 @@ WHICH change is your pick, not merely how you phrase it:
   CO2-reducing change at modest extra cost over a cheaper but CO2-neutral one.
 - If values_time_over_money is true, never recommend a slower or less convenient option purely
   because it saves money.
-- State explicitly in "Why this change" which preference weight(s) drove the pick.
+- State explicitly in the "{why_this_change}" section which preference weight(s) drove the pick.
 
 CRITICAL — BahnCard ROI check (do this before recommending any BahnCard change):
 All rail trips in history are priced at the BahnCard 50 discount (50% off).
@@ -171,43 +201,54 @@ name cannot distinguish, and this name is what gets executed later — an unders
 cannot be applied. This applies everywhere you name a specific product: the proposed change,
 cost breakdown, and "what stays" section.
 
-Step 3 — output your recommendation in this exact structure:
+Step 3 — output your recommendation in this exact structure. The bold labels below are already
+given to you in the correct output language — reproduce them EXACTLY as written, do not
+translate, retranslate, or reword them; only the bracketed placeholders and any sentences you
+compose yourself must follow the OUTPUT LANGUAGE directive:
 
-**Proposed change:** [what to add / cancel / swap — if this is a swap/replace, explicitly
+{proposed_change} [what to add / cancel / swap — if this is a swap/replace, explicitly
 name BOTH the exact current subscription being removed AND the exact new product being
 added, e.g. "Replace your BahnCard 50 (2. Klasse, Standard, Jahresabo) with a BahnCard 25
 (2. Klasse, Standard, Jahresabo)" — never just "Downgrade to BahnCard 25"]
 
-**Current monthly cost:** €X.XX/mo (list all active subscriptions and their costs)
-**Proposed monthly cost:** €Y.YY/mo (list the new stack)
-**Monthly saving:** €Z.ZZ/mo
+{current_monthly_cost} €X.XX/mo (list all active subscriptions and their costs)
+{proposed_monthly_cost} €Y.YY/mo (list the new stack)
+{monthly_saving} €Z.ZZ/mo
 
-**CO₂ impact:** Call compute_co2_impact_kg with this change's target_subscription/new_product
-(same names as your Proposed change above) and date_from="{_REVIEW_YEAR}-01-01",
+{co2_impact} Call compute_co2_impact_kg with this change's target_subscription/new_product
+(same names as your {proposed_change} above) and date_from="{_REVIEW_YEAR}-01-01",
 date_to="{_REVIEW_YEAR}-12-31" (this report is scoped to {_REVIEW_YEAR} only), then state its
 "explanation" field verbatim — do NOT compute CO₂ yourself or invent a number.
 
-**Action deadline:** For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding: "Cancel/change before [next_renewal_date] to avoid auto-renewal." Do not hardcode the date — extract it from {{annual_analysis}}.
+{action_deadline} For any subscription being cancelled or changed, state the next_renewal_date from the Analyst finding as: "{cancel_change_before}" (substituting the real date for [next_renewal_date]). Do not hardcode the date — extract it from {{annual_analysis}}.
 
-**What stays and why:**
+{what_stays_and_why}
 - [subscription] — [one-line justification with the key metric]
 
-**Why this change:**
+{why_this_change}
 - [bullet-point rationale referencing the analysis, forecast, and user preferences —
   including which preference weight(s) (cost/time/sustainability) drove this pick per
   PREFERENCE WEIGHTING above]
 
 Show real numbers from the data. Do not propose more than one change.
 """
+    from google.adk.utils.instructions_utils import inject_session_state
+    resolved = await inject_session_state(raw_instruction, _ctx)
+    return resolved + LANGUAGE_DIRECTIVE[get_language()]
+
 
 annual_optimizer_agent = LlmAgent(
     name="annual_optimizer",
     model=_MODEL,
     description=_ANNUAL_OPTIMIZER_DESCRIPTION_BASE,
-    # NB: no .replace() here — a previous version tried to swap in "in {_REVIEW_YEAR}" for a
-    # phrase ("over the past 12 months") that doesn't actually appear anywhere in
-    # _ANNUAL_OPTIMIZER_INSTRUCTION_BASE, so it was a silent no-op. Removed.
-    instruction=_ANNUAL_OPTIMIZER_INSTRUCTION_BASE,
+    # An InstructionProvider (not localized(), which only handles a static base string) —
+    # unlike the regular pipeline's optimizer_agent (whose raw output is only ever read by
+    # communicator_agent to pull numbers into its OWN translated prose), this agent's Step 3
+    # output is quoted directly into annual_communicator's Section 5 ("include the optimizer's
+    # proposed change from {annual_recommendation}"), which then reaches the user near-verbatim
+    # — see _annual_optimizer_instruction's docstring for why its labels are rendered via t()
+    # instead of left for the LLM to translate.
+    instruction=_annual_optimizer_instruction,
     tools=[load_annual_optimizer_context, compute_co2_impact_kg],
     output_key="annual_recommendation",  # see annual_analyst_agent's output_key comment above
     generate_content_config=build_content_config(_MEDIUM_REPORT_TOKENS),
@@ -267,7 +308,7 @@ async def _annual_communicator_instruction(_ctx: ReadonlyContext) -> str:
     top_emitter_share_pct = (
         round(100 * top_emitter["co2_kg"] / stats["total_co2_kg"]) if top_emitter and stats["total_co2_kg"] else 0
     )
-    warnings_text = "; ".join(stats["data_quality_warnings"]) if stats["data_quality_warnings"] else "None."
+    warnings_text = "; ".join(stats["data_quality_warnings"]) if stats["data_quality_warnings"] else t("report.dataQualityNotesNone")
 
     raw_instruction = f"""\
 You are the Annual Report agent for your Mobility Advisor.
@@ -293,16 +334,19 @@ prose below — never recompute, re-derive, or contradict them):
 Your job: produce a full annual mobility review that speaks directly to
 the user as "you"/"your" throughout — not by name.
 
-Structure your output EXACTLY as follows.
+Structure your output EXACTLY as follows. The section headers and fixed labels below are
+already given to you in the correct output language — reproduce them EXACTLY as written, do
+not translate, retranslate, or reword them; only the sentences you compose yourself (the
+narrative parts described in each section) must follow the OUTPUT LANGUAGE directive.
 
 ---
-# Your Annual Mobility Review
+# {t("report.pdf.title")}
 
-**Period covered:** 1 January – 31 December {_REVIEW_YEAR}
+{t("report.periodCovered", year=_REVIEW_YEAR)}
 
 ---
 
-## 1. Year at a Glance
+## {t("report.section1")}
 
 Output exactly this line for this section, verbatim, and nothing else — the table is inserted
 automatically afterward:
@@ -310,7 +354,7 @@ automatically afterward:
 
 ---
 
-## 2. Spend & Emissions by Mode
+## {t("report.section2")}
 
 Output exactly this line for this section, verbatim, and nothing else — the table is inserted
 automatically afterward:
@@ -318,7 +362,7 @@ automatically afterward:
 
 ---
 
-## 3. Sustainability
+## {t("report.section3")}
 
 Write 2–4 sentences of honest, plain-language narrative using ONLY the authoritative figures
 given above. Explicitly name the largest emission source and its approximate share of the
@@ -328,7 +372,7 @@ smaller, secondary positive, clearly distinguished from the total footprint.
 
 ---
 
-## 4. Subscription Value
+## {t("report.section4")}
 
 Output exactly this line for this section, verbatim, and nothing else — the content is inserted
 automatically afterward:
@@ -336,13 +380,13 @@ automatically afterward:
 
 ---
 
-## 5. Recommendations & Actions
+## {t("report.section5")}
 
 State plainly, as a labeled line, whether any contract changes were executed this year. If
 execution is mocked/pending (the normal case), write exactly:
 
-> **Actions taken this year:** None.
-> **Pending proposal:** awaiting your approval (see below).
+{t("report.actionsTakenNoneLine")}
+{t("report.pendingProposalLine")}
 
 Then include the optimizer's proposed change from {{annual_recommendation}} as a single bullet. If
 {{annual_recommendation}} indicates a change was actually approved/executed, state that instead under
@@ -350,13 +394,13 @@ Then include the optimizer's proposed change from {{annual_recommendation}} as a
 
 ---
 
-## 6. Forward Outlook
+## {t("report.section6")}
 
 Summarise {{annual_forecast}} in 2–3 sentences: what demand signals suggest about the next quarter and whether the current portfolio still fits.
 
 ---
 
-## 7. Methodology & Assumptions
+## {t("report.section7")}
 
 - State that all data used is mock/synthetic, for demonstration purposes.
 - State that every figure in this report is scoped to trips dated in {_REVIEW_YEAR} only —
@@ -367,7 +411,7 @@ Summarise {{annual_forecast}} in 2–3 sentences: what demand signals suggest ab
 - Data quality notes: {warnings_text}
 
 ---
-⚠️ **This report is informational. No changes have been made to your subscriptions.**
+{t("report.footerDisclaimer")}
 ---
 """
     # inject_session_state resolves the {annual_recommendation}/{annual_analysis}/

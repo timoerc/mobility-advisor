@@ -72,7 +72,7 @@ def normalize_keep_current_setup(rec: Recommendation) -> Recommendation:
             alt.savingsVsCurrentEur = round(keep_cost - alt.annualCostEur, 2)
     for alt in rec.alternatives:
         if alt.action is None:
-            alt.co2Impact = "Neutral"
+            alt.co2Impact = t("alt.co2.neutral")
             alt.co2ImpactKg = 0.0
     assumption = _co2_methodology_assumption(load_optimization_weights())
     if assumption not in rec.assumptions:

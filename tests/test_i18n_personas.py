@@ -12,6 +12,8 @@ import main as main_module
 
 _MAJA_TAGLINE_EN = "Occasional long-distance traveller · BahnCard 50"
 _MAJA_TAGLINE_DE = "Gelegentliche Fernreisende · BahnCard 50"
+_MAJA_PROFESSION_EN = "Consultant"
+_MAJA_PROFESSION_DE = "Beraterin"
 
 
 def _maja(personas: list[dict]) -> dict:
@@ -33,10 +35,22 @@ def test_personas_tagline_follows_x_language_header():
     assert _maja(no_header_personas)["tagline"] == _MAJA_TAGLINE_EN
 
 
+def test_personas_profession_and_notes_follow_x_language_header():
+    # tagline, profession and notes all resolve their _de sibling the same way — see pick() in
+    # list_personas() (api/routes/personas.py).
+    client = TestClient(main_module.app)
+
+    de_maja = _maja(client.get("/api/personas", headers={"X-Language": "de"}).json())
+    en_maja = _maja(client.get("/api/personas", headers={"X-Language": "en"}).json())
+
+    assert de_maja["profileData"]["personal"]["profession"] == _MAJA_PROFESSION_DE
+    assert en_maja["profileData"]["personal"]["profession"] == _MAJA_PROFESSION_EN
+    assert de_maja["profileData"]["notes"] != en_maja["profileData"]["notes"]
+
+
 def test_personas_non_prose_fields_are_language_invariant():
-    # The tagline is the only field pick() touches (main.py's list_personas) — everything else
-    # must be byte-identical across languages, since it's either an id/enum or user-editable
-    # profile data with no _de sibling (profession, notes).
+    # Everything id/enum-shaped must stay byte-identical across languages — only tagline,
+    # profession and notes vary via their _de siblings.
     client = TestClient(main_module.app)
 
     de_maja = _maja(client.get("/api/personas", headers={"X-Language": "de"}).json())
@@ -45,8 +59,4 @@ def test_personas_non_prose_fields_are_language_invariant():
     assert de_maja["id"] == en_maja["id"] == "maja"
     assert de_maja["avatar"] == en_maja["avatar"]
     assert de_maja["avatarBg"] == en_maja["avatarBg"]
-    assert (
-        de_maja["profileData"]["personal"]["profession"]
-        == en_maja["profileData"]["personal"]["profession"]
-    )
     assert de_maja["tagline"] != en_maja["tagline"]

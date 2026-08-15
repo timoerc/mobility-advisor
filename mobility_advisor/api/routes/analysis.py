@@ -9,8 +9,17 @@ from google.genai import types as gtypes
 from ... import clock, paths
 from ...agents.pipelines import annual_report_pipeline, optimization_pipeline
 from ...engine.stats import compute_annual_report_stats
-from ...i18n import get_language, t
-from ...models import AnalysisHistoryEntry, AnalysisRunResult, CurrentSubscriptions, Recommendation
+from ...i18n import apply_language_siblings, get_language, language_sibling, localize_unit, t
+from ...models import (
+    ACTION_LANGUAGE_FIELDS,
+    ALTERNATIVE_LANGUAGE_FIELDS,
+    METRIC_LANGUAGE_FIELDS,
+    RECOMMENDATION_LANGUAGE_FIELDS,
+    AnalysisHistoryEntry,
+    AnalysisRunResult,
+    CurrentSubscriptions,
+    Recommendation,
+)
 from ...reporting.chat_tables import render_by_mode_table, render_glance_table, render_subscription_value
 from ...reporting.pdf import render_annual_report_pdf
 from ...store.decisions import detect_pending_portfolio_decision
@@ -19,6 +28,7 @@ from ..deps import history_lock
 from ..recommendation.builder import build_alternatives_from_optimization, load_optimization_warnings
 from ..recommendation.extraction import extract_recommendation_json, extract_verdict
 from ..recommendation.finalize import build_headline_metrics, finalize_recommendation
+from ..recommendation.translation import backfill_translations, merge_entry_siblings
 from ..schemas import AnalyzeRequest, ResolveAnalysisRequest
 from .chat import _collect_text, _has_function_call
 
@@ -27,47 +37,40 @@ router = APIRouter()
 _MAX_PIPELINE_ATTEMPTS = 2
 
 
-def _resolve_recommendation_language(rec: Recommendation) -> Recommendation:
-    """Swap in the German sibling fields (verdict_de, summaryText_de, ...) seeded on scenario
-    analysis_history.json entries, when the active request is German — see models/api.py's _de
-    fields and CLAUDE.md's i18n notes. A live /api/analyze run never populates these siblings
-    (its LLM output already comes back in the request's language via the agent-prompt
-    directive), so this is always a no-op for freshly-generated recommendations; it only
-    matters for seeded scenario history read back through GET /api/analysis-history."""
-    if get_language() != "de":
-        return rec
-    if rec.verdict_de:
-        rec.verdict = rec.verdict_de
-    if rec.summaryText_de:
-        rec.summaryText = rec.summaryText_de
-    if rec.reasoning_de:
-        rec.reasoning = rec.reasoning_de
-    if rec.assumptions_de:
-        rec.assumptions = rec.assumptions_de
+def _resolve_recommendation_language(rec: Recommendation, lang: str | None = None) -> Recommendation:
+    """Swap in whichever `_en`/`_de` sibling matches `lang` (the active request's language by
+    default) onto every prose field of `rec`, in place — see models/api.py's per-field sibling
+    pairs (verdict_de/verdict_en, label_de/label_en, ...) and CLAUDE.md's i18n notes.
+
+    Two populations of siblings reach this function: `_de` siblings seeded on scenario
+    analysis_history.json entries (whose base fields are always English), and `_en`/`_de`
+    siblings backfilled onto LIVE entries by
+    recommendation.translation.backfill_translations() the first time an entry is read in a
+    language other than the one it was generated in (see AnalysisHistoryEntry.language). Either
+    way, resolving is a no-op exactly when `lang` already matches the entry's base-field
+    language — there's no need to special-case that here, since a missing/empty sibling just
+    means language_sibling() falls back to the base field unchanged.
+
+    Also normalizes every metric's `unit` via i18n.localize_unit() — units are a small closed
+    vocabulary (see that function), so they need no sibling field of their own.
+    """
+    lang = lang or get_language()
+    apply_language_siblings(rec, RECOMMENDATION_LANGUAGE_FIELDS, lang)
     for metric in rec.metrics:
-        if metric.label_de:
-            metric.label = metric.label_de
-        if metric.value_de:
-            metric.value = metric.value_de
+        apply_language_siblings(metric, METRIC_LANGUAGE_FIELDS, lang)
+        metric.unit = localize_unit(metric.unit)
     for alt in rec.alternatives:
-        if alt.name_de:
-            alt.name = alt.name_de
-        if alt.tradeoff_de:
-            alt.tradeoff = alt.tradeoff_de
+        apply_language_siblings(alt, ALTERNATIVE_LANGUAGE_FIELDS, lang)
         if alt.action is not None:
-            if alt.action.title_de:
-                alt.action.title = alt.action.title_de
-            if alt.action.description_de:
-                alt.action.description = alt.action.description_de
-            if alt.action.consequence_de:
-                alt.action.consequence = alt.action.consequence_de
+            apply_language_siblings(alt.action, ACTION_LANGUAGE_FIELDS, lang)
     return rec
 
 
 def _resolve_history_entry_language(entry: AnalysisHistoryEntry) -> AnalysisHistoryEntry:
-    _resolve_recommendation_language(entry.recommendation)
-    if get_language() == "de" and entry.resolvedMessage_de:
-        entry.resolvedMessage = entry.resolvedMessage_de
+    lang = get_language()
+    _resolve_recommendation_language(entry.recommendation, lang)
+    if entry.resolvedMessage is not None:
+        entry.resolvedMessage = language_sibling(entry, "resolvedMessage", lang)
     return entry
 
 
@@ -201,7 +204,12 @@ async def analyze(req: AnalyzeRequest):
         async with history_lock:
             hist = load_history()
             hist.entries.append(
-                AnalysisHistoryEntry(id=entry_id, date=clock.MOCK_TODAY.isoformat(), recommendation=rec)
+                AnalysisHistoryEntry(
+                    id=entry_id,
+                    date=clock.MOCK_TODAY.isoformat(),
+                    recommendation=rec,
+                    language=get_language(),
+                )
             )
             save_history(hist)
     except Exception as exc:
@@ -284,9 +292,31 @@ async def annual_report(req: AnalyzeRequest):
 async def get_analysis_history():
     """Return this persona's analysis history, newest first. Entries are stored
     oldest-first on disk (mocked ones authored in narrative order, live ones
-    appended as they occur), and reversed here for display."""
+    appended as they occur), and reversed here for display.
+
+    Before resolving each entry's display language, backfill_translations() fills in whichever
+    `_en`/`_de` sibling fields are still missing for the active request's language — the one
+    place a live-generated entry (which never gets its siblings written at /api/analyze time)
+    picks them up, lazily, on first read in the other language. This is a no-op call (zero LLM
+    calls, no disk write) once every entry already has what it needs — see that function's own
+    docstring in api/recommendation/translation.py.
+    """
     hist = load_history()
-    return [_resolve_history_entry_language(e) for e in reversed(hist.entries)]
+    entries = list(reversed(hist.entries))
+    lang = get_language()
+
+    translated = await backfill_translations(entries, lang)
+    if translated:
+        async with history_lock:
+            disk_hist = load_history()
+            translated_by_id = {e.id: e for e in entries}
+            for disk_entry in disk_hist.entries:
+                source = translated_by_id.get(disk_entry.id)
+                if source is not None:
+                    merge_entry_siblings(disk_entry, source, lang)
+            save_history(disk_hist)
+
+    return [_resolve_history_entry_language(e) for e in entries]
 
 
 @router.post("/api/analysis-history/{entry_id}/resolve")
@@ -317,6 +347,7 @@ async def resolve_analysis(entry_id: str, req: ResolveAnalysisRequest):
         newest.outcome = req.outcome
         newest.resolvedAlternativeId = req.alternative_id
         newest.resolvedMessage = req.message
+        newest.resolvedMessageLanguage = get_language()
         newest.resolvedAt = clock.MOCK_TODAY.isoformat()
         # A kept-current decision changed nothing, so there is nothing to undo.
         newest.revertSnapshot = None
@@ -344,6 +375,7 @@ async def revert_analysis(entry_id: str):
         newest.outcome = "kept_current"
         newest.resolvedAlternativeId = None
         newest.resolvedMessage = t("revert.resolvedMessage")
+        newest.resolvedMessageLanguage = get_language()
         newest.resolvedAt = clock.MOCK_TODAY.isoformat()
         newest.revertSnapshot = None
         save_history(hist)

@@ -83,6 +83,60 @@ def t(key: str, /, **kw: object) -> str:
         return template
 
 
+def localize_unit(unit: str) -> str:
+    """Translate a raw `MetricDelta.unit` string (e.g. "€/year", "kg CO2") to the active
+    language's equivalent, by reverse-looking it up against every `metric.unit.*` catalog
+    key in EITHER language and re-resolving that key via t(). Returns `unit` unchanged if it
+    doesn't match any known unit string — covers ad-hoc units a metric might carry that were
+    never meant to be a closed vocabulary.
+
+    Built at call time, never module scope, per this module's HARD RULE above. There is no
+    `unit_de` model field (unlike verdict_de/label_de/...): units are a small closed
+    vocabulary already fully covered by the message catalog, so this reverse-index approach
+    handles seeded fixtures AND live-generated units (which already come from t()) with one
+    mechanism, instead of asking every seeded fixture to carry yet another sibling field.
+    """
+    from mobility_advisor.messages import de as _de, en as _en
+
+    # Iterate the two catalogs' items separately, NOT merged into one dict — {**en, **de}
+    # collapses each shared key down to a single (German) value, which would make an
+    # English unit string un-matchable against its own English catalog value.
+    for catalog in (_en.MESSAGES, _de.MESSAGES):
+        for key, value in catalog.items():
+            if key.startswith("metric.unit.") and value == unit:
+                return t(key)
+    return unit
+
+
+def language_sibling(obj: object, field: str, lang: Language) -> object:
+    """Return `obj`'s `{field}_{lang}` attribute if it's set and truthy, else `obj`'s base
+    `field` attribute unchanged.
+
+    The generalized, Pydantic-model equivalent of pick() above: pick() resolves a raw dict's
+    `_de`-only sibling (seeded scenario fixtures); this resolves either direction (`_en` or
+    `_de`) on a typed model, which is what a live-generated Recommendation needs — see
+    models/api.py's per-field `_de`/`_en` sibling pairs (label_de/label_en, verdict_de/
+    verdict_en, ...) and AnalysisHistoryEntry.language for how the base fields' own language
+    is known. Building block for apply_language_siblings below, and used standalone by
+    store/history.py's continuity summary, which only ever needs one field at a time.
+    """
+    value = getattr(obj, f"{field}_{lang}", None)
+    return value if value else getattr(obj, field)
+
+
+def apply_language_siblings(obj: object, fields: tuple[str, ...], lang: Language) -> None:
+    """Mutate `obj` in place: resolve each name in `fields` via language_sibling() and write
+    the result back onto the base attribute.
+
+    Used by api/routes/analysis.py's recommendation-history resolvers to swap in whichever of
+    a model's `_en`/`_de` siblings matches the active request's language, across every prose
+    field on Recommendation/MetricDelta/Alternative/ProposedAction/AnalysisHistoryEntry in one
+    shared mechanism instead of a hand-written `if` per field.
+    """
+    for f in fields:
+        setattr(obj, f, language_sibling(obj, f, lang))
+
+
 def pick(obj: dict, field: str) -> object:
     """Resolve a scenario-fixture field to its German sibling (`f"{field}_de"`) when the active
     language is German and that sibling is present and non-empty; otherwise returns the English

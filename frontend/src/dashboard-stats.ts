@@ -1,5 +1,6 @@
 import type { TripRecord } from "./api";
-import type { TranslationKey } from "./i18n";
+import type { Language, TranslationKey } from "./i18n";
+import { LOCALE_TAG } from "./i18n";
 import type { SubscriptionEntry } from "./types";
 
 /** Time-range presets for the home dashboard, in display order. */
@@ -167,13 +168,14 @@ function parseDate(value: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function bucketLabel(start: Date, unit: BucketUnit, spansMultipleYears: boolean): string {
+function bucketLabel(start: Date, unit: BucketUnit, spansMultipleYears: boolean, language: Language): string {
+  const localeTag = LOCALE_TAG[language];
   if (unit === "week") {
-    return start.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+    return start.toLocaleDateString(localeTag, { day: "2-digit", month: "2-digit" });
   }
   if (unit === "month") {
     return start.toLocaleDateString(
-      "de-DE",
+      localeTag,
       spansMultipleYears ? { month: "short", year: "2-digit" } : { month: "short" },
     );
   }
@@ -197,6 +199,7 @@ export function bucketSpendOverTime(
   subscriptions: SubscriptionEntry[] | null,
   referenceDate: string,
   range: RangeKey,
+  language: Language,
 ): { buckets: SpendBucket[]; unit: BucketUnit } {
   const ref = new Date(referenceDate);
   if (Number.isNaN(ref.getTime())) return { buckets: [], unit: "month" };
@@ -249,7 +252,7 @@ export function bucketSpendOverTime(
       return sum + (s.monthly_cost_eur ?? 0) * unitMonths(unit);
     }, 0);
 
-    buckets.push({ key, label: bucketLabel(cursor, unit, spansMultipleYears), start: cursor, end: bucketEnd, tripEur, subEur });
+    buckets.push({ key, label: bucketLabel(cursor, unit, spansMultipleYears, language), start: cursor, end: bucketEnd, tripEur, subEur });
     cursor = bucketEnd;
   }
 

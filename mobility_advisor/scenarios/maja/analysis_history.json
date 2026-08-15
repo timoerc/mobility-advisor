@@ -15,8 +15,20 @@
         "summaryText": "Only a couple of long-distance DB trips are logged so far in 2026 — discounted spend is well below what's needed to justify BahnCard 50's €244/year cost. Downgrading to BahnCard 25 would still cover your usage at less than half the price.",
         "summaryText_de": "Bisher sind 2026 nur wenige Fernfahrten mit der DB erfasst — die vergünstigten Ausgaben liegen deutlich unter dem, was die BahnCard 50 mit 244 €/Jahr rechtfertigen würde. Ein Downgrade auf die BahnCard 25 würde Ihre Nutzung weiterhin abdecken, für weniger als die Hälfte des Preises.",
         "metrics": [
-          { "value": 133, "unit": "€/year", "direction": "save", "label": "Potential saving vs. BahnCard 50" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          {
+            "value": 133,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving vs. BahnCard 50",
+            "label_de": "Mögliche Ersparnis ggü. BahnCard 50"
+          },
+          {
+            "value": 0,
+            "unit": "kg CO2",
+            "direction": "neutral",
+            "label": "CO2 impact",
+            "label_de": "CO2-Auswirkung"
+          }
         ],
         "reasoning": [
           "Only 2 long-distance rail trips have been recorded since January",
@@ -88,8 +100,20 @@
         "summaryText": "Discounted DB spend through mid-April covers less than half of BahnCard 50's €244 annual cost. At this pace you're on track for a net loss of about €132 this year — cancelling would save the full card cost.",
         "summaryText_de": "Die vergünstigten DB-Ausgaben bis Mitte April decken weniger als die Hälfte der 244 € Jahreskosten der BahnCard 50. Bei diesem Tempo steuern Sie dieses Jahr auf einen Nettoverlust von rund 132 € zu — eine Kündigung würde die vollen Kartenkosten sparen.",
         "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          {
+            "value": 244,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving",
+            "label_de": "Mögliche Ersparnis"
+          },
+          {
+            "value": 0,
+            "unit": "kg CO2",
+            "direction": "neutral",
+            "label": "CO2 impact",
+            "label_de": "CO2-Auswirkung"
+          }
         ],
         "reasoning": [
           "Discounted DB spend year-to-date is far short of the €488 breakeven threshold",
@@ -160,8 +184,20 @@
         "summaryText": "Your discounted DB spend this year covers less than half of BahnCard 50's €244 cost — cancelling would save the full amount with no change to your travel pattern.",
         "summaryText_de": "Ihre vergünstigten DB-Ausgaben decken dieses Jahr weniger als die Hälfte der 244 € Kosten der BahnCard 50 — eine Kündigung würde den vollen Betrag sparen, ohne Ihr Reiseverhalten zu ändern.",
         "metrics": [
-          { "value": 244, "unit": "€/year", "direction": "save", "label": "Potential saving" },
-          { "value": 0, "unit": "kg CO2", "direction": "neutral", "label": "CO2 impact" }
+          {
+            "value": 244,
+            "unit": "€/year",
+            "direction": "save",
+            "label": "Potential saving",
+            "label_de": "Mögliche Ersparnis"
+          },
+          {
+            "value": 0,
+            "unit": "kg CO2",
+            "direction": "neutral",
+            "label": "CO2 impact",
+            "label_de": "CO2-Auswirkung"
+          }
         ],
         "reasoning": [
           "5 DB trips this year produced €111.70 in discounted spend, far below the €488 breakeven threshold",

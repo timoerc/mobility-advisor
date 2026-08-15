@@ -50,6 +50,12 @@ MESSAGES: dict[str, str] = {
     "metric.unit.hPerYear": "h/year",
     "metric.unit.eurPerYear": "€/year",
     "metric.unit.kgCo2PerYear": "kg CO₂/year",
+    # These four cover raw units seen in seeded analysis_history.json fixtures (not emitted by
+    # any current live code path) — resolved via i18n.localize_unit(), not looked up by key.
+    "metric.unit.kgCo2": "kg CO2",
+    "metric.unit.flexDiscountPct": "% flex discount",
+    "metric.unit.trips": "trips",
+    "metric.unit.decision": "decision",
     "metric.pendingDecision.revisitBy": "Revisit by",
     "metric.pendingDecision.valueOnHold": "Value on hold",
     "metric.pendingDecision.decisionPending": "Decision pending",
@@ -203,6 +209,39 @@ MESSAGES: dict[str, str] = {
     "report.pdf.pageLabel": "Page ",
     "report.pdf.ofLabel": " of ",
 
+    # ── annual report skeleton (agents/annual.py's raw_instruction) — these are the fixed
+    # structural headers/labels around the LLM-authored prose, rendered in code (via t()) and
+    # spliced into the instruction template rather than left as literal English text, so a
+    # German report's structure translates deterministically instead of depending on the LLM
+    # translating a "reproduce this exactly" template on its own initiative.
+    "report.periodCovered": "**Period covered:** 1 January – 31 December {year}",
+    "report.section1": "1. Year at a Glance",
+    "report.section2": "2. Spend & Emissions by Mode",
+    "report.section3": "3. Sustainability",
+    "report.section4": "4. Subscription Value",
+    "report.section5": "5. Recommendations & Actions",
+    "report.section6": "6. Forward Outlook",
+    "report.section7": "7. Methodology & Assumptions",
+    "report.actionsTakenNoneLine": "> **Actions taken this year:** None.",
+    "report.pendingProposalLine": "> **Pending proposal:** awaiting your approval (see below).",
+    "report.footerDisclaimer": "⚠️ **This report is informational. No changes have been made to your subscriptions.**",
+    "report.dataQualityNotesNone": "None.",
+
+    # ── annual_optimizer_agent's Step 3 output labels (agents/annual.py) — this agent's
+    # recommendation is quoted directly into annual_communicator's Section 5, so these labels
+    # are rendered via t() and spliced into the instruction (same reasoning as the report
+    # skeleton keys above) instead of relying on the LLM to translate a "reproduce this exact
+    # structure" template on its own initiative.
+    "report.optimizer.proposedChange": "**Proposed change:**",
+    "report.optimizer.currentMonthlyCost": "**Current monthly cost:**",
+    "report.optimizer.proposedMonthlyCost": "**Proposed monthly cost:**",
+    "report.optimizer.monthlySaving": "**Monthly saving:**",
+    "report.optimizer.co2Impact": "**CO₂ impact:**",
+    "report.optimizer.actionDeadline": "**Action deadline:**",
+    "report.optimizer.cancelChangeBefore": "Cancel/change before {date} to avoid auto-renewal.",
+    "report.optimizer.whatStaysAndWhy": "**What stays and why:**",
+    "report.optimizer.whyThisChange": "**Why this change:**",
+
     "error.noMatchFor": "no match for '{query}'",
     "error.ambiguousMatchFor": "ambiguous match for '{query}': matched {count} entries ({matches})",
 
@@ -242,4 +281,7 @@ MESSAGES: dict[str, str] = {
         "replace target and new_product both resolved to '{product}' — this resets the renewal "
         "clock on an unchanged product, not a real swap."
     ),
+
+    # ── persona onboarding — api/routes/personas.py ──────────────────────────────────────────
+    "persona.newUser": "New user",
 }

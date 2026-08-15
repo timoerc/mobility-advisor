@@ -12,6 +12,7 @@
       "age": 33,
       "employment_status": "employed",
       "profession": "Consultant",
+      "profession_de": "Beraterin",
       "household_context": "single"
     },
     "location": {
@@ -46,6 +47,7 @@
         "FreeNow"
       ]
     },
-    "notes": "Köln-based; occasional long-distance DB trips (Ulm, Freiburg, Karlsruhe), no regular Frankfurt commute."
+    "notes": "Köln-based; occasional long-distance DB trips (Ulm, Freiburg, Karlsruhe), no regular Frankfurt commute.",
+    "notes_de": "Wohnhaft in Köln; gelegentliche Fernfahrten mit der DB (Ulm, Freiburg, Karlsruhe), kein regelmäßiger Pendelverkehr nach Frankfurt."
   }
 }

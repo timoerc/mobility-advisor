@@ -12,6 +12,7 @@
       "age": 29,
       "employment_status": "employed",
       "profession": "UX Designer",
+      "profession_de": "UX-Designerin",
       "household_context": "single"
     },
     "location": {
@@ -45,6 +46,7 @@
         "Nextbike"
       ]
     },
-    "notes": "Get around Berlin by U-/S-Bahn and MILES car-share for evenings and errands. No membership — I just book MILES pay-as-you-go."
+    "notes": "Get around Berlin by U-/S-Bahn and MILES car-share for evenings and errands. No membership — I just book MILES pay-as-you-go.",
+    "notes_de": "Bewegt sich in Berlin mit U-/S-Bahn und nutzt MILES Carsharing abends und für Erledigungen. Keine Mitgliedschaft — bucht MILES einfach nach Bedarf (Pay-as-you-go)."
   }
 }

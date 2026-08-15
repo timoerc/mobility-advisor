@@ -1,3 +1,4 @@
+import { useI18n, formatNumber } from "../i18n";
 import type { MetricDelta } from "../types/recommendation";
 
 const DIRECTION_STYLE: Record<MetricDelta["direction"], { value: string; bg: string; border: string }> = {
@@ -17,6 +18,7 @@ const DIRECTION_PREFIX: Record<MetricDelta["direction"], string> = {
 };
 
 export function MetricTile({ metric }: { metric: MetricDelta }) {
+  const { language } = useI18n();
   const s = DIRECTION_STYLE[metric.direction];
   const prefix = DIRECTION_PREFIX[metric.direction];
   // A headline tile can carry a date or a word instead of a number (e.g. a pending-decision
@@ -25,6 +27,7 @@ export function MetricTile({ metric }: { metric: MetricDelta }) {
   // 10-character string overflows or gets clipped in this flex-1 tile sitting 3-across.
   // Numbers stay large and tight; strings get a smaller size and are allowed to wrap.
   const isNumeric = typeof metric.value === "number";
+  const displayValue = isNumeric ? formatNumber(language, metric.value as number) : metric.value;
   return (
     <div className={`flex-1 min-w-0 rounded-xl p-4 border shadow-card ${s.bg} ${s.border} text-center`}>
       <p
@@ -34,7 +37,7 @@ export function MetricTile({ metric }: { metric: MetricDelta }) {
             : "text-base font-bold leading-tight break-words"
         }`}
       >
-        {prefix}{metric.value}
+        {prefix}{displayValue}
         <span className="text-sm font-semibold ml-1">{metric.unit}</span>
       </p>
       <p className="text-xs text-gray-500 m-0 mt-1.5 leading-snug">{metric.label}</p>

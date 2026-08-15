@@ -12,6 +12,7 @@
       "age": 36,
       "employment_status": "employed",
       "profession": "Management Consultant",
+      "profession_de": "Unternehmensberater",
       "household_context": "partner"
     },
     "location": {
@@ -44,6 +45,7 @@
         "RMV"
       ]
     },
-    "notes": "On a Munich client project since last autumn — lots of Frankfurt–Munich train travel. Project wraps end of August; next staffing looks like a local Frankfurt engagement."
+    "notes": "On a Munich client project since last autumn — lots of Frankfurt–Munich train travel. Project wraps end of August; next staffing looks like a local Frankfurt engagement.",
+    "notes_de": "Seit letztem Herbst auf einem Kundenprojekt in München — viele Zugfahrten zwischen Frankfurt und München. Das Projekt endet Ende August; der nächste Einsatz zeichnet sich als lokales Frankfurt-Projekt ab."
   }
 }

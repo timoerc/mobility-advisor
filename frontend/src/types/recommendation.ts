@@ -1,5 +1,14 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
 
+// The backend's Recommendation/MetricDelta/Alternative/ProposedAction/AnalysisHistoryEntry
+// models (mobility_advisor/models/api.py) each carry `_en`/`_de` sibling fields alongside
+// every prose field below (verdict_de, verdict_en, label_de, label_en, ...) — populated on
+// seeded scenario fixtures and lazily backfilled for live entries by
+// recommendation.translation.backfill_translations(). GET /api/analysis-history resolves the
+// sibling matching the request's X-Language header onto the BASE field before responding (see
+// _resolve_history_entry_language), so the frontend never needs to read a sibling directly —
+// only the base fields below are declared here.
+
 export type MetricDelta = {
   // Usually the numeric delta a tile is built from; a headline tile can instead carry a
   // date or a word (e.g. a pending-decision tile showing "2026-09-01" or "relocation").
@@ -86,6 +95,14 @@ export type AnalysisHistoryEntry = {
   resolvedAlternativeId: string | null;
   resolvedMessage: string | null;
   resolvedAt: string | null;
+  // The language this entry's recommendation prose was generated/seeded in. Not otherwise
+  // used by the frontend today — backend-only bookkeeping (see AnalysisHistoryEntry.language
+  // in models/api.py) that drives which sibling backfill_translations() fills in.
+  language?: "en" | "de";
+  // resolvedMessage can be written by a later, differently-languaged request than the one
+  // that created the entry (e.g. /api/execute vs. the original /api/analyze) — see
+  // AnalysisHistoryEntry.resolvedMessageLanguage.
+  resolvedMessageLanguage?: "en" | "de" | null;
   // Present (non-null) only while an executed change on the newest entry can still be reverted.
   revertSnapshot?: unknown | null;
 };

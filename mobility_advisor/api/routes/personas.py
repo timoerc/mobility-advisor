@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
 from ... import paths
-from ...i18n import pick
+from ...i18n import pick, t
 from ...models import CarUsage, CurrentSubscriptions
 from ...store.scenarios import activate_scenario
 from ..schemas import ActivateRequest, ProfilePayload
@@ -28,7 +28,7 @@ def _persona_from_payload(payload: ProfilePayload) -> dict:
     return {
         "id": payload.persona_id,
         "name": full_name,
-        "tagline": payload.personal.profession or "New user",
+        "tagline": payload.personal.profession or t("persona.newUser"),
         "avatar": initials,
         "avatarBg": payload.avatarBg,
         "profileData": {
@@ -77,10 +77,13 @@ async def list_personas():
         if not pf.exists():
             continue
         persona = json.loads(pf.read_text(encoding="utf-8"))
-        # tagline_de sibling in the scenario fixture, resolved for the active request's
-        # language — see mobility_advisor.i18n.pick(). persona.json is a raw dict, not
-        # Pydantic-validated, so this is the only place the German variant needs wiring.
+        # tagline_de/profession_de/notes_de siblings in the scenario fixture, resolved for the
+        # active request's language — see mobility_advisor.i18n.pick(). persona.json is a raw
+        # dict, not Pydantic-validated, so this is the only place the German variants need wiring.
         persona["tagline"] = pick(persona, "tagline")
+        personal = persona["profileData"]["personal"]
+        personal["profession"] = pick(personal, "profession")
+        persona["profileData"]["notes"] = pick(persona["profileData"], "notes")
         sf = folder / "current_subscriptions.json"
         subscriptions = (
             CurrentSubscriptions.model_validate(json.loads(sf.read_text(encoding="utf-8"))).model_dump()["subscriptions"]

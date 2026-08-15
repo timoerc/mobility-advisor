@@ -5,7 +5,7 @@ import json
 from pydantic import ValidationError
 
 from .. import paths
-from ..i18n import get_language
+from ..i18n import get_language, language_sibling
 from ..models import AnalysisHistory
 
 
@@ -29,19 +29,18 @@ def load_recommendation_history(limit: int = 3) -> dict:
         return {"history": []}
     raw = json.loads(path.read_text())
     entries = AnalysisHistory.model_validate(raw).entries[-limit:]
-    is_de = get_language() == "de"
+    lang = get_language()
     history = []
     for entry in entries:
         recommended = next(
             (alt for alt in entry.recommendation.alternatives if alt.isRecommended), None
         )
-        # _de siblings on seeded scenario analysis_history.json entries, resolved for the
-        # active request's language — same fields main.py's _resolve_recommendation_language
-        # resolves for GET /api/analysis-history; live entries never populate these siblings.
-        verdict = (entry.recommendation.verdict_de or entry.recommendation.verdict) if is_de else entry.recommendation.verdict
-        action_name = ""
-        if recommended:
-            action_name = (recommended.name_de or recommended.name) if is_de else recommended.name
+        # `_en`/`_de` siblings (seeded on scenario analysis_history.json entries, or backfilled
+        # onto live entries — see AnalysisHistoryEntry.language), resolved for the active
+        # request's language via the same mechanism api/routes/analysis.py's
+        # _resolve_recommendation_language uses for GET /api/analysis-history.
+        verdict = language_sibling(entry.recommendation, "verdict", lang)
+        action_name = language_sibling(recommended, "name", lang) if recommended else ""
         history.append({
             "date": entry.date,
             "verdict": verdict,
@@ -65,4 +64,12 @@ def load_history() -> AnalysisHistory:
 
 
 def save_history(hist: AnalysisHistory) -> None:
-    paths.atomic_write_json(paths.DATA_DIR / "analysis_history.json", hist.model_dump())
+    # exclude_none=True: with the per-field _en/_de sibling pairs on Recommendation/MetricDelta/
+    # Alternative/ProposedAction/AnalysisHistoryEntry (most of them None on any given entry —
+    # only whichever siblings a seeded fixture or backfill_translations() actually populated
+    # are set), a plain model_dump() would write a "verdict_en": null-style key for every one
+    # of them on every entry, on every save. Alternative.action's explicit "action": null on
+    # the "Keep current setup" row is dropped by this too — harmless, since the field defaults
+    # to None and the model validator only checks that at least one alternative HAS a null
+    # action, not that the key is present in the JSON.
+    paths.atomic_write_json(paths.DATA_DIR / "analysis_history.json", hist.model_dump(exclude_none=True))
