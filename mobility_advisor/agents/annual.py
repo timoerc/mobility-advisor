@@ -390,7 +390,8 @@ execution is mocked/pending (the normal case), write exactly:
 
 Then include the optimizer's proposed change from {{annual_recommendation}} as a single bullet. If
 {{annual_recommendation}} indicates a change was actually approved/executed, state that instead under
-"Actions taken this year" and only list remaining open proposals under "Pending proposal".
+"{t("report.actionsTakenLabel")}" and only list remaining open proposals under
+"{t("report.pendingProposalLabel")}".
 
 ---
 

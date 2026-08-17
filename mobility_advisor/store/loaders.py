@@ -4,7 +4,7 @@ per-agent context helpers that save a tool-call round-trip."""
 import json
 
 from .. import clock, paths
-from ..i18n import pick, t
+from ..i18n import pick, pick_lang, t
 from ..models import (
     CalendarEvents,
     CarUsage,
@@ -16,6 +16,26 @@ from ..models import (
 )
 
 USE_MOCK_DATA = True
+
+
+def _localize_entries(entries: list[dict]) -> list[dict]:
+    """Resolve `product` to the active request's language and drop the now-redundant
+    `product_en` sibling plus the German-only `notes` field, on a list of catalog-option or
+    subscription dicts. Applied before any such entry reaches an agent (whose tool result gets
+    quoted verbatim, per agents/execution.py rule 4) or the frontend, so a German product name
+    or German notes prose never leaks onto an English screen (or vice versa). `notes` is
+    dropped rather than translated because it's free-text prose that only duplicates numbers
+    already present in `benefits`/`monthly_cost_eur` on the same entry — see
+    load_relevant_mobility_catalog's docstring for the same rationale, applied here to every
+    catalog/subscription loader instead of just the relevance-filtered one."""
+    localized = []
+    for entry in entries:
+        resolved = {**entry, "product": pick_lang(entry, "product")}
+        resolved.pop("product_en", None)
+        resolved.pop("notes", None)
+        localized.append(resolved)
+    return localized
+
 
 def load_user_preferences() -> dict:
     """Load the active user's mobility preferences derived from their persona profile.
@@ -93,30 +113,63 @@ def load_current_subscriptions() -> dict:
     subscription-specific fields. Every field below is always present; none are ever
     missing, and only next_renewal_date/started can be an empty string (never absent).
 
+    `product` is ALWAYS the canonical German name here (never localized) — this loader
+    backs internal engine matching/joins (engine/stats.py, engine/calibration.py) that
+    correlate subscriptions against mobility_catalog.json and travel history by exact
+    `product` string; localizing it here would silently break every one of those lookups
+    in English-mode requests. For a user-facing, localized copy (dropping `product_en`/
+    `notes`, resolving `product` to the active language), see load_current_subscriptions_display
+    or apply _localize_entries yourself, as api/routes/data.py and mutations.py do.
+
     id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/
     flight/bus), monthly_cost_eur (float), billing_cycle (str), minimum_months (int),
     eligibility (dict: min_age/max_age, either may be null), benefits (dict, shape
     varies by mode), qualifying_threshold (dict or null, shape varies by mode),
-    affiliated_airlines (list[str] or null, flight mode only), notes (str),
-    next_renewal_date (str, "" if not applicable), started (str, "" if not applicable).
+    affiliated_airlines (list[str] or null, flight mode only), product_en (str, English
+    display sibling), notes (str), next_renewal_date (str, "" if not applicable),
+    started (str, "" if not applicable).
     """
     raw = json.loads((paths.DATA_DIR / "current_subscriptions.json").read_text(encoding="utf-8"))
     return CurrentSubscriptions.model_validate(raw).model_dump()
+
+
+def load_current_subscriptions_display() -> dict:
+    """Localized, display-only variant of load_current_subscriptions() — for a direct
+    user-facing answer (qa_agent) where the LLM will quote `product` in its reply. Resolves
+    `product` to the active request's language and drops `product_en`/`notes` (see
+    _localize_entries). Never use this for matching/joins against other data — the
+    resolved `product` may be the English display name, which won't match
+    mobility_catalog.json's canonical German entries or travel-history linkage; use
+    load_current_subscriptions for that."""
+    return {"subscriptions": _localize_entries(load_current_subscriptions()["subscriptions"])}
 
 
 def load_mobility_catalog() -> dict:
     """Load the market-side mobility products catalog including pricing and benefits data.
 
     Returns a dict with key 'options', a list of available products each containing:
-    id (str), provider (str), product (str), mode (str: rail/car_share/car_rental/flight/bus),
-    monthly_cost_eur (float), benefits (dict), eligibility (dict), qualifying_threshold (dict or null).
+    id (str), provider (str), product (str, ALWAYS the canonical German name — see
+    load_current_subscriptions' docstring for why this loader never localizes it),
+    mode (str: rail/car_share/car_rental/flight/bus), monthly_cost_eur (float),
+    benefits (dict), eligibility (dict), qualifying_threshold (dict or null),
+    product_en (str, English display sibling), notes (str).
     """
     raw = json.loads((paths.STATIC_DIR / "mobility_catalog.json").read_text(encoding="utf-8"))
     return MobilityCatalog.model_validate(raw).model_dump()
 
 
+def load_mobility_catalog_display() -> dict:
+    """Localized, display-only variant of load_mobility_catalog() — see
+    load_current_subscriptions_display's docstring for the same rationale. Never use for
+    matching/joins."""
+    return {"options": _localize_entries(load_mobility_catalog()["options"])}
+
+
 def load_relevant_mobility_catalog() -> dict:
-    """Load the market catalog narrowed to options relevant to the active user.
+    """Load the market catalog narrowed to options relevant to the active user, localized
+    for direct display (this feeds annual_optimizer_agent's prompt context, which quotes
+    product names verbatim into the user-facing annual report — see
+    load_annual_optimizer_context).
 
     Same shape as load_mobility_catalog() (key 'options'), but filtered by two
     deterministic signals computed from the user's own data — not an embedding
@@ -126,13 +179,13 @@ def load_relevant_mobility_catalog() -> dict:
          taken a trip in it.
       2. Age eligibility: drop an option the user could not actually sign up
          for, per persona.json's age and the option's eligibility range.
-    Each kept option also has its 'notes' field dropped — that field is
-    free-text prose that duplicates numbers already present in 'benefits'/
-    'monthly_cost_eur' on the same option.
+    Each kept option is localized and has 'notes'/'product_en' dropped — see
+    _localize_entries. Eligibility filtering itself runs against the canonical
+    (unlocalized) catalog/subscriptions so mode/age comparisons are unaffected by language.
 
     If applying the filter would remove every option (e.g. a brand-new profile
-    with no subscriptions or trips yet), returns the full unfiltered catalog
-    instead — with no usage signal, no filter criterion is trustworthy, and an
+    with no subscriptions or trips yet), returns the full unfiltered (but still localized)
+    catalog instead — with no usage signal, no filter criterion is trustworthy, and an
     empty catalog is worse than an oversized one.
 
     Use this (not load_mobility_catalog) when proposing or comparing contract
@@ -163,12 +216,8 @@ def load_relevant_mobility_catalog() -> dict:
             return False
         return True
 
-    filtered = [
-        {k: v for k, v in option.items() if k != "notes"}
-        for option in catalog
-        if eligible(option)
-    ]
-    return {"options": filtered or catalog}
+    filtered = [option for option in catalog if eligible(option)]
+    return {"options": _localize_entries(filtered or catalog)}
 
 
 _KNOWN_MODES = {"rail", "car_share", "car_rental", "flight", "bus"}

@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from ... import paths
 from ...i18n import pick, t
 from ...models import CarUsage, CurrentSubscriptions
+from ...store.loaders import _localize_entries
 from ...store.scenarios import activate_scenario
 from ..schemas import ActivateRequest, ProfilePayload
 
@@ -48,7 +49,7 @@ async def save_profile(payload: ProfilePayload):
     try:
         subscriptions = CurrentSubscriptions.model_validate(_subs_from_payload(payload)).model_dump()
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid subscriptions: {exc}") from exc
+        raise HTTPException(status_code=422, detail=t("error.invalidSubscriptions", error=str(exc))) from exc
     paths.atomic_write_json(paths.DATA_DIR / "persona.json", _persona_from_payload(payload))
     paths.atomic_write_json(paths.DATA_DIR / "current_subscriptions.json", subscriptions)
     paths.atomic_write_json(paths.DATA_DIR / "car_usage.json", payload.car.model_dump())
@@ -89,7 +90,9 @@ async def list_personas():
             CurrentSubscriptions.model_validate(json.loads(sf.read_text(encoding="utf-8"))).model_dump()["subscriptions"]
             if sf.exists() else []
         )
-        persona["profileData"]["subscriptions"] = subscriptions
+        # Localize `product` to the active request's language, same as the live
+        # /api/current-subscriptions path — see store/loaders._localize_entries.
+        persona["profileData"]["subscriptions"] = _localize_entries(subscriptions)
         cf = folder / "car_usage.json"
         persona["profileData"]["car"] = (
             json.loads(cf.read_text(encoding="utf-8")) if cf.exists() else CarUsage().model_dump()
@@ -104,12 +107,12 @@ async def activate_persona(req: ActivateRequest):
     if req.persona_id not in paths.known_personas():
         raise HTTPException(
             status_code=404,
-            detail=f"No scenario for persona '{req.persona_id}'.",
+            detail=t("error.noScenarioForPersona", personaId=req.persona_id),
         )
     found = activate_scenario(req.persona_id)
     if not found:
         raise HTTPException(
             status_code=404,
-            detail=f"No scenario directory for persona '{req.persona_id}'.",
+            detail=t("error.noScenarioDirectoryForPersona", personaId=req.persona_id),
         )
     return {"ok": True}

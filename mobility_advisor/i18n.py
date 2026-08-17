@@ -150,6 +150,20 @@ def pick(obj: dict, field: str) -> object:
     return obj.get(field)
 
 
+def pick_lang(obj: dict, field: str) -> object:
+    """Resolve `field` to the active language's sibling, the reverse-direction counterpart of
+    pick(): pick() assumes the base field is English with an optional `_de` sibling; this
+    assumes the base field is German (e.g. mobility_catalog.json's `product`, authored in
+    German because it doubles as the identity/matching key) with an optional `_en` sibling.
+    Returns the base field unchanged in German mode, or when no non-empty `_en` sibling exists
+    (a defensive fallback, not the expected path — every catalog option carries product_en)."""
+    if get_language() == "en":
+        en_value = obj.get(f"{field}_en")
+        if en_value:
+            return en_value
+    return obj.get(field)
+
+
 # ── Agent-prompt language directive ──────────────────────────────────────────────────────────
 #
 # Appended (not prepended) to each of the six user-facing agent instructions, so it has recency
@@ -167,7 +181,9 @@ transliterated, abbreviated or reworded:
 - the Confidence value, exactly one of: high, medium, low
 - every subscription, product, provider and tariff name — e.g. "BahnCard 25 (2. Klasse,
   Standard, Jahresabo)", "MILES Silber Pass" — copy them character-for-character from the tool
-  output
+  output. (This directive only fires in German mode; in English mode the tools already return
+  the English display name — e.g. "BahnCard 25 (2nd class, standard, annual)" — which must
+  likewise be quoted verbatim, never re-translated or reworded.)
 - any text you were told to quote verbatim from a tool's `explanation` field
 - the HTML comment markers <!-- GLANCE_TABLE -->, <!-- BY_MODE_TABLE -->,
   <!-- SUBSCRIPTION_VALUE -->

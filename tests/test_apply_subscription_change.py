@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from mobility_advisor import paths
+from mobility_advisor.i18n import language_scope
+from mobility_advisor.models import Subscription
 from mobility_advisor.store import mutations
 
 _SCENARIOS = Path(__file__).parent.parent / "mobility_advisor" / "scenarios"
@@ -41,9 +43,14 @@ def test_remove_existing_subscription(isolated_data_dir):
 
 
 def test_add_from_catalog_computes_renewal_date(isolated_data_dir):
-    result = mutations.apply_subscription_change(
-        action="add", new_product="BahnCard 25 (2. Klasse, Standard, Jahresabo)", as_of=date(2026, 3, 10)
-    )
+    # language_scope("de"): result["added"] is now localized for display (see
+    # test_replace_receipt_localizes_product_name_but_disk_stays_canonical below) — this
+    # test is about renewal-date computation, not display language, so it pins German to
+    # keep asserting against the canonical fixture string.
+    with language_scope("de"):
+        result = mutations.apply_subscription_change(
+            action="add", new_product="BahnCard 25 (2. Klasse, Standard, Jahresabo)", as_of=date(2026, 3, 10)
+        )
     assert result["status"] == "applied"
     added = result["added"][0]
     assert added["product"] == "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
@@ -66,12 +73,14 @@ def test_add_monthly_product_renewal_date_clamps_month_end(isolated_data_dir):
 
 
 def test_replace_swaps_in_one_pass(isolated_data_dir):
-    result = mutations.apply_subscription_change(
-        action="replace",
-        target_subscription="BahnCard 50",
-        new_product="BahnCard 25 (2. Klasse, Standard, Jahresabo)",
-        as_of=date(2026, 6, 22),
-    )
+    # language_scope("de"): see test_add_from_catalog_computes_renewal_date's comment above.
+    with language_scope("de"):
+        result = mutations.apply_subscription_change(
+            action="replace",
+            target_subscription="BahnCard 50",
+            new_product="BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            as_of=date(2026, 6, 22),
+        )
     assert result["status"] == "applied"
     assert result["removed"][0]["product"] == "BahnCard 50 (2. Klasse, Standard, Jahresabo)"
     assert result["added"][0]["product"] == "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
@@ -170,6 +179,44 @@ def test_token_fallback_matches_english_class_notation(isolated_data_dir):
     )
     assert result["status"] == "error"
     assert "ambiguous" in result["error"]
+
+
+def test_replace_receipt_localizes_product_name_but_disk_stays_canonical(isolated_data_dir):
+    # Reproduces the reported bug: an English-mode execution receipt (built from this
+    # function's removed/added lists — see agents/execution.py rule 4, which quotes them
+    # verbatim) must not read German, even though current_subscriptions.json's `product`
+    # stays the canonical German identity/matching key on disk either way.
+    with language_scope("en"):
+        result = mutations.apply_subscription_change(
+            action="replace",
+            target_subscription="BahnCard 50",
+            new_product="BahnCard 25 (2. Klasse, Standard, Jahresabo)",
+            as_of=date(2026, 6, 22),
+        )
+    assert result["status"] == "applied"
+    assert result["removed"][0]["product"] == "BahnCard 50 (2nd class, standard, annual)"
+    assert result["added"][0]["product"] == "BahnCard 25 (2nd class, standard, annual)"
+    assert "notes" not in result["removed"][0]
+    assert "notes" not in result["added"][0]
+
+    subs = _read_subscriptions(isolated_data_dir)
+    rail_subs = [s for s in subs if "BahnCard" in s["product"]]
+    assert len(rail_subs) == 1
+    # Canonical German product name on disk, regardless of the request language above.
+    assert rail_subs[0]["product"] == "BahnCard 25 (2. Klasse, Standard, Jahresabo)"
+    # Still a full, catalog-derived entry (product_en/notes included) that re-validates.
+    assert rail_subs[0]["product_en"] == "BahnCard 25 (2nd class, standard, annual)"
+    Subscription.model_validate(rail_subs[0])
+
+
+def test_replace_target_matched_by_english_display_name(isolated_data_dir):
+    # A user or the LLM may name the subscription to remove by its English display name
+    # under an English request — must resolve the same as the German name would.
+    result = mutations.apply_subscription_change(
+        action="remove", target_subscription="BahnCard 50 (2nd class, standard, annual)"
+    )
+    assert result["status"] == "applied"
+    assert result["removed"][0]["id"] == "db_bc50_2nd_annual_standard"
 
 
 def test_token_fallback_no_false_positive_between_bahncard_tiers(isolated_data_dir):

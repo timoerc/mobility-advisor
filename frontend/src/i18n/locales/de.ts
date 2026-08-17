@@ -14,6 +14,7 @@ export const de: Record<TranslationKey, string> = {
   "common.backToDashboard": "Zurück zur Übersicht",
   "common.skip": "Überspringen →",
   "common.selectPlaceholder": "— auswählen —",
+  "common.perMonthSuffix": "/Mon.",
 
   "onboarding.personalProfile.heading": "Erzählen Sie uns von sich",
   "onboarding.personalProfile.subheading": "So kann der Advisor die Empfehlungen auf Ihren Lebensstil zuschneiden.",
@@ -173,6 +174,7 @@ export const de: Record<TranslationKey, string> = {
   "home.saveUpTo": "Bis zu {amount}/Jahr sparen",
   "home.review": "Prüfen",
   "home.rangeAsOf": "Stand {date}",
+  "home.renews": "verlängert sich am {date}",
   "home.modesByUsage": "Nutzung nach Verkehrsmittel",
   "home.modesByUsage.subtitle": "Nach Anzahl der Fahrten sortiert",
   "home.noTripsInRange": "Keine Fahrten in diesem Zeitraum.",

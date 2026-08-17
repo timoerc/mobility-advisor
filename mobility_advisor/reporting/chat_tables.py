@@ -98,7 +98,7 @@ def render_subscription_value(stats: dict) -> str:
             # of that paragraph, flattening the bullets into running prose.
             blocks.append(
                 f"{header}\n\n"
-                + t("report.subValue.tripsAttributedWithMode", count=sub["trips_attributed"], provider=sub["provider"], mode=sub["mode"].replace("_", " ")) + "\n"
+                + t("report.subValue.tripsAttributedWithMode", count=sub["trips_attributed"], provider=sub["provider"], mode=_mode_display_label(sub["mode"])) + "\n"
                 + t("report.subValue.discountValue", amount=f"{sub['discount_value_eur']:.2f}") + "\n"
                 + t("report.subValue.netVsFee", sign=sign, amount=f"{abs(net):.2f}") + "\n"
                 + t("report.subValue.verdict", verdict=verdict)

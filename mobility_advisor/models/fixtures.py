@@ -119,6 +119,12 @@ class _CatalogFields(BaseModel):
     model_config = {"extra": "forbid"}
     provider: str
     product: str
+    # English display sibling for `product` — `product` stays the canonical German
+    # identity/matching key (joins current_subscriptions.json to this catalog by id, and
+    # is what _resolve_unique_match/apply_subscription_change match against); product_en
+    # is only ever surfaced for display when the active request language is English. See
+    # store/loaders.py's _localize_entries and i18n.py's pick_lang().
+    product_en: str = ""
     mode: Literal["rail", "car_share", "car_rental", "flight", "bus"]
     monthly_cost_eur: float
     billing_cycle: str = "monthly"

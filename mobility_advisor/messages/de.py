@@ -130,6 +130,9 @@ MESSAGES: dict[str, str] = {
     "error.alreadyExecutedMustRevertFirst": "Diese Analyse wurde bereits umgesetzt; machen Sie sie rückgängig, bevor Sie erneut entscheiden.",
     "error.onlyNewestCanBeReverted": "Nur die neueste Analyse kann rückgängig gemacht werden.",
     "error.noExecutedChangeToRevert": "Diese Analyse hat keine umgesetzte Änderung zum Rückgängigmachen.",
+    "error.invalidSubscriptions": "Ungültige Abonnements: {error}",
+    "error.noScenarioForPersona": "Kein Szenario für Persona '{personaId}'.",
+    "error.noScenarioDirectoryForPersona": "Kein Szenario-Verzeichnis für Persona '{personaId}'.",
     "revert.resolvedMessage": "Rückgängig gemacht — Ihr vorheriges Mobilitäts-Setup wurde wiederhergestellt.",
     "revert.message": "Zu Ihrem vorherigen Mobilitäts-Setup zurückgesetzt.",
 
@@ -194,6 +197,7 @@ MESSAGES: dict[str, str] = {
     "table.total": "Gesamt",
 
     "report.pdf.title": "Ihr Mobility Jahresrückblick",
+    "report.pdf.filename": "jahresrueckblick-mobilitaet.pdf",
     "report.pdf.mastheadLeft": "Mobility Advisor",
     "report.pdf.mastheadRight": "Jahresrückblick Mobilität",
     "report.pdf.pageLabel": "Seite ",
@@ -209,6 +213,8 @@ MESSAGES: dict[str, str] = {
     "report.section7": "7. Methodik & Annahmen",
     "report.actionsTakenNoneLine": "> **Maßnahmen in diesem Jahr:** Keine.",
     "report.pendingProposalLine": "> **Ausstehender Vorschlag:** wartet auf Ihre Zustimmung (siehe unten).",
+    "report.actionsTakenLabel": "Maßnahmen in diesem Jahr",
+    "report.pendingProposalLabel": "Ausstehender Vorschlag",
     "report.footerDisclaimer": "⚠️ **Dieser Bericht dient nur zur Information. An Ihren Abonnements wurden keine Änderungen vorgenommen.**",
     "report.dataQualityNotesNone": "Keine.",
 

@@ -284,7 +284,7 @@ async def annual_report(req: AnalyzeRequest):
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": 'inline; filename="annual-mobility-review.pdf"'},
+        headers={"Content-Disposition": f'inline; filename="{t("report.pdf.filename")}"'},
     )
 
 

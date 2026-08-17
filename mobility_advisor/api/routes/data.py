@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from ... import clock, paths
 from ...models import CurrentSubscriptions, TravelHistory, catalog_lookup
+from ...store.loaders import _localize_entries
 
 router = APIRouter()
 
@@ -23,7 +24,9 @@ async def get_current_subscriptions():
     if not path.exists():
         return {"subscriptions": []}
     data = CurrentSubscriptions.model_validate(json.loads(path.read_text(encoding="utf-8")))
-    return {"subscriptions": data.model_dump()["subscriptions"]}
+    # Localize `product` to the active request's language (see store/loaders._localize_entries)
+    # so the home screen's subscription list matches the language of everything around it.
+    return {"subscriptions": _localize_entries(data.model_dump()["subscriptions"])}
 
 
 @router.get("/api/travel-history")

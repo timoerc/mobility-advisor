@@ -141,6 +141,9 @@ MESSAGES: dict[str, str] = {
     "error.alreadyExecutedMustRevertFirst": "This analysis was already executed; revert it before deciding again.",
     "error.onlyNewestCanBeReverted": "Only the newest analysis can be reverted.",
     "error.noExecutedChangeToRevert": "This analysis has no executed change to revert.",
+    "error.invalidSubscriptions": "Invalid subscriptions: {error}",
+    "error.noScenarioForPersona": "No scenario for persona '{personaId}'.",
+    "error.noScenarioDirectoryForPersona": "No scenario directory for persona '{personaId}'.",
     "revert.resolvedMessage": "Reverted — your previous mobility setup has been restored.",
     "revert.message": "Reverted to your previous mobility setup.",
 
@@ -204,6 +207,9 @@ MESSAGES: dict[str, str] = {
 
     # ── annual report PDF chrome (report_pdf.py / templates/annual_report.{html,css}) ───────
     "report.pdf.title": "Your Annual Mobility Review",
+    # ASCII-only (no umlauts/€/etc.) — goes straight into a Content-Disposition header, which
+    # is not safe for arbitrary Unicode without RFC 5987 encoding this app doesn't implement.
+    "report.pdf.filename": "annual-mobility-review.pdf",
     "report.pdf.mastheadLeft": "Mobility Advisor",
     "report.pdf.mastheadRight": "Annual Mobility Review",
     "report.pdf.pageLabel": "Page ",
@@ -224,6 +230,12 @@ MESSAGES: dict[str, str] = {
     "report.section7": "7. Methodology & Assumptions",
     "report.actionsTakenNoneLine": "> **Actions taken this year:** None.",
     "report.pendingProposalLine": "> **Pending proposal:** awaiting your approval (see below).",
+    # Bare label text (no "> **...:**" wrapper) — used when annual_communicator's own prompt
+    # needs to refer to these headings by name, e.g. telling the LLM which heading to state an
+    # executed change under. Kept as a separate key rather than parsed out of the two lines
+    # above so it can't drift out of sync with a Markdown-formatting change to those lines.
+    "report.actionsTakenLabel": "Actions taken this year",
+    "report.pendingProposalLabel": "Pending proposal",
     "report.footerDisclaimer": "⚠️ **This report is informational. No changes have been made to your subscriptions.**",
     "report.dataQualityNotesNone": "None.",
 

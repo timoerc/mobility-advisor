@@ -279,12 +279,12 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
                   </p>
                   <p className="text-xs text-gray-400 m-0">
                     {mLabel(s.mode)}
-                    {s.next_renewal_date ? ` · renews ${fmtDate(s.next_renewal_date)}` : ""}
+                    {s.next_renewal_date ? ` · ${t("home.renews", { date: fmtDate(s.next_renewal_date) })}` : ""}
                   </p>
                 </div>
                 {typeof s.monthly_cost_eur === "number" && (
                   <span className="text-sm font-semibold text-gray-900 tabular-nums flex-shrink-0">
-                    {s.monthly_cost_eur === 0 ? t("home.free") : `${formatCurrencyPrecise(language, s.monthly_cost_eur)}/mo`}
+                    {s.monthly_cost_eur === 0 ? t("home.free") : `${formatCurrencyPrecise(language, s.monthly_cost_eur)}${t("common.perMonthSuffix")}`}
                   </span>
                 )}
               </div>
@@ -292,7 +292,7 @@ export function HomePage({ personaName, onChat, onAnalysis, onAnnualReport, onHi
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
             <span className="text-sm text-gray-500">{t("home.total")}</span>
-            <span className="text-sm font-bold text-gray-900 tabular-nums">{formatCurrencyPrecise(language, totalMonthly)}/mo</span>
+            <span className="text-sm font-bold text-gray-900 tabular-nums">{formatCurrencyPrecise(language, totalMonthly)}{t("common.perMonthSuffix")}</span>
           </div>
           {nextRenewal && (
             <p className="text-xs text-gray-400 m-0 mt-2">

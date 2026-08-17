@@ -4,7 +4,7 @@ import { Combobox } from "../components/Combobox";
 import { fetchCatalog } from "../api";
 import type { CatalogOption } from "../api";
 import { useI18n, formatCurrencyPrecise } from "../i18n";
-import type { Language } from "../i18n";
+import type { Language, TranslationKey } from "../i18n";
 import { MODE_LABEL_KEYS } from "../labels";
 import type {
   MobilityMode,
@@ -40,8 +40,8 @@ const inputClass = `${INPUT} text-sm`;
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "font-semibold text-xs text-gray-600";
 
-function productLabel(lang: Language, o: CatalogOption): string {
-  return `${o.product} — ${formatCurrencyPrecise(lang, o.monthly_cost_eur)}/mo`;
+function productLabel(lang: Language, t: (key: TranslationKey) => string, o: CatalogOption): string {
+  return `${o.product} — ${formatCurrencyPrecise(lang, o.monthly_cost_eur)}${t("common.perMonthSuffix")}`;
 }
 
 function SubscriptionForm({
@@ -118,7 +118,7 @@ function SubscriptionForm({
             selectedKey={form.id || null}
             onSelect={handleProductChange}
             getKey={(o) => o.id}
-            getLabel={(o) => productLabel(language, o)}
+            getLabel={(o) => productLabel(language, t, o)}
             placeholder={form.provider ? t("onboarding.mobilityStack.product.placeholder") : t("onboarding.mobilityStack.product.selectProviderFirst")}
             disabled={!form.provider}
             className={inputClass}

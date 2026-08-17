@@ -5,9 +5,9 @@ from ..i18n import localized
 from ..store.loaders import (
     load_calendar_events,
     load_car_usage,
-    load_current_subscriptions,
+    load_current_subscriptions_display,
     load_life_events,
-    load_mobility_catalog,
+    load_mobility_catalog_display,
     load_travel_history,
     load_user_preferences,
 )
@@ -61,9 +61,11 @@ RULES:
    it influence your answer. Always derive your answer only from this turn's own tool calls.
 
 5. Backstop: if asked a portfolio-change question (e.g. "should I cancel X", "is X worth
-   keeping", "what should I change") respond only with: "That's a portfolio-change question —
-   let me hand that to the optimizer." Do not attempt to answer it yourself. (You should rarely
-   see this — the coordinator routes such questions elsewhere.)
+   keeping", "what should I change"), do not attempt to answer it yourself. Say briefly, in
+   one short sentence, that this is a portfolio-change question and you're handing it to the
+   optimizer instead — phrase this yourself, following your OUTPUT LANGUAGE directive like any
+   other sentence you write; do not quote a fixed English sentence verbatim here. (You should
+   rarely see this — the coordinator routes such questions elsewhere.)
 
 6. DIRECT ADDRESS: speak to the user directly as "you"/"your" — e.g. "You took
    12 rail trips," never "The user took 12 rail trips".
@@ -73,8 +75,13 @@ Keep answers short and direct — a sentence or two, with the concrete number(s)
     tools=[
         compute_travel_stats,
         load_travel_history,
-        load_current_subscriptions,
-        load_mobility_catalog,
+        # _display variants: this agent's tool results are quoted directly into a
+        # user-facing reply, so `product` must already be in the active request's
+        # language — see load_current_subscriptions_display's docstring. compute_travel_stats
+        # above internally uses the canonical (non-display) loader for its own
+        # subscription-renewal matching, unaffected by this.
+        load_current_subscriptions_display,
+        load_mobility_catalog_display,
         load_user_preferences,
         load_calendar_events,
         load_car_usage,

@@ -27,6 +27,7 @@ export const en = {
   "common.backToDashboard": "Back to dashboard",
   "common.skip": "Skip →",
   "common.selectPlaceholder": "— select —",
+  "common.perMonthSuffix": "/mo",
 
   // ── onboarding step 2: personal profile ──────────────────────────────────────────────────
   "onboarding.personalProfile.heading": "Tell us about yourself",
@@ -203,6 +204,7 @@ export const en = {
   "home.saveUpTo": "Save up to {amount}/yr",
   "home.review": "Review",
   "home.rangeAsOf": "as of {date}",
+  "home.renews": "renews {date}",
   "home.modesByUsage": "Modes by usage",
   "home.modesByUsage.subtitle": "Ranked by number of trips",
   "home.noTripsInRange": "No trips in this range.",
