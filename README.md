@@ -153,12 +153,3 @@ mobility-advisor/
     └── scenarios/                      # 6 persona fixture sets — see Personas above
 tests/                                  # pytest suite (mirrors the package layout above)
 ```
-
----
-
-## Tier status
-
-- **Tier 1** (basic linear pipeline, all-mocked, reactive single run) — done, frozen as the baseline.
-- **Tier 2 + Tier 3** — in progress together, not strictly sequential. The Coordinator routing layer, `execution_agent`, and real Outlook calendar ingestion are already Tier-3-shaped pieces that have landed ahead of full Tier 2 completion. Still open: a dedicated Validation agent, disk-persisted orchestrator state, continuous life-event-triggered evaluation, and execution against real provider APIs.
-
-See `.claude/TIERS_CONTEXT.md` for the full tier definitions and gap list.
