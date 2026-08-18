@@ -1,0 +1,39 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+
+# ADK / Google
+mobility_advisor/.adk/
+
+# Timestamped data/ backups from scenarios/activate_scenario.sh
+mobility_advisor/data_backup_*/
+
+# VCS / tooling
+.git/
+.claude/
+.pytest_cache/
+
+# Secrets — never let a stray .env end up baked into an image layer
+.env
+**/.env
+.env.local
+.env.*.local
+
+# Logs, OS/editor cruft
+*.log
+.DS_Store
+.idea/
+.vscode/

@@ -9,7 +9,6 @@ from .agents.qa import qa_agent
 from .agents.reject import reject_agent
 from .i18n import localized
 
-# TODO (Tier 2): add persistent user state, RAG over contracts catalog, calendar-driven forecasting, constraint capture
 COORDINATOR_INSTRUCTION = f"""\
 You are the Coordinator for your Mobility Advisor. Today's date: {_TODAY}.
 

@@ -35,3 +35,10 @@ async def _language_middleware(request, call_next):
 
 for router_module in (personas, data, analysis, execution, chat):
     app.include_router(router_module.router)
+
+
+@app.get("/api/health")
+async def health() -> dict[str, str]:
+    """Liveness probe — deliberately touches neither the LLM proxy nor disk, so it
+    stays fast and green independent of KICONNECT_API_KEY or fixture state."""
+    return {"status": "ok"}

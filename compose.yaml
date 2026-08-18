@@ -1,0 +1,56 @@
+# Mobility Advisor — one-command demo stack.
+#
+# Quick start:
+#   cp sample.env .env      # then fill in KICONNECT_API_KEY
+#   docker compose up --build
+#   open http://localhost:8080
+#
+# State is deliberately ephemeral: mobility_advisor/data/*.json is baked into the
+# backend image, not volume-mounted. A plain `restart` reuses the same container's
+# writable layer, so mutations survive it — recreate the container to reset:
+#   docker compose up -d --force-recreate backend
+# See README.md.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+      target: runtime
+    environment:
+      # Fails the whole `up` before anything builds or starts if unset — no code
+      # change required, this is plain shell-style compose interpolation.
+      KICONNECT_API_KEY: ${KICONNECT_API_KEY:?missing — copy sample.env to .env and set KICONNECT_API_KEY (see README's "Run with Docker" section)}
+      # Optional: without it, distance calculations fall back to a haversine estimate
+      # instead of real routing (mobility_advisor/integrations/ors.py).
+      ORS_API_KEY: ${ORS_API_KEY:-}
+    ports:
+      - "8000:8000" # exposed for /docs and direct debugging; the UI only needs 8080
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Not started by `up` (profile-gated). Run explicitly:
+  #   docker compose run --rm tests
+  tests:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+      target: test
+    profiles: ["tools"]
+    environment:
+      KICONNECT_API_KEY: ${KICONNECT_API_KEY:-test-placeholder}
+    command: ["pytest"]

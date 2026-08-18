@@ -16,7 +16,7 @@ A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming 
 - **`execution_agent`** — applies an explicitly-instructed subscription change, single-confirmation human-in-the-loop
 - **`annual_report_pipeline`** — same 4 stages, ending in an Annual Communicator that renders a structured year-in-review PDF
 
-The Communicator only ever *drafts* a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
+The Communicator only ever _drafts_ a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
 
 The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/agents/model.py::build_model()`.
 
@@ -26,22 +26,36 @@ The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not nat
 
 Six self-contained fixture sets live under `mobility_advisor/scenarios/`, each isolating a different pipeline behavior:
 
-| Persona | Holds | Tests | Expected result |
-|---|---|---|---|
-| `maja` | BahnCard 50 + Enterprise Silver | Basic over-subscription detection | Downgrade BC50 → BC25 (Enterprise Silver is a free automatic tier, untouched either way) |
-| `katrin` | BahnCard 25 + Deutschland-Ticket | Fare-class-driven upgrade (Flexpreis-heavy long-distance travel) | Upgrade to BahnCard 50, saving €318/yr; Deutschland-Ticket kept by a near-tie |
-| `sofia` | Deutschland-Ticket + MILES Basis | The "add/upgrade a product" case | Add BahnCard 25, upgrade MILES Basis → Silber, drop the Deutschland-Ticket |
-| `tobias` | BahnCard 50 + Deutschland-Ticket | Forward signal overriding a strong historical ROI | Downgrade/cancel BC50 ahead of renewal |
-| `stefan` | Car + BC50 + Deutschland-Ticket + MILES Silber | Hedging under genuine ambiguity (possible relocation) | Conditional recommendation, not a single confident action |
-| `lena` | BahnCard 50 Young + Deutschland-Ticket | Graceful degradation on corrupted trip data | Completes with a Data Quality Warnings section, never crashes |
+| Persona  | Holds                                          | Tests                                                            | Expected result                                                                          |
+| -------- | ---------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `maja`   | BahnCard 50 + Enterprise Silver                | Basic over-subscription detection                                | Downgrade BC50 → BC25 (Enterprise Silver is a free automatic tier, untouched either way) |
+| `katrin` | BahnCard 25 + Deutschland-Ticket               | Fare-class-driven upgrade (Flexpreis-heavy long-distance travel) | Upgrade to BahnCard 50, saving €318/yr; Deutschland-Ticket kept by a near-tie            |
+| `sofia`  | Deutschland-Ticket + MILES Basis               | The "add/upgrade a product" case                                 | Add BahnCard 25, upgrade MILES Basis → Silber, drop the Deutschland-Ticket               |
+| `tobias` | BahnCard 50 + Deutschland-Ticket               | Forward signal overriding a strong historical ROI                | Downgrade/cancel BC50 ahead of renewal                                                   |
+| `stefan` | Car + BC50 + Deutschland-Ticket + MILES Silber | Hedging under genuine ambiguity (possible relocation)            | Conditional recommendation, not a single confident action                                |
+| `lena`   | BahnCard 50 Young + Deutschland-Ticket         | Graceful degradation on corrupted trip data                      | Completes with a Data Quality Warnings section, never crashes                            |
 
-Each scenario's `SCENARIO.md` has the full rationale. Switch the active dataset with:
+---
+
+## Run with Docker (recommended for a quick demo)
+
+The whole stack runs from one command, no local Python/Node toolchain needed beyond Docker itself.
 
 ```bash
-./mobility_advisor/scenarios/activate_scenario.sh <name>
+cp sample.env .env      # then fill in KICONNECT_API_KEY, see below
+docker compose up --build
 ```
 
-This backs up `mobility_advisor/data/` to a timestamped folder before overwriting it — restore with `cp data_backup_<timestamp>/*.json data/`.
+Open **http://localhost:8080**.
+
+- **`KICONNECT_API_KEY` is the only key required.** Get one via your university's KI:connect.nrw membership. If you're grading this project without NRW access, a time-limited key was included in the submission bundle — it is _not_ in this repository (a key in a public/gradable repo gets scraped and revoked within minutes, so it's handed over out-of-band instead).
+  - `docker compose up` fails fast with a clear message if the key isn't set — nothing builds or starts.
+- `ORS_API_KEY` is optional — without it, distance calculations fall back to a haversine estimate instead of real routing.
+- State resets by design, but not on a plain `restart`: `mobility_advisor/data/*.json` is baked into the backend image, not volume-mounted, so a persona switch, subscription change, or executed action only disappears when the _container_ is recreated from the image — `docker compose restart backend` reuses the same container and its writable layer, so mutations survive it. Use `docker compose up -d --force-recreate backend` (or `docker compose down && docker compose up -d`) as the actual "undo everything" button for a demo.
+- Run the test suite in the same environment the app runs in: `docker compose run --rm tests`.
+- The backend runs a single uvicorn worker on purpose — chat session state and the analysis-history write lock both live in process memory (`mobility_advisor/api/deps.py`), so a second worker would neither share sessions nor serialize those writes correctly.
+
+For active development (hot reload, no rebuild per change), use the local setup below instead.
 
 ---
 
@@ -49,8 +63,7 @@ This backs up `mobility_advisor/data/` to a timestamped folder before overwritin
 
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Python 3.14+
-- A KIConnect API key (`KICONNECT_API_KEY`) — used by the LLM agents
-- A Google AI Studio API key (`GOOGLE_API_KEY`) — required by the ADK runtime itself
+- A KIConnect API key (`KICONNECT_API_KEY`) — used by the LLM agents; see "Run with Docker" above for how to get one
 - Optional: `OUTLOOK_CLIENT_ID`/`OUTLOOK_TENANT_ID` for live Outlook calendar ingestion, `ORS_API_KEY` for distance enrichment — see `sample.env` for the full list
 
 ---
@@ -64,29 +77,31 @@ This backs up `mobility_advisor/data/` to a timestamped folder before overwritin
 
 ---
 
-## Running the full stack
+## Running the full stack (local development)
 
 **Terminal 1 — backend** (from the repo root):
+
 ```bash
 uv run uvicorn main:app --reload --port 8000
 ```
 
 **Terminal 2 — frontend**:
+
 ```bash
 cd frontend && npm run dev
 ```
 
-Open **http://localhost:5173**. Vite proxies `/api/*` to `localhost:8000` — if the backend isn't running, the frontend still loads and falls back to canned mock recommendations.
+Open **http://localhost:5173**. Vite proxies `/api/*` to `localhost:8000`. The frontend still loads if the backend isn't running (persona list falls back to a small static default), but analysis/chat/execution all need a live backend — expect an error screen with a retry button rather than mock data.
 
 ### Key API endpoints
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /api/chat` | Send a message to the Coordinator (routes to whichever tool fits) |
-| `POST /api/analyze` | Run the full 4-agent pipeline directly, returns a structured `Recommendation` |
-| `POST /api/annual-report` | Run the annual pipeline and return a rendered PDF |
-| `POST /api/execute` | Apply an explicitly-approved subscription change |
-| `POST /api/activate` | Switch the active persona/scenario |
+| Endpoint                  | Purpose                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `POST /api/chat`          | Send a message to the Coordinator (routes to whichever tool fits)             |
+| `POST /api/analyze`       | Run the full 4-agent pipeline directly, returns a structured `Recommendation` |
+| `POST /api/annual-report` | Run the annual pipeline and return a rendered PDF                             |
+| `POST /api/execute`       | Apply an explicitly-approved subscription change                              |
+| `POST /api/activate`      | Switch the active persona/scenario                                            |
 
 See `mobility_advisor/api/routes/` for the complete list (profile onboarding, history, catalog, etc.), or run the backend and open `/docs` for the live OpenAPI schema.
 
@@ -95,6 +110,7 @@ See `mobility_advisor/api/routes/` for the complete list (profile onboarding, hi
 ```bash
 uv run adk web
 ```
+
 > `adk web`/`adk api_server` bind to port 8000 too — stop them before running `uvicorn main:app`.
 
 ---
