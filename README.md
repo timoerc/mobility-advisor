@@ -48,7 +48,7 @@ docker compose up --build
 
 Open **http://localhost:8080**.
 
-- **`KICONNECT_API_KEY` is the only key required.** Get one via your university's KI:connect.nrw membership. If you're grading this project without NRW access, a time-limited key was included in the submission bundle — it is _not_ in this repository (a key in a public/gradable repo gets scraped and revoked within minutes, so it's handed over out-of-band instead).
+- **`KICONNECT_API_KEY` is the only key required.** Get one via your university's KI:connect.nrw membership.
   - `docker compose up` fails fast with a clear message if the key isn't set — nothing builds or starts.
 - `ORS_API_KEY` is optional — without it, distance calculations fall back to a haversine estimate instead of real routing.
 - State resets by design, but not on a plain `restart`: `mobility_advisor/data/*.json` is baked into the backend image, not volume-mounted, so a persona switch, subscription change, or executed action only disappears when the _container_ is recreated from the image — `docker compose restart backend` reuses the same container and its writable layer, so mutations survive it. Use `docker compose up -d --force-recreate backend` (or `docker compose down && docker compose up -d`) as the actual "undo everything" button for a demo.
