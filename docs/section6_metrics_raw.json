@@ -1,0 +1,495 @@
+{
+  "generated_at": "2026-08-29T16:55:52.981077",
+  "repeats": 3,
+  "personas": {
+    "maja": {
+      "persona": "maja",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 158.55,
+          "llm_calls": 13,
+          "prompt_tokens": 50662,
+          "completion_tokens": 6458,
+          "total_tokens": 57120,
+          "verdict": "Cancel all subscriptions, save \u20ac205 and cut travel time",
+          "recommended_alternative_id": "none",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.78x from 7 observed DB Sparpreis/Flexpreis trip(s) up to 902km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic",
+            "Aggregated 2 same-city car-share/car-rental trip(s) (avg ~6.0km) into one projected intra-city trip (2/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against."
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 129.69,
+          "llm_calls": 13,
+          "prompt_tokens": 53900,
+          "completion_tokens": 7310,
+          "total_tokens": 61210,
+          "verdict": "Cancel all subscriptions to save \u20ac205 per year and travel faster",
+          "recommended_alternative_id": "none",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.78x from 7 observed DB Sparpreis/Flexpreis trip(s) up to 902km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d710)",
+            "Aggregated 2 same-city car-share/car-rental trip(s) (avg ~6.0km) into one projected intra-city trip (2/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against."
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 134.74,
+          "llm_calls": 13,
+          "prompt_tokens": 51527,
+          "completion_tokens": 7616,
+          "total_tokens": 59143,
+          "verdict": "Cancel BahnCard\u202f50 \u2013 save \u20ac205\u202f/\u202fyr and travel faster",
+          "recommended_alternative_id": "none",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.78x from 7 observed DB Sparpreis/Flexpreis trip(s) up to 902km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d710)",
+            "Aggregated 2 same-city car-share/car-rental trip(s) (avg ~6.0km) into one projected intra-city trip (2/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against."
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "none"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    },
+    "stefan": {
+      "persona": "stefan",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 138.17,
+          "llm_calls": 15,
+          "prompt_tokens": 67150,
+          "completion_tokens": 8352,
+          "total_tokens": 75502,
+          "verdict": "Hold your current setup until the pending decision resolves (2026-09-01)",
+          "recommended_alternative_id": "hold",
+          "recommended_alternative_name": "Hold pending decision",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.32x from 6 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d74)",
+            "car_private: driving route API failed, using heuristic (\u00d78)",
+            "car_share: driving route API failed, using heuristic (\u00d74)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~51.8km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Aggregated 8 same-city car-share/car-rental trip(s) (avg ~5.1km) into one projected intra-city trip (11/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 5 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 460/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar (48/yr) replaces history (3/yr)"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 159.25,
+          "llm_calls": 16,
+          "prompt_tokens": 71436,
+          "completion_tokens": 11168,
+          "total_tokens": 82604,
+          "verdict": "Hold your current setup until the pending decision resolves (2026-09-01)",
+          "recommended_alternative_id": "hold",
+          "recommended_alternative_name": "Hold pending decision",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.32x from 6 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d74)",
+            "car_private: driving route API failed, using heuristic (\u00d78)",
+            "car_share: driving route API failed, using heuristic (\u00d74)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~51.8km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Aggregated 8 same-city car-share/car-rental trip(s) (avg ~5.1km) into one projected intra-city trip (11/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 5 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 460/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar (48/yr) replaces history (3/yr)"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 146.73,
+          "llm_calls": 16,
+          "prompt_tokens": 71734,
+          "completion_tokens": 8935,
+          "total_tokens": 80669,
+          "verdict": "Hold your current setup until the pending decision resolves (2026-09-01)",
+          "recommended_alternative_id": "hold",
+          "recommended_alternative_name": "Hold pending decision",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.32x from 6 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d74)",
+            "car_private: driving route API failed, using heuristic (\u00d78)",
+            "car_share: driving route API failed, using heuristic (\u00d74)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~51.8km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Aggregated 8 same-city car-share/car-rental trip(s) (avg ~5.1km) into one projected intra-city trip (11/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 5 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 460/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar (48/yr) replaces history (3/yr)"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "hold"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    },
+    "lena": {
+      "persona": "lena",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 160.29,
+          "llm_calls": 17,
+          "prompt_tokens": 81879,
+          "completion_tokens": 9384,
+          "total_tokens": 91263,
+          "verdict": "Switch to BahnCard\u202f25\u202fYoung\u202f+\u202fDeutschland\u2011Ticket \u2013 saves \u20ac80 per year",
+          "recommended_alternative_id": "db_bc25_2nd_annual_young_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 25 Young (2. Klasse, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "2026-05-28 Frankfurt (Main) Hbf\u2192N\u00fcrnberg Hbf: cost_eur is null \u2014 excluded from spend totals",
+            "2025-11-30 Frankfurt Innenstadt\u2192Frankfurt Bornheim: cost_eur is null \u2014 excluded from spend totals",
+            "2026-02-05 Frankfurt (Main) Hbf\u2192Hannover Hbf: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-12-10 Frankfurt Bornheim\u2192Frankfurt Airport Terminal 1: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-10-14 Frankfurt (Main) Hbf\u2192Bremen Hbf: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-08-19 Frankfurt Westend\u2192Frankfurt Nordend: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.23x from 12 observed DB Sparpreis/Flexpreis trip(s) up to 1100km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d79)",
+            "Aggregated 3 same-city car-share/car-rental trip(s) (avg ~6.6km) into one projected intra-city trip (4/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "car_share: driving route API failed, using heuristic",
+            "Dedup: Frankfurt \u2194 Hamburg \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr",
+            "Dedup: Berlin \u2194 Frankfurt \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 91.85,
+          "llm_calls": 15,
+          "prompt_tokens": 69588,
+          "completion_tokens": 7791,
+          "total_tokens": 77379,
+          "verdict": "Switch to BahnCard\u202f25\u202fYoung\u202f+\u202fDeutschland\u2011Ticket saves \u20ac80 per year annually",
+          "recommended_alternative_id": "db_bc25_2nd_annual_young_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 25 Young (2. Klasse, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "2026-05-28 Frankfurt (Main) Hbf\u2192N\u00fcrnberg Hbf: cost_eur is null \u2014 excluded from spend totals",
+            "2025-11-30 Frankfurt Innenstadt\u2192Frankfurt Bornheim: cost_eur is null \u2014 excluded from spend totals",
+            "2026-02-05 Frankfurt (Main) Hbf\u2192Hannover Hbf: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-12-10 Frankfurt Bornheim\u2192Frankfurt Airport Terminal 1: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-10-14 Frankfurt (Main) Hbf\u2192Bremen Hbf: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-08-19 Frankfurt Westend\u2192Frankfurt Nordend: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.23x from 12 observed DB Sparpreis/Flexpreis trip(s) up to 1100km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d79)",
+            "Aggregated 3 same-city car-share/car-rental trip(s) (avg ~6.6km) into one projected intra-city trip (4/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "car_share: driving route API failed, using heuristic",
+            "Dedup: Frankfurt \u2194 Hamburg \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr",
+            "Dedup: Berlin \u2194 Frankfurt \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 115.73,
+          "llm_calls": 15,
+          "prompt_tokens": 68410,
+          "completion_tokens": 8978,
+          "total_tokens": 77388,
+          "verdict": "Switch to BahnCard 25 Young + Deutschland-Ticket saves \u20ac80 per year, same travel time",
+          "recommended_alternative_id": "db_bc25_2nd_annual_young_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 25 Young (2. Klasse, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "2026-05-28 Frankfurt (Main) Hbf\u2192N\u00fcrnberg Hbf: cost_eur is null \u2014 excluded from spend totals",
+            "2025-11-30 Frankfurt Innenstadt\u2192Frankfurt Bornheim: cost_eur is null \u2014 excluded from spend totals",
+            "2026-02-05 Frankfurt (Main) Hbf\u2192Hannover Hbf: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-12-10 Frankfurt Bornheim\u2192Frankfurt Airport Terminal 1: mode is empty \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-10-14 Frankfurt (Main) Hbf\u2192Bremen Hbf: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "2025-08-19 Frankfurt Westend\u2192Frankfurt Nordend: unknown mode 'hovercraft' \u2014 excluded from CO\u2082 and mode aggregations",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.23x from 12 observed DB Sparpreis/Flexpreis trip(s) up to 1100km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d79)",
+            "Aggregated 3 same-city car-share/car-rental trip(s) (avg ~6.6km) into one projected intra-city trip (4/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "car_share: driving route API failed, using heuristic",
+            "Dedup: Frankfurt \u2194 Hamburg \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr",
+            "Dedup: Berlin \u2194 Frankfurt \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "db_bc25_2nd_annual_young_db_deutschlandticket"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    },
+    "katrin": {
+      "persona": "katrin",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 132.19,
+          "llm_calls": 15,
+          "prompt_tokens": 60256,
+          "completion_tokens": 8024,
+          "total_tokens": 68280,
+          "verdict": "Upgrade to BahnCard\u202f50\u202f+\u202fDeutschland\u2011Ticket saves \u20ac54/year and reduces CO\u2082",
+          "recommended_alternative_id": "db_bc50_2nd_annual_standard_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 50 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "Rail fare calibration ratio 2.61x (from 10 observed DB trips) looked like an outlier and was clamped to [0.5, 2.5].",
+            "car_rental: driving route API failed, using heuristic (\u00d76)",
+            "car_share: driving route API failed, using heuristic (\u00d73)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~39.1km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Berlin \u2194 D\u00fcsseldorf \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 Stuttgart \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 140.6,
+          "llm_calls": 15,
+          "prompt_tokens": 56245,
+          "completion_tokens": 7336,
+          "total_tokens": 63581,
+          "verdict": "Switch to BahnCard\u202f50\u202f+\u202fDeutschland\u2011Ticket saves \u20ac54/year and cuts CO\u2082",
+          "recommended_alternative_id": "db_bc50_2nd_annual_standard_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 50 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "Rail fare calibration ratio 2.61x (from 10 observed DB trips) looked like an outlier and was clamped to [0.5, 2.5].",
+            "car_rental: driving route API failed, using heuristic (\u00d76)",
+            "car_share: driving route API failed, using heuristic (\u00d73)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~39.1km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Berlin \u2194 D\u00fcsseldorf \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 Stuttgart \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 112.61,
+          "llm_calls": 14,
+          "prompt_tokens": 53814,
+          "completion_tokens": 6869,
+          "total_tokens": 60683,
+          "verdict": "Switch to BahnCard\u202f50\u202f+\u202fDeutschland\u2011Ticket saves \u20ac54/year and cuts CO\u2082",
+          "recommended_alternative_id": "db_bc50_2nd_annual_standard_db_deutschlandticket",
+          "recommended_alternative_name": "Switch to BahnCard 50 (2. Klasse, Standard, Jahresabo) + Deutschland-Ticket",
+          "data_quality_warnings": [
+            "Rail fare calibration ratio 2.61x (from 10 observed DB trips) looked like an outlier and was clamped to [0.5, 2.5].",
+            "car_rental: driving route API failed, using heuristic (\u00d76)",
+            "car_share: driving route API failed, using heuristic (\u00d73)",
+            "Aggregated 3 regional route(s) each seen under 2x/yr individually (3/yr combined, ~39.1km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Berlin \u2194 D\u00fcsseldorf \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr",
+            "Dedup: D\u00fcsseldorf \u2194 Stuttgart \u2014 calendar route data used, but frequency kept at history's higher 3/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "db_bc50_2nd_annual_standard_db_deutschlandticket"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    },
+    "tobias": {
+      "persona": "tobias",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 108.62,
+          "llm_calls": 13,
+          "prompt_tokens": 52674,
+          "completion_tokens": 7253,
+          "total_tokens": 59927,
+          "verdict": "Switch to the Deutschland\u2011Ticket \u2013 saves \u20ac205 per year",
+          "recommended_alternative_id": "db_deutschlandticket",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Travel-reduction signal detected (event date 2026-09-01) \u2014 projected trip frequencies damped by a factor of 0.21 to reflect reduced travel after this date, rather than extrapolating history unchanged.",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.85x from 14 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d72)",
+            "car_share: driving route API failed, using heuristic (\u00d72)",
+            "Aggregated 2 regional route(s) each seen under 2x/yr individually (4/yr combined, ~26.4km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 4/yr rather than calendar's 3/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 95.99,
+          "llm_calls": 13,
+          "prompt_tokens": 46421,
+          "completion_tokens": 6093,
+          "total_tokens": 52514,
+          "verdict": "Switch to the Deutschland\u2011Ticket saves \u20ac205 per year",
+          "recommended_alternative_id": "db_deutschlandticket",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Travel-reduction signal detected (event date 2026-09-01) \u2014 projected trip frequencies damped by a factor of 0.21 to reflect reduced travel after this date, rather than extrapolating history unchanged.",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.85x from 14 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d72)",
+            "car_share: driving route API failed, using heuristic (\u00d72)",
+            "Aggregated 2 regional route(s) each seen under 2x/yr individually (4/yr combined, ~26.4km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 4/yr rather than calendar's 3/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 95.22,
+          "llm_calls": 15,
+          "prompt_tokens": 53307,
+          "completion_tokens": 6556,
+          "total_tokens": 59863,
+          "verdict": "Switch to the Deutschland\u2011Ticket \u2013 saves \u20ac205 per year",
+          "recommended_alternative_id": "db_deutschlandticket",
+          "recommended_alternative_name": "Cancel BahnCard 50 (2. Klasse, Standard, Jahresabo)",
+          "data_quality_warnings": [
+            "Travel-reduction signal detected (event date 2026-09-01) \u2014 projected trip frequencies damped by a factor of 0.21 to reflect reduced travel after this date, rather than extrapolating history unchanged.",
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 0.85x from 14 observed DB Sparpreis/Flexpreis trip(s) up to 800km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d72)",
+            "car_share: driving route API failed, using heuristic (\u00d72)",
+            "Aggregated 2 regional route(s) each seen under 2x/yr individually (4/yr combined, ~26.4km avg) into one projected local-travel trip, instead of dropping them \u2014 this is the demand a Deutschlandticket or regional pass actually prices against.",
+            "Modelled 4 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 368/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Frankfurt \u2194 M\u00fcnchen \u2014 calendar route data used, but frequency kept at history's higher 4/yr rather than calendar's 3/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "db_deutschlandticket"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    },
+    "sofia": {
+      "persona": "sofia",
+      "runs": [
+        {
+          "run_index": 0,
+          "http_ok": true,
+          "elapsed_seconds": 107.19,
+          "llm_calls": 13,
+          "prompt_tokens": 50815,
+          "completion_tokens": 7586,
+          "total_tokens": 58401,
+          "verdict": "Switch to MILES Silber Pass saves \u20ac204 per year",
+          "recommended_alternative_id": "miles_silber",
+          "recommended_alternative_name": "Switch to MILES Silber Pass",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.06x from 2 observed DB Sparpreis/Flexpreis trip(s) up to 600km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d72)",
+            "Aggregated 14 same-city car-share/car-rental trip(s) (avg ~6.8km) into one projected intra-city trip (15/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 3 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 276/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Berlin \u2194 Hamburg \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 1,
+          "http_ok": true,
+          "elapsed_seconds": 116.51,
+          "llm_calls": 13,
+          "prompt_tokens": 50641,
+          "completion_tokens": 7317,
+          "total_tokens": 57958,
+          "verdict": "Switch to MILES Silber Pass saves \u20ac204 per year",
+          "recommended_alternative_id": "miles_silber",
+          "recommended_alternative_name": "Switch to MILES Silber Pass",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.06x from 2 observed DB Sparpreis/Flexpreis trip(s) up to 600km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic",
+            "Aggregated 14 same-city car-share/car-rental trip(s) (avg ~6.8km) into one projected intra-city trip (15/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 3 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 276/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "geocoding failed \u2014 cannot compute alternatives"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        },
+        {
+          "run_index": 2,
+          "http_ok": true,
+          "elapsed_seconds": 90.62,
+          "llm_calls": 13,
+          "prompt_tokens": 50911,
+          "completion_tokens": 6183,
+          "total_tokens": 57094,
+          "verdict": "Switch to MILES Silber Pass saves \u20ac204 per year",
+          "recommended_alternative_id": "miles_silber",
+          "recommended_alternative_name": "Switch to MILES Silber Pass",
+          "data_quality_warnings": [
+            "Rail prices calibrated to observed fares: synthetic price curve scaled 1.06x from 2 observed DB Sparpreis/Flexpreis trip(s) up to 600km; routes beyond that use the uncalibrated curve.",
+            "car_rental: driving route API failed, using heuristic (\u00d72)",
+            "Aggregated 14 same-city car-share/car-rental trip(s) (avg ~6.8km) into one projected intra-city trip (15/yr) instead of dropping them \u2014 this is the demand a car-share membership actually prices against. No rail alternative is offered for it (see this function's docstring).",
+            "Modelled 3 office day(s)/week as a recurring home-city commute at ~8.0km one-way (typical urban commute distance, not from actual data \u2014 travel history only records inter-city trips) \u2014 276/yr legs. This is the demand a Deutschlandticket or regional pass is actually priced against.",
+            "Dedup: Berlin \u2194 Hamburg \u2014 calendar route data used, but frequency kept at history's higher 2/yr rather than calendar's 1/yr"
+          ],
+          "matches_expected_outcome": true,
+          "error": null
+        }
+      ],
+      "stable_recommendation": true,
+      "distinct_recommendations": [
+        "miles_silber"
+      ],
+      "all_passed_http": true,
+      "all_matched_expected": true
+    }
+  }
+}
