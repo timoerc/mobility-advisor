@@ -15,6 +15,25 @@ independent of streaming vs. non-streaming mode: ADK always resolves usage onto 
 response object litellm returns, whether that object is streamed or not, and either way its
 `.usage` attribute is what the wrapper reads.
 
+Per-stage breakdown: the regular pipeline is `SequentialAgent(analyst, forecaster, optimizer,
+communicator)` (agents/pipelines.py) — ADK owns the loop that runs each sub-agent in turn, so
+there is no hand-rolled orchestrator call site to wrap directly. Instead, a `before_model_callback`
+is attached to each of the four LlmAgent singletons (the same objects `optimization_pipeline`
+already holds references to, so this affects the real run, not a copy); ADK invokes it once per
+underlying model call for that agent (including tool-call round-trips within one agent's turn),
+just before the call is made. The callback sets a contextvars.ContextVar to that agent's name —
+a ContextVar rather than a plain global because the *annual* pipeline runs its analyst/forecaster
+in a ParallelAgent (see CLAUDE.md's "Four-stage pipelines"), and asyncio tasks each get their own
+copy of the context, so concurrent agents' tags can't clobber each other. The regular pipeline this
+script drives is sequential, so that isolation isn't exercised here, but the same instrumentation
+would be correct if pointed at the annual pipeline too. `_tracked_acompletion` below reads the
+ContextVar at call time and tags each usage record with the stage that was active.
+
+Known gap (unchanged by this instrumentation): `/api/analyze`'s own `extract_verdict()` call
+(api/recommendation/extraction.py) uses `litellm.acompletion` directly rather than going through
+ADK's LiteLLMClient, so it was never covered by the patch below, before or after this change —
+the run-level and per-stage totals both exclude it.
+
 Usage: uv run python scripts/collect_section6_metrics.py [--repeats N] [--personas a,b,c]
 """
 import argparse
@@ -23,6 +42,8 @@ import json
 import shutil
 import sys
 import time
+from collections import defaultdict
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -35,7 +56,23 @@ from mobility_advisor import paths  # noqa: E402
 import httpx  # noqa: E402
 import google.adk.models.lite_llm as lite_llm_mod  # noqa: E402
 
+from mobility_advisor.agents.analysis import analyst_agent, forecaster_agent  # noqa: E402
+from mobility_advisor.agents.optimization import communicator_agent, optimizer_agent  # noqa: E402
 from mobility_advisor.api.app import app  # noqa: E402
+
+current_stage: ContextVar[str] = ContextVar("current_stage", default="unknown")
+
+
+def _tag_stage(callback_context, llm_request):
+    """before_model_callback: fires just before every underlying model call for whichever
+    agent it's attached to. Returning None (rather than an LlmResponse) tells ADK to proceed
+    with the real call unmodified — this hook only tags, it never short-circuits."""
+    current_stage.set(callback_context.agent_name)
+    return None
+
+
+for _agent in (analyst_agent, forecaster_agent, optimizer_agent, communicator_agent):
+    _agent.before_model_callback = _tag_stage
 
 ALL_PERSONAS = ["maja", "stefan", "lena", "katrin", "tobias", "sofia"]
 
@@ -68,12 +105,37 @@ async def _tracked_acompletion(*args, **kwargs):
         _usage_log.append(
             {
                 "model": kwargs.get("model"),
+                "stage": current_stage.get(),
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0) or 0,
                 "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
                 "total_tokens": getattr(usage, "total_tokens", 0) or 0,
             }
         )
     return resp
+
+
+def _empty_stage_bucket() -> dict:
+    return {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
+def _bucket_by_stage(usage_entries: list[dict]) -> dict:
+    by_stage = defaultdict(_empty_stage_bucket)
+    for u in usage_entries:
+        bucket = by_stage[u["stage"]]
+        bucket["calls"] += 1
+        bucket["prompt_tokens"] += u["prompt_tokens"]
+        bucket["completion_tokens"] += u["completion_tokens"]
+        bucket["total_tokens"] += u["total_tokens"]
+    return dict(by_stage)
+
+
+def _sum_stage_buckets(buckets: list[dict]) -> dict:
+    total = defaultdict(_empty_stage_bucket)
+    for by_stage in buckets:
+        for stage, vals in by_stage.items():
+            for key, val in vals.items():
+                total[stage][key] += val
+    return dict(total)
 
 
 lite_llm_mod.acompletion = _tracked_acompletion
@@ -123,6 +185,7 @@ async def run_persona(client: httpx.AsyncClient, persona: str, repeats: int) -> 
         completion_tokens = sum(u["completion_tokens"] for u in _usage_log)
         total_tokens = sum(u["total_tokens"] for u in _usage_log)
         n_calls = len(_usage_log)
+        tokens_by_stage = _bucket_by_stage(_usage_log)
 
         rec = body.get("recommendation", {}) if ok_http else {}
         recommended_alt = next(
@@ -138,6 +201,7 @@ async def run_persona(client: httpx.AsyncClient, persona: str, repeats: int) -> 
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,
+            "tokens_by_stage": tokens_by_stage,
             "verdict": rec.get("verdict"),
             "recommended_alternative_id": recommended_alt.get("id") if recommended_alt else None,
             "recommended_alternative_name": recommended_alt.get("name") if recommended_alt else None,
@@ -146,17 +210,21 @@ async def run_persona(client: httpx.AsyncClient, persona: str, repeats: int) -> 
             "error": body.get("error") if not ok_http else None,
         }
         runs.append(run_record)
+        stage_summary = ", ".join(
+            f"{stage}={v['total_tokens']}" for stage, v in tokens_by_stage.items()
+        )
         print(
             f"  [{persona}] run {i + 1}/{repeats}: "
             f"{'OK' if ok_http else 'FAIL'} "
             f"{run_record['elapsed_seconds']}s "
-            f"{total_tokens} tok "
+            f"{total_tokens} tok ({stage_summary}) "
             f"-> {run_record['recommended_alternative_id']} "
             f"(expected match: {matches_expected})"
         )
 
     recommended_ids = {r["recommended_alternative_id"] for r in runs if r["http_ok"]}
     stable = len(recommended_ids) <= 1
+    persona_tokens_by_stage = _sum_stage_buckets([r["tokens_by_stage"] for r in runs])
 
     return {
         "persona": persona,
@@ -165,6 +233,7 @@ async def run_persona(client: httpx.AsyncClient, persona: str, repeats: int) -> 
         "distinct_recommendations": sorted(x for x in recommended_ids if x is not None),
         "all_passed_http": all(r["http_ok"] for r in runs),
         "all_matched_expected": all(r["matches_expected_outcome"] for r in runs),
+        "tokens_by_stage": persona_tokens_by_stage,
     }
 
 
@@ -191,6 +260,16 @@ async def main():
         for persona in personas:
             print(f"\n=== {persona} ===")
             results["personas"][persona] = await run_persona(client, persona, args.repeats)
+
+    results["tokens_by_stage_aggregate"] = _sum_stage_buckets(
+        [p["tokens_by_stage"] for p in results["personas"].values()]
+    )
+    print("\n=== aggregate tokens by stage (all personas, all repeats) ===")
+    for stage, v in results["tokens_by_stage_aggregate"].items():
+        print(
+            f"  {stage}: {v['calls']} calls, {v['total_tokens']} tok "
+            f"(prompt {v['prompt_tokens']}, completion {v['completion_tokens']})"
+        )
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
