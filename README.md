@@ -1,6 +1,6 @@
 # Mobility Advisor
 
-An agentic AI system that answers one question: **"Is my mobility setup optimal right now?"**
+An agentic AI system prototype that answers one question: **"Is my mobility setup optimal right now?"**
 
 Built for a joint course at **University of Cologne × Deutsche Bahn × BCG Platinion**. The system analyzes a traveler's current subscription portfolio, forecasts forward demand, and recommends concrete contract changes — with full cost and CO₂ transparency and a human-in-the-loop gate before any change is made.
 
