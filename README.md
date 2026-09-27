@@ -1,4 +1,15 @@
-# Mobility Advisor
+# Mobility Portfolio Advisor
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Google_ADK-Agentic_AI-4285F4?logo=google&logoColor=white" alt="Google ADK">
+  <img src="https://img.shields.io/badge/LiteLLM-LLM_Proxy-000000?logo=litellm&logoColor=white" alt="LiteLLM">
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
 
 An agentic AI system prototype that answers one question: **"Is my mobility setup optimal right now?"**
 
@@ -16,11 +27,21 @@ A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming 
 - **`execution_agent`** — applies an explicitly-instructed subscription change, single-confirmation human-in-the-loop
 - **`annual_report_pipeline`** — same 4 stages, ending in an Annual Communicator that renders a structured year-in-review PDF
 
+
+<p align="center">
+  <img src="assets/architecture.png" alt="Mobility Portfolio Advisor agent org chart" width="800">
+</p>
+
 The Communicator only ever _drafts_ a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
 
 The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/agents/model.py::build_model()`.
 
----
+## Product walkthrough
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Mobility Advisor web application walkthrough" width="700">
+</p>
+
 
 ## Personas
 
