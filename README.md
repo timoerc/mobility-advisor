@@ -63,7 +63,7 @@ A **Coordinator** agent (`mobility_advisor/agent.py`) classifies each incoming r
 The LLM is served via the **KIConnect** proxy using ADK’s `LiteLlm` wrapper, rather than native Gemini.
 
 
-## Product walkthrough
+## Frontend preview
 
 <p align="center">
   <img src="assets/demo.gif" alt="Mobility Advisor web application walkthrough" width="700">
