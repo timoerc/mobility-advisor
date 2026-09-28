@@ -1,26 +1,75 @@
-# Mobility Advisor
+# Mobility Portfolio Advisor
 
-An agentic AI system prototype that answers one question: **"Is my mobility setup optimal right now?"**
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Google_ADK-Agentic_AI-4285F4?logo=google&logoColor=white" alt="Google ADK">
+  <img src="https://img.shields.io/badge/LiteLLM-LLM_Proxy-000000?logo=litellm&logoColor=white" alt="LiteLLM">
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
 
-Built for a joint course at **University of Cologne × Deutsche Bahn × BCG Platinion**. The system analyzes a traveler's current subscription portfolio, forecasts forward demand, and recommends concrete contract changes — with full cost and CO₂ transparency and a human-in-the-loop gate before any change is made.
+An agentic AI system prototype that answers one question: **“Is my mobility setup optimal right now?”**
 
----
+Built for a joint course at **University of Cologne × Deutsche Bahn × BCG Platinion**.
 
-## Architecture
+Mobility subscriptions tend to accumulate: a rail pass, bus pass, leased car or car-sharing membership. Yet few people revisit whether their combination still fits their actual travel behaviour, preferences and life situation. The Mobility Portfolio Advisor reviews the current portfolio against present and anticipated demand, then recommends concrete changes with transparent cost, time and CO₂ trade-offs. 
 
-A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming message and routes it to one of five tools:
+
+## How it works
+
+The product is a broader agent system, but its primary value path is a four-stage portfolio review that answers whether a user’s mobility setup is still optimal.
+
+The central optimization pipeline is: **Analyst → Forecaster → Optimizer → Communicator**. Each stage combines a specialised LLM agent with deterministic services, receives deliberately scoped context and tools, and passes structured outputs to the next stage.
+
+- **Analyst** — aggregates the user’s travel data and establishes a baseline mobility profile. It uses mode-substitution factor tables to simulate how observed journeys would compare with alternatives, for example, replacing car trips with rail, public transport, car sharing or other available modes.
+
+- **Forecaster** — adjusts this baseline to anticipated future demand. It incorporates relevant calendar and email signals, such as an upcoming move or job change, to identify events that may reduce, expand or otherwise change future travel needs.
+
+- **Optimizer** — combines predicted demand with the available subscription catalogue, prices and product rules. It evaluates possible portfolio combinations against the user’s preferences and identifies the best trade-off—for example, minimising cost, prioritising shorter travel times, reducing CO₂ emissions, or balancing all three.
+
+- **Communicator** — translates the resulting analysis into a transparent, human-readable recommendation. It explains the proposed changes, expected impact and trade-offs, while leaving every contract change subject to explicit user approval.
+
+<p align="center">
+  <img src="assets/optimization pipeline.png"
+       alt="Core four-stage optimization pipeline: Analyst, Forecaster, Optimizer and Communicator"
+       width="800">
+  <br>
+  <sub><strong>Core optimization pipeline.</strong> The system’s primary decision-making path for portfolio reviews.</sub>
+</p>
+
+The optimization pipeline is only one route through the wider system. Other requests—such as a factual question, an explicit contract change or an annual report—do not need to run through the full four-stage review.
+
+## Agent architecture
+
+A **Coordinator** agent (`mobility_advisor/agent.py`) classifies each incoming request and routes it to the appropriate specialised capability:
 
 - **`reject_agent`** — fixed refusal for out-of-scope or instruction-override messages
-- **`optimization_pipeline`** — the core 4-stage review: Analyst → Forecaster → Optimizer → Communicator
-- **`qa_agent`** — factual lookups (spend, counts, renewal dates) without a full review
-- **`execution_agent`** — applies an explicitly-instructed subscription change, single-confirmation human-in-the-loop
-- **`annual_report_pipeline`** — same 4 stages, ending in an Annual Communicator that renders a structured year-in-review PDF
+- **`qa_agent`** — factual lookups without a full review
+- **`optimization_pipeline`** — the core four-stage portfolio review shown above
+- **`execution_agent`** — applies an explicitly instructed subscription change after confirmation
+- **`annual_report_pipeline`** — produces a structured year-in-review PDF
 
-The Communicator only ever _drafts_ a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
+<p align="center">
+  <img src="assets/architecture.png"
+       alt="Full Mobility Portfolio Advisor agent architecture and routing structure"
+       width="800">
+  <br>
+  <sub><strong>Full agent architecture.</strong> The Coordinator routes requests to the core review flow or a specialised supporting capability.</sub>
+</p>
 
-The LLM is served via the **KIConnect** proxy (ADK's `LiteLlm` wrapper), not native Gemini — see `mobility_advisor/agents/model.py::build_model()`.
+The LLM is served via the **KIConnect** proxy using ADK’s `LiteLlm` wrapper, rather than native Gemini.
 
----
+
+## Frontend preview
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Mobility Advisor web application walkthrough" width="700">
+</p>
+
+
 
 ## Personas
 
