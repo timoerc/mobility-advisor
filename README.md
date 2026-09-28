@@ -22,15 +22,17 @@ Built for a joint course at **University of Cologne × Deutsche Bahn × BCG Plat
 A **Coordinator** agent (`mobility_advisor/agent.py`) classifies every incoming message and routes it to one of five tools:
 
 - **`reject_agent`** — fixed refusal for out-of-scope or instruction-override messages
-- **`optimization_pipeline`** — the core 4-stage review: Analyst → Forecaster → Optimizer → Communicator
 - **`qa_agent`** — factual lookups (spend, counts, renewal dates) without a full review
+- **`optimization_pipeline`** — the core 4-stage review: Analyst → Forecaster → Optimizer → Communicator
 - **`execution_agent`** — applies an explicitly-instructed subscription change, single-confirmation human-in-the-loop
 - **`annual_report_pipeline`** — same 4 stages, ending in an Annual Communicator that renders a structured year-in-review PDF
 
-
+--- 
 <p align="center">
   <img src="assets/architecture.png" alt="Mobility Portfolio Advisor agent org chart" width="800">
 </p>
+
+
 
 The Communicator only ever _drafts_ a recommendation — nothing is executed unless the user explicitly says so via `execution_agent`.
 
