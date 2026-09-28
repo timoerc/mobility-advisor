@@ -1,1 +1,38 @@
-<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70"><style>.st0{fill:#f01414}.st1{fill:#fff}</style><title>db_em_rgb_100px</title><path class="st0" d="M90 0H10C4.5 0 0 4.5 0 10v50c0 5.5 4.5 10 10 10h80c5.5 0 10-4.5 10-10.1V10c0-5.5-4.5-10-10-10z"/><path class="st1" d="M92.7 59.9c.1 1.5-1.1 2.8-2.7 2.9H10c-1.5 0-2.7-1.3-2.7-2.8V10c-.1-1.5 1.1-2.8 2.6-2.9H90c1.5 0 2.7 1.3 2.7 2.8v50z"/><path class="st0" d="M30.6 57.9H13.8V12.1h16.8c11.9 0 18.4 7.4 18.4 22.7 0 13.2-4.5 23-18.4 23.1zm7.3-22.2c0-9.2-1-16.4-10.9-16.4h-2.2v31.2h3.9c5.8 0 9.2-4.7 9.2-14.8zM78 33.9c4.7-1.4 7.9-5.7 8-10.7 0-1-.2-11.2-13.1-11.2H53.8v45.8H70c4.3 0 17.7 0 17.7-12.9 0-3.1-1.4-9.2-9.7-11zM64.7 19.2h3.5c4.9 0 6.9 1.7 6.9 5.5 0 3-2.2 5.5-6 5.5h-4.3v-11zm4.5 31.3h-4.5V38.7h4.8c5.7 0 7.1 3.3 7.1 5.9 0 5.9-5.6 5.9-7.4 5.9z"/></svg>
+<svg width="800" height="800" viewBox="0 0 76 76"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Rounded red outline -->
+  <rect x="4" y="7" width="24" height="18" rx="4"
+        fill="none" stroke="#EC0016 " stroke-width="1.5"/>
+
+  <!-- Wavy track, proportionally scaled and centred inside -->
+  <g
+    fill="none"
+    stroke="#EC0016 "
+    stroke-width="5"
+    stroke-linecap="square"
+    stroke-linejoin="round"
+    transform="translate(-5.9 -1.2) scale(.127)"
+  >
+<!-- Rails: slightly further apart -->
+<path d="M78 124 C113 86 133 99 159 122 C188 148 220 155 264 119"/>
+<path d="M84 150 C117 116 133 122 154 141 C183 168 218 179 265 150"/>
+
+<!-- Sleepers: extended to meet the wider rails -->
+<path d="M78 117 96 143"/>
+<path d="M87 108 105 140"/>
+<path d="M98 101 114 136"/>
+<path d="M110 97 122 133"/>
+<path d="M123 98 132 132"/>
+<path d="M138 103 142 137"/>
+<path d="M150 111 151 146"/>
+<path d="M162 121 161 154"/>
+<path d="M173 130 171 162"/>
+<path d="M185 136 184 169"/>
+<path d="M199 140 196 174"/>
+<path d="M213 140 212 174"/>
+<path d="M227 137 230 170"/>
+<path d="M240 130 248 163"/>
+<path d="M251 122 265 154"/>
+</g>
+</svg>
